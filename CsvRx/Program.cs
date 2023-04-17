@@ -53,7 +53,7 @@ public class ExecutionContext
 
         var plan = ast.First() switch
         {
-            Statement.Select s => new Planner().CreateLogicalPlan(s.Query),
+            Statement.Select s => new Planner().CreateLogicalPlan(s.Query, _tables),
             _ => throw new InvalidOperationException()
         };
 
@@ -76,7 +76,7 @@ public class ExecutionContext
 
 public class Planner
 {
-    public ILogicalPlan CreateLogicalPlan(Query query)
+    public ILogicalPlan CreateLogicalPlan(Query query, Dictionary<string, DataSource> dataSources)
     {
         var select = query.Body.AsSelect();
 
