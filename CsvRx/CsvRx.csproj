@@ -8,17 +8,21 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Logical_old\**" />
+    <Compile Remove="Physical_old\**" />
+    <EmbeddedResource Remove="Logical_old\**" />
+    <EmbeddedResource Remove="Physical_old\**" />
+    <None Remove="Logical_old\**" />
+    <None Remove="Physical_old\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="CsvHelper" Version="30.0.1" />
     <PackageReference Include="SqlParserCS" Version="0.1.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\CsvRx.Core\CsvRx.Core.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Data\" />
-    <Folder Include="Physical\" />
   </ItemGroup>
 
 </Project>

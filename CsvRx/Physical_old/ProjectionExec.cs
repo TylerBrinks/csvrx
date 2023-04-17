@@ -68,12 +68,18 @@ public record HashAggregateExec(
 
         //for (var i = 0; i < map.Count; i++)
 
-        var index 
-        foreach(var entry in map)
-        {
-            var index = map.Keys.
-            var rowIndex = 
-        }
+        //var index = 0;
+        //foreach(var entry in map)
+        //{
+        //    var rowIndex = index;
+        //    var groupingKey = entry.Key;
+        //    var accumulators = entry.Value;
+
+        //    GroupExpr.
+        //}
+
+        var outputBatch = new RecordBatch(Schema, null);
+        return new List<RecordBatch>();
     }
 
     public List<IPhysicalPlan> Children => new () { Input };

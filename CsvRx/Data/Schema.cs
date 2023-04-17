@@ -9,28 +9,28 @@ public class Schema
 
     public List<Field> Fields { get; }
 
-    public Schema Select(List<string> names)
-    {
-        var fields = new List<Field>();
-        foreach (var name in names)
-        {
-            var m = Fields.FindAll(_ => _.Name == name);
+    //public Schema Select(List<string> names)
+    //{
+    //    var fields = new List<Field>();
+    //    foreach (var name in names)
+    //    {
+    //        var m = Fields.FindAll(_ => _.Name == name);
 
-            if (m.Count == 1)
-            {
-                fields.Add(m[0]);
-            }
-            else
-            {
-                throw new InvalidOperationException();
-            }
-        }
+    //        if (m.Count == 1)
+    //        {
+    //            fields.Add(m[0]);
+    //        }
+    //        else
+    //        {
+    //            throw new InvalidOperationException();
+    //        }
+    //    }
 
-        return new Schema(fields);
-    }
+    //    return new Schema(fields);
+    //}
 
-    public Schema Project(List<int> indices)
-    {
-        return new Schema(indices.Select((_, i) => Fields[i]).ToList());
-    }
+    //public Schema Project(List<int> indices)
+    //{
+    //    return new Schema(indices.Select((_, i) => Fields[i]).ToList());
+    //}
 }

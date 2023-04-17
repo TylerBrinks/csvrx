@@ -1,3 +1,3 @@
 ﻿namespace CsvRx.Data;
 
-public record Field(string Name);
+public record Field(string Name, ColumnDataType DataType);
