@@ -19,17 +19,16 @@ public enum ColumnDataType
     Utf8 = 1 << 8,
 }
 
-public class CsvDataSource //: DataSource
+public class CsvDataSource : DataSource
 {
     private readonly string _filePath;
-    private Schema _schema;
     private CsvOptions _options;
 
     public CsvDataSource(string filePath, CsvOptions options)
     {
         _filePath = filePath;
         _options = options;
-        _schema = InferSchema();
+        Schema = InferSchema();
     }
 
     private Schema InferSchema()
@@ -70,6 +69,8 @@ public class CsvDataSource //: DataSource
 
         return new Schema(fields);
     }
+
+    public override Schema Schema { get; }
 }
 
 public partial class InferredDataType

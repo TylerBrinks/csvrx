@@ -1,6 +1,5 @@
-﻿using System.Linq.Expressions;
-using System.Runtime.CompilerServices;
-using CsvRx.Data;
+﻿using CsvRx.Data;
+using CsvRx.Logical;
 using SqlParser.Ast;
 //using CsvRx.Data;
 //using CsvRx.Logical;
@@ -20,35 +19,30 @@ public class CsvOptions
     public string Delimiter { get; set; } = ",";
     public bool HasHeader { get; set; } = true;
     public int InferMax { get; set; } = 100;
-
 }
 
 public class ExecutionContext
 {
-    private readonly Dictionary<string, TableProvider> _tables = new();
+    private readonly Dictionary<string, DataSource> _tables = new();
 
     public void RegisterCsv(string tableName, string path)
     {
         RegisterCsv(tableName, path, new CsvOptions());
     }
+
     public void RegisterCsv(string tableName, string path, CsvOptions options)
     {
         var csv = new CsvDataSource(path, options);
-        
-        Register(tableName, LoadCsv(path));
+        //TODO: csv?
+        Register(tableName, csv);
     }
 
-    private void LoadCsv(string path)
+    public void Register(string tableName, DataSource df)
     {
-        return new CsvTableProvider(new Scan(path, new CsvDataSource(path)));
+        _tables.Add(tableName, df);
     }
 
-    public void Register(string tableName, TableProvider tableProvider)
-    {
-        _tables.Add(tableName, tableProvider);
-    }
-
-    public LogicalPlan Sql(string sql)
+    public ILogicalPlan Sql(string sql)
     {
         var ast = new Parser().ParseSql(sql);
 
@@ -57,14 +51,13 @@ public class ExecutionContext
             throw new InvalidOperationException();
         }
 
-        var df = ast.First() switch
+        var plan = ast.First() switch
         {
             Statement.Select s => new Planner().CreateLogicalPlan(s.Query),
             _ => throw new InvalidOperationException()
         };
 
-        //return new DataFrame(df.LogicalPlan);
-        return null;
+        return plan;
     }
 
     //public List<RecordBatch> Execute(DataFrame df)
@@ -81,29 +74,18 @@ public class ExecutionContext
     //}
 }
 
-public class TableProvider
-{
-
-}
-
-
-public class LogicalPlan
-{
-
-}
-
 public class Planner
 {
-    public LogicalPlan CreateLogicalPlan(Query query)
+    public ILogicalPlan CreateLogicalPlan(Query query)
     {
         var select = query.Body.AsSelect();
 
-        var plan = PlanFromTables(select.From);
+        var plan = PlanFromTables(select.From!);
 
         return plan;
     }
 
-    private LogicalPlan PlanFromTables(Sequence<TableWithJoins> from)
+    private ILogicalPlan PlanFromTables(Sequence<TableWithJoins> from)
     {
         // check for cluster by, lateral views, quality, top, sort by
         //TODO multiple tables?
@@ -111,14 +93,14 @@ public class Planner
         return PlanTableWithJoins(from.First());
     }
 
-    private LogicalPlan PlanTableWithJoins(TableWithJoins table)
+    private ILogicalPlan PlanTableWithJoins(TableWithJoins table)
     {
        // todo if joins?
 
         return CreateRelation(table.Relation);
     }
 
-    private LogicalPlan CreateRelation(TableFactor table)
+    private ILogicalPlan CreateRelation(TableFactor table)
     {
         if (table is not TableFactor.Table relation)
         {
@@ -133,12 +115,19 @@ public class Planner
 
 public class LogicalPlanBuilder
 {
-    public LogicalPlanBuilder Scan()
+    public LogicalPlanBuilder Scan(DataSource dataSource)
     {
+        ScanWithFilters(dataSource);
         return this;
     }
 
-    public LogicalPlan Build()
+    private void ScanWithFilters(DataSource dataSource)
+    {
+        var schema = dataSource.Schema;
+
+    }
+
+    public ILogicalPlan Build()
     {
         return null;
     }

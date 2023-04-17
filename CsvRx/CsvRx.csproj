@@ -25,4 +25,8 @@
     <ProjectReference Include="..\CsvRx.Core\CsvRx.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Logical\" />
+  </ItemGroup>
+
 </Project>
