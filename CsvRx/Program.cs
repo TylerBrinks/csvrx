@@ -25,7 +25,7 @@ public class CsvOptions
 
 public class ExecutionContext
 {
-    //private readonly Dictionary<string, DataFrame> _tables = new();
+    private readonly Dictionary<string, TableProvider> _tables = new();
 
     public void RegisterCsv(string tableName, string path)
     {
@@ -35,18 +35,18 @@ public class ExecutionContext
     {
         var csv = new CsvDataSource(path, options);
         
-        //Register(tableName, LoadCsv(path));
+        Register(tableName, LoadCsv(path));
     }
 
-    //private void LoadCsv(string path)
-    //{
-    //    //return new DataFrame(new Scan(path, new CsvDataSource(path)));
-    //}
+    private void LoadCsv(string path)
+    {
+        return new CsvTableProvider(new Scan(path, new CsvDataSource(path)));
+    }
 
-    //public void Register(string tableName, DataFrame df)
-    //{
-    //    _tables.Add(tableName, df);
-    //}
+    public void Register(string tableName, TableProvider tableProvider)
+    {
+        _tables.Add(tableName, tableProvider);
+    }
 
     public LogicalPlan Sql(string sql)
     {
@@ -79,6 +79,11 @@ public class ExecutionContext
 
     //    return physical.Execute();
     //}
+}
+
+public class TableProvider
+{
+
 }
 
 
