@@ -80,36 +80,19 @@ public class Planner
     {
         var select = query.Body.AsSelect();
 
-        var plan = PlanFromTables(select.From!);
+        var from = select.From!.First();
+        var tableFactor = from.Relation;
 
-        return plan;
-    }
-
-    private ILogicalPlan PlanFromTables(Sequence<TableWithJoins> from)
-    {
-        // check for cluster by, lateral views, quality, top, sort by
-        //TODO multiple tables?
-
-        return PlanTableWithJoins(from.First());
-    }
-
-    private ILogicalPlan PlanTableWithJoins(TableWithJoins table)
-    {
-       // todo if joins?
-
-        return CreateRelation(table.Relation);
-    }
-
-    private ILogicalPlan CreateRelation(TableFactor table)
-    {
-        if (table is not TableFactor.Table relation)
+        if (tableFactor is not TableFactor.Table relation)
         {
             throw new InvalidOperationException();
         }
 
         var name = relation.Alias != null ? relation.Alias.Name : relation.Name.Values[0];
 
-        return new LogicalPlanBuilder().Scan().Build();
+        var table = dataSources[name];
+
+        return new LogicalPlanBuilder().Scan(table).Build();
     }
 }
 
@@ -117,14 +100,9 @@ public class LogicalPlanBuilder
 {
     public LogicalPlanBuilder Scan(DataSource dataSource)
     {
-        ScanWithFilters(dataSource);
-        return this;
-    }
-
-    private void ScanWithFilters(DataSource dataSource)
-    {
         var schema = dataSource.Schema;
 
+        return this;
     }
 
     public ILogicalPlan Build()
