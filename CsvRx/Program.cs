@@ -1,78 +1,17 @@
 ﻿using CsvRx.Data;
 using CsvRx.Logical;
+using CsvRx.Logical.Expressions;
+using CsvRx.Logical.Functions;
 using SqlParser.Ast;
-//using CsvRx.Data;
-//using CsvRx.Logical;
-//using CsvRx.Physical;
-
+using System.Runtime.InteropServices;
 
 var context = new ExecutionContext();
+// ReSharper disable once StringLiteralTypo
 context.RegisterCsv("aggregate_test_100", @"C:\Users\tyler\source\repos\sink\sqldatafusion\testing\data\csv\aggregate_test_100.csv");
-var df = context.Sql("SELECT c1, MAX(c12) FROM aggregate_test_100 GROUP BY c1"); //WHERE c11 > 0.1 AND c11 < 0.9 
+var df = context.Sql("SELECT c1, MAX(c3) FROM aggregate_test_100 WHERE c11 > 0.1 AND c11 < 0.9 GROUP BY c1");
 //var df = context.Sql("SELECT MAX(c3) FROM aggregate_test_100");
 //context.Execute(df);
-
-Console.Write("done");
-
-public class CsvOptions
-{
-    public string Delimiter { get; set; } = ",";
-    public bool HasHeader { get; set; } = true;
-    public int InferMax { get; set; } = 100;
-}
-
-public class ExecutionContext
-{
-    private readonly Dictionary<string, DataSource> _tables = new();
-
-    public void RegisterCsv(string tableName, string path)
-    {
-        RegisterCsv(tableName, path, new CsvOptions());
-    }
-
-    public void RegisterCsv(string tableName, string path, CsvOptions options)
-    {
-        var csv = new CsvDataSource(path, options);
-        //TODO: csv?
-        Register(tableName, csv);
-    }
-
-    public void Register(string tableName, DataSource df)
-    {
-        _tables.Add(tableName, df);
-    }
-
-    public ILogicalPlan Sql(string sql)
-    {
-        var ast = new Parser().ParseSql(sql);
-
-        if (ast.Count > 1)
-        {
-            throw new InvalidOperationException();
-        }
-
-        var plan = ast.First() switch
-        {
-            Statement.Select s => new Planner().CreateLogicalPlan(s.Query, _tables),
-            _ => throw new InvalidOperationException()
-        };
-
-        return plan;
-    }
-
-    //public List<RecordBatch> Execute(DataFrame df)
-    //{
-    //    return Execute(df.LogicalPlan);
-    //}
-
-    //public List<RecordBatch> Execute(ILogicalPlan plan)
-    //{
-    //    var optimized = new Optimizer().Optimize(plan);
-    //    var physical = new Planner().CreatePhysicalPlan(optimized);
-
-    //    return physical.Execute();
-    //}
-}
+Console.Write(df.ToStringIndented(new Indentation()));
 
 public class Planner
 {
@@ -80,7 +19,45 @@ public class Planner
     {
         var select = query.Body.AsSelect();
 
-        var from = select.From!.First();
+        var plan = PlanFromTable(select.From, dataSources);
+
+        // Wrap the scan in a filter if a clause exists
+        if (select.Selection != null)
+        {
+            plan = PlanSelection(select.Selection, plan);
+        }
+
+        var emptyFrom = plan is EmptyRelation;
+        var selectExpressions = PrepareSelectExpressions(select.Projection, plan, emptyFrom);
+
+        // having and group by may reference columns in the projection
+        // validate schema satisfies exprs
+
+        plan = new Projection(plan, selectExpressions, plan.Schema);
+        //ILogicalPlan projectedPlan = Project(plan, selectExpressions);
+
+        return plan;
+    }
+
+
+    /// <summary>
+    /// Gets the root logical plan.  The plan root will scan the data
+    /// source for the query's projected values. The plan is empty in
+    /// the case there is no from clause
+    ///  e.g. `select 123`
+    /// </summary>
+    /// <param name="tables">Data sources used to look up the table being scanned</param>
+    /// <param name="dataSources">Query from clause.  This should contain zero or one statements.</param>
+    /// <returns>ILogicalPlan instance as the plan root</returns>
+    /// <exception cref="InvalidOperationException">Thrown for unsupported from clauses</exception>
+    private static ILogicalPlan PlanFromTable(IReadOnlyCollection<TableWithJoins>? tables, IReadOnlyDictionary<string, DataSource> dataSources)
+    {
+        if (tables == null || tables.Count == 0)
+        {
+            return new EmptyRelation(true);
+        }
+
+        var from = tables!.First();
         var tableFactor = from.Relation;
 
         if (tableFactor is not TableFactor.Table relation)
@@ -88,477 +65,262 @@ public class Planner
             throw new InvalidOperationException();
         }
 
+        // Get the table name used to query the data source
         var name = relation.Alias != null ? relation.Alias.Name : relation.Name.Values[0];
 
+        // The root operation will scan the table for the projected values
         var table = dataSources[name];
-
-        return new LogicalPlanBuilder().Scan(table).Build();
+        return new TableScan(name, table);
     }
-}
-
-public class LogicalPlanBuilder
-{
-    public LogicalPlanBuilder Scan(DataSource dataSource)
+    /// <summary>
+    /// Builds a logical plan from a query filter
+    /// </summary>
+    /// <param name="predicate">Filter expression</param>
+    /// <param name="plan">Input plan</param>
+    /// <returns>ILogicalPlan instance to filter the input plan</returns>
+    private ILogicalPlan PlanSelection(Expression predicate, ILogicalPlan plan)
     {
-        var schema = dataSource.Schema;
-
-        return this;
+        var filterExpression = SqlToExpr(predicate, plan.Schema);
+        var usingColumns = new HashSet<Column>();
+        ExprToColumns(filterExpression, usingColumns);
+        //filterExpression = NormalizeColumn(filterExpression, new []{ plan.Schema }, usingColumns);
+        return new Filter(filterExpression, plan);
+    }
+    /// <summary>
+    /// Create a projection from a `SELECT` statement
+    /// </summary>
+    /// <param name="projection"></param>
+    /// <param name="plan"></param>
+    /// <param name="emptyFrom"></param>
+    /// <returns></returns>
+    private List<ILogicalExpression> PrepareSelectExpressions(Sequence<SelectItem> projection, ILogicalPlan plan, bool emptyFrom)
+    {
+        return projection.Select(expr => SelectToRex(expr, plan, emptyFrom)).SelectMany(_ => _).ToList();
     }
 
-    public ILogicalPlan Build()
+    private List<ILogicalExpression> SelectToRex(SelectItem sql, ILogicalPlan plan, bool emptyFrom)
     {
+        switch (sql)
+        {
+            case SelectItem.UnnamedExpression u:
+                {
+                    var expr = SqlToExpr(u.Expression, plan.Schema);
+                    //var column = NormalizeColumn(expr, new []{ plan.Schema }, null);
+                    return new List<ILogicalExpression> { expr };
+                }
+            case SelectItem.ExpressionWithAlias e:
+                {
+                    var select = SqlToExpr(e.Expression, plan.Schema);
+                    //var column = NormalizeColumn(select, new[] { plan.Schema }, null);
+                    return new List<ILogicalExpression> { new Alias(select, e.Alias) };
+                }
+            case SelectItem.Wildcard:
+                if (emptyFrom)
+                {
+                    throw new InvalidOperationException("SELECT * with no table is not valid");
+                }
+
+                return plan.Schema.Fields.Select(f => (ILogicalExpression)new Column(f.Name)).ToList();
+            //return ExpandWildcard(plan.Schema);//, plan);
+
+            //case SelectItem.QualifiedWildcard q:
+            //    return ExpandQualifiedWildcard(qualifier, plan.Schema);
+
+            default:
+                throw new InvalidOperationException("Invalid select expression");
+        }
+    }
+
+    //private List<ILogicalExpression> ExpandWildcard(Schema schema/*, ILogicalPlan plan*/)
+    //{
+    //    //var usingColumns = GetUsingColumns(plan);
+    //    //var columnsToSkip = usingColumns.
+
+    //    //if (!columnsToSkip.Any())
+    //    //{
+    //    return schema.Fields.Select(f => (ILogicalExpression)new Column(f.Name)).ToList();
+    //    //}
+
+    //    //var columns = schema.Fields.Select(f =>
+    //    //{
+    //    //    var col = new Column(f.Name);
+    //    //    if (!columnsToSkip.Contains(col))
+    //    //    {
+    //    //        return (ILogicalExpression)col;
+    //    //    }
+
+    //    //    return null;
+    //    //});
+
+    //    //return columns.Where(c => c!= null).ToList()!;
+    //}
+
+    /// <summary>
+    /// Relational expression from sql expression
+    /// </summary>
+    private ILogicalExpression SqlToExpr(Expression predicate, Schema schema)
+    {
+        var expr = SqlExprToLogicalExpr(predicate, schema);
+        // rewrite qualifier
+        // validate
+        // infer
+
+        return expr;
+    }
+
+    private ILogicalExpression SqlExprToLogicalExpr(Expression predicate, Schema schema)
+    {
+        if (predicate is Expression.BinaryOp b)
+        {
+            return ParseSqlBinaryOp(b.Left, b.Op, b.Right, schema);
+        }
+
+        return SqlExprToLogicalInternal(predicate, schema);
+    }
+
+    private ILogicalExpression ParseSqlBinaryOp(Expression left, BinaryOperator op, Expression right, Schema schema)
+    {
+        return new BinaryExpr(SqlExprToLogicalExpr(left, schema), op, SqlExprToLogicalExpr(right, schema));
+    }
+
+    private ILogicalExpression SqlExprToLogicalInternal(Expression expr, Schema schema)
+    {
+        switch (expr)
+        {
+            case Expression.LiteralValue v:
+                return ParseValue(v);
+
+            case Expression.Identifier ident:
+                return SqlIdentifierToExpr(ident, schema);
+
+            case Expression.Function fn:
+                return SqlFunctionToExpr(fn, schema);
+
+            default:
+                throw new NotImplementedException();
+        }
+    }
+
+    private ILogicalExpression SqlIdentifierToExpr(Expression.Identifier ident, Schema schema)
+    {
+        var field = schema.GetField(ident.Ident.Value);
+        return new Column(field.Name);
+    }
+
+    private void ExprToColumns(ILogicalExpression expression, HashSet<Column> accumulator)
+    {
+        InspectExprPre(expression, Inspect);
+
+        void Inspect(ILogicalExpression expr)
+        {
+            switch (expr)
+            {
+                case Column col:
+                    accumulator.Add(col);
+                    break;
+
+                case ScalarVariable sv:
+                    accumulator.Add(new Column(string.Join(".", sv.Names)));
+                    break;
+            }
+        }
+    }
+
+    private static void InspectExprPre(ILogicalExpression expression, Action<ILogicalExpression> action)
+    {
+        expression.Apply(expr =>
+        {
+            try
+            {
+                action((ILogicalExpression)expr);
+                return VisitRecursion.Continue;
+            }
+            catch
+            {
+                return VisitRecursion.Stop;
+            }
+        });
+    }
+
+    private ILogicalExpression ParseValue(Expression.LiteralValue literalValue)
+    {
+        switch (literalValue.Value)
+        {
+            //TODO case Value.Null: literal scalar value
+
+            case Value.Number n:
+                return ParseSqlNumber(n);
+
+            case Value.SingleQuotedString sq:
+                return new LiteralExpression(sq.Value);
+
+            case Value.Boolean b:
+                return new LiteralExpression(b.Value.ToString());
+
+            default:
+                throw new NotImplementedException();
+        }
+    }
+
+    private ILogicalExpression ParseSqlNumber(Value.Number number)
+    {
+        return new LiteralExpression(number.Value);
+    }
+
+    private ILogicalExpression SqlFunctionToExpr(Expression.Function function, Schema schema)
+    {
+        // scalar functions
+
+        // aggregate functions
+        var aggregate = AggregateFunction.FromString(function.Name);
+        if (aggregate != null)
+        {
+            var (agFn, expressionArgs) = AggregateFunctionToExpr(aggregate, function.Args, schema);
+            return new AggregateFunctionExpression(agFn, expressionArgs /*distinct*/);
+        }
+
         return null;
     }
+
+    private (AggregateFunction, List<ILogicalExpression>) AggregateFunctionToExpr(
+        AggregateFunction function,
+        Sequence<FunctionArg> args,
+        Schema schema)
+    {
+        List<ILogicalExpression> arguments = null!;
+
+        if (function is Count)
+        {
+            //
+        }
+        else
+        {
+            arguments = FunctionArgsToExpr(args, schema);
+        }
+
+        return (function, arguments);
+
+    }
+
+    private List<ILogicalExpression> FunctionArgsToExpr(Sequence<FunctionArg> args, Schema schema)
+    {
+        return args.Select(SqlFnArgToLogicalExpr).ToList();
+
+        ILogicalExpression SqlFnArgToLogicalExpr(FunctionArg functionArg)
+        {
+            return functionArg switch
+            {
+                FunctionArg.Named {Arg: FunctionArgExpression.Wildcard} => new Wildcard(),
+                FunctionArg.Named {Arg: FunctionArgExpression.FunctionExpression a} => SqlExprToLogicalExpr(a.Expression, schema),
+                FunctionArg.Unnamed {FunctionArgExpression: FunctionArgExpression.FunctionExpression fe} => SqlExprToLogicalExpr(fe.Expression, schema),
+                _ => throw new InvalidOleVariantTypeException($"Unsupported qualified wildcard argument: {functionArg.ToSql()}")
+            };
+        }
+    }
+
+    //private ILogicalExpression NormalizeColumn(ILogicalExpression expr, IEnumerable<Schema> schemas, HashSet<Column> usedColumns)
+    //{
+    //    return expr;
+    //}
 }
-
-
-//public class Optimizer
-//{
-//    public ILogicalPlan Optimize(ILogicalPlan plan)
-//    {
-//        return new ProjectionPushDownRule().Optimize(plan);
-//    }
-//}
-
-//public class Planner
-//{
-//    public DataFrame CreateDataFrame(Query query, Dictionary<string, DataFrame> tables)
-//    {
-//        var select = query.Body.AsSelect();
-
-//        var relation = select.From!.First().Relation!.AsTable();
-//        var name = relation.Alias != null ? relation.Alias.Name : relation.Name.Values[0];
-//        var table = tables[name];
-
-//        var projectionExpr = select.Projection.Select(_ => CreateLogicalExpression(GetSelectExpression(_), table)).ToList();
-
-//        var columnsInProjection = GetReferencedColumns(projectionExpr);
-//        var aggregateExprCount = projectionExpr.Count(IsAggregateExpression);
-
-//        //if (aggregateExprCount > 0 && select.GroupBy == null || !select.GroupBy!.Any())
-//        if(aggregateExprCount == 0 && select.GroupBy != null && select.GroupBy.Any())
-//        {
-//            throw new InvalidOperationException();
-//        }
-
-//        var columnsInSelect = GetColumnsReferencedBySelection(select, table);
-
-//        var plan = table;
-
-//        if (aggregateExprCount == 0)
-//        {
-//            //return PlanNonAggregateQuery(select, table, projectionExpr, columnsInSelect, columnsInProjection);
-//        }
-
-//        var projection = new List<ILogicalExpression>();
-//        var aggregates = new List<LogicalAggregateExpression>();
-//        var groupColumnCount = select.GroupBy?.Count ?? 0;
-//        var groupCount = 0;
-
-//        foreach (var expr in projectionExpr)
-//        {
-//            if (expr is LogicalAggregateExpression ae)
-//            {
-//                projection.Add(new ColumnIndex(groupColumnCount + aggregates.Count));
-//                aggregates.Add(ae);
-//            }
-//            //else if alias
-//            else
-//            {
-//                projection.Add(new ColumnIndex(groupCount++));
-//            }
-//        }
-
-//        plan = PlanAggregateQuery(projectionExpr, select, columnsInSelect, plan, aggregates);
-//        plan = plan.Project(projection);
-
-//        if (select.Having != null)
-//        {
-//            plan = plan.Filter(CreateLogicalExpression(select.Having, plan));
-//        }
-
-//        return plan;
-
-//        Expression GetSelectExpression(SelectItem selectItem)
-//        {
-//            return selectItem switch
-//            {
-//                SelectItem.UnnamedExpression u => u.Expression,
-//                SelectItem.ExpressionWithAlias e => e.Expression,
-//                _ => throw new InvalidOperationException()
-//            };
-//        }
-//    }
-
-//    private DataFrame PlanAggregateQuery(
-//        List<ILogicalExpression> projectionExpr,
-//        Select select,
-//        HashSet<string> columnsInSelect,
-//        DataFrame plan,
-//        List<LogicalAggregateExpression> aggregateExpr)
-//    {
-//        var projectionWithoutAggregates = projectionExpr.Where(_ => !IsAggregateExpression(_)).ToList();
-
-//        if (select.Selection != null)
-//        {
-//            var columnNamesInProjectionWithoutAggregates = GetReferencedColumns(projectionWithoutAggregates);
-//            var missing = columnsInSelect.Except(columnNamesInProjectionWithoutAggregates);
-
-//            // if the selection only references outputs from the projection we can simply apply the filter
-//            // expression to the DataFrame representing the projection
-//            if (!missing.Any())
-//            {
-//                plan = plan.Project(projectionWithoutAggregates);
-//                plan = plan.Filter(CreateLogicalExpression(select.Selection, plan));
-//            }
-//            else
-//            {
-//                // because the selection references some columns that are not in the projection output we
-//                // need to create an interim projection that has the additional columns and then we need to
-//                // remove them after the selection has been applied
-//                var fullList = projectionWithoutAggregates.Concat(missing.Select(c => new Column(c))).ToList();
-//                plan = plan.Project(fullList);
-//                plan = plan.Filter(CreateLogicalExpression(select.Selection, plan));
-//            }
-//        }
-
-//        var groupByExpr = select.GroupBy?.Select(_ => CreateLogicalExpression(_, plan)).ToList() ?? new List<ILogicalExpression>();
-//        return plan.Aggregate(groupByExpr, aggregateExpr);
-//    }
-
-//    private HashSet<string> GetColumnsReferencedBySelection(Select select, DataFrame table)
-//    {
-//        var accumulator = new HashSet<string>();
-
-//        if (select.Selection != null)
-//        {
-//            var filterExpr = CreateLogicalExpression(select.Selection, table);
-//            Visit(filterExpr, accumulator);
-//            var validColumns = table.Schema.Fields.Select(f => f.Name).ToList();
-
-//            accumulator.RemoveWhere(_ => !validColumns.Contains(_));
-//        }
-
-//        return accumulator;
-//    }
-
-//    private HashSet<string> GetReferencedColumns(List<ILogicalExpression> projectionExpressions)
-//    {
-//        var accumulator = new HashSet<string>();
-
-//        foreach (var expr in projectionExpressions)
-//        {
-//            Visit(expr, accumulator);
-//        }
-
-//        return accumulator;
-//    }
-
-//    private void Visit(ILogicalExpression expr, HashSet<string> accumulator)
-//    {
-//        switch (expr)
-//        {
-//            case Column c:
-//                accumulator.Add(c.Name);
-//                break;
-
-//            //case Alias a ;
-
-//            case BinaryExpr b:
-//                Visit(b.Left, accumulator);
-//                Visit(b.Right, accumulator);
-//                break;
-
-//            case LogicalAggregateExpression a:
-//                Visit(a.Expression, accumulator);
-//                break;
-//        }
-//    }
-
-//    private static bool IsAggregateExpression(ILogicalExpression expr)
-//    {
-//        if (expr is LogicalAggregateExpression)
-//        {
-//            return true;
-//        }
-
-//        // if alias, return alias.expr is agg exp
-
-//        return false;
-//    }
-
-//    //private ILogicalExpression CreateLogicalExpression(SelectItem selectItem, DataFrame table)
-//    private static ILogicalExpression CreateLogicalExpression(Expression expr, DataFrame table)
-//    {
-//        return expr switch
-//        {
-//            Expression.Identifier i => new Column(i.Ident.Value),
-//            Expression.LiteralValue v => GetLiteralValue(v.Value),
-//            Expression.Function fn => GetFunction(fn),
-//            Expression.BinaryOp b => GetBinaryExpr(b),
-//            _ => throw new InvalidOperationException()
-//        };
-
-//        ILogicalExpression GetFunction(Expression.Function fn)
-//        {
-//            var arg = fn.Args?.FirstOrDefault();
-
-//            var argVal = arg switch
-//            {
-//                FunctionArg.Unnamed u => u.FunctionArgExpression,
-//                FunctionArg.Named n => n.Arg,
-//                _ => throw new InvalidOperationException()
-//            };
-
-//            var argExp = argVal switch
-//            {
-//                FunctionArgExpression.FunctionExpression f => f.Expression,
-//                _ => throw new InvalidOperationException()
-//            };
-
-//            return fn.Name.ToSql() switch
-//            {
-//                "MIN" => new MinFunction(CreateLogicalExpression(argExp, table)),
-//                "MAX" => new MaxFunction(CreateLogicalExpression(argExp, table))
-//            };
-//        }
-
-//        ILogicalExpression GetLiteralValue(Value value)
-//        {
-//            return value switch
-//            {
-//                Value.Number n => new NumberValue(n.Value),
-//                _ => null
-//            };
-//        }
-
-//        ILogicalExpression GetBinaryExpr(Expression.BinaryOp op)
-//        {
-//            var left = CreateLogicalExpression(op.Left, table);
-//            var right = CreateLogicalExpression(op.Right, table);
-
-//            return op.Op switch
-//            {
-//                BinaryOperator.Eq => new Eq(left, right),
-//                BinaryOperator.NotEq => new Neq(left, right),
-//                BinaryOperator.Gt => new Gt(left, right),
-//                BinaryOperator.GtEq => new GtEq(left, right),
-//                BinaryOperator.Lt => new Lt(left, right),
-//                BinaryOperator.LtEq => new LtEq(left, right),
-//                BinaryOperator.And => new And(left, right),
-//                BinaryOperator.Or => new Or(left, right),
-//                BinaryOperator.Plus => new Add(left, right),
-//                BinaryOperator.Minus => new Subtract(left, right),
-//                BinaryOperator.Multiply => new Multiply(left, right),
-//                BinaryOperator.Divide => new Divide(left, right),
-//                BinaryOperator.Modulo => new Modulus(left, right)
-//            };
-//        }
-//    }
-
-//    public IPhysicalPlan CreatePhysicalPlan(ILogicalPlan optimized)
-//    {
-//        switch (optimized)
-//        {
-//            case Scan scan:
-//                return new ScanExec(scan.DataSource, scan.Projection);
-
-//            case Selection s:
-//                var inputS = CreatePhysicalPlan(s.Plan);
-//                var filterExpr = CreatePhysicalExpr(s.Expr, s.Plan);
-//                return new SelectionExec(inputS, filterExpr);
-
-//            case Projection p:
-//                var inputp = CreatePhysicalPlan(p.Plan);
-//                var projectionExpr = p.Expr.Select(_ => CreatePhysicalExpr(_, p.Plan)).ToList();
-//                var projectionSchema = new Schema(p.Expr.Select(_ => _.ToField(p.Plan)).ToList());
-//                return new ProjectionExec(inputp, projectionSchema, projectionExpr);
-
-//            case Aggregate a:
-//                var inputA = CreatePhysicalPlan(a.Plan);
-//                var groupExpr = a.Expr.Select(_ => CreatePhysicalExpr(_, a.Plan));
-//                var aggregateExpr = a.AggregateExpr.Select(_ =>
-//                {
-//                    return _ switch
-//                    {
-//                        MaxFunction => (IPhysicalAggregateExpression)new MaxExpression(CreatePhysicalExpr(_.Expression, a.Plan)),
-//                        MinFunction => new MinExpression(CreatePhysicalExpr(_.Expression, a.Plan)),
-//                        _ => throw new InvalidOperationException()
-//                    };
-//                }).ToList();
-//                return new HashAggregateExec(inputA, groupExpr, aggregateExpr, a.Schema);
-
-//            default:
-//                throw new InvalidOperationException();
-//        }
-//    }
-
-//    private PhysicalExpression CreatePhysicalExpr(ILogicalExpression expr, ILogicalPlan plan)
-//    {
-//        switch (expr)
-//        {
-//            // todo Numerics here
-//            case StringValue sv:
-//                return new LiteralStringExpression(sv.Value);
-
-//            default:
-//                throw new InvalidOperationException();
-//        }
-//    }
-//}
-
-//public class ProjectionPushDownRule
-//{
-//    public ILogicalPlan Optimize(ILogicalPlan plan)
-//    {
-//        return PushDown(plan, new List<string>());
-//    }
-
-//    private ILogicalPlan PushDown(ILogicalPlan plan, List<string> columnNames)
-//    {
-//        switch (plan)
-//        {
-//            case Projection p:
-//                ExtractColumns(p.Expr, p.Plan, columnNames);
-//                var input = PushDown(p.Plan, columnNames);
-//                return new Projection(input, p.Expr);
-
-//            case Selection s:
-//                ExtractColumns(s.Expr, s.Plan, columnNames);
-//                var input2 = PushDown(s.Plan, columnNames);
-//                return new Selection(input2, s.Expr);
-
-//            case Aggregate a:
-//                ExtractColumns(a.Expr, a.Plan, columnNames);
-//                ExtractColumns(a.AggregateExpr.Select(a => a.Expression).ToList(), a.Plan, columnNames);
-//                return new Aggregate(PushDown(a.Plan, columnNames), a.Expr, a.AggregateExpr);
-
-//            case Scan scan:
-//                var validFieldNames = scan.DataSource.Schema.Fields.Select(f => f.Name).ToList();
-//                var pd = validFieldNames.Where(columnNames.Contains).OrderBy(f => f).ToList();
-//                return new Scan(scan.Path, scan.DataSource, pd);
-
-//            default:
-//                throw new InvalidOperationException();
-//        }
-//    }
-
-//    public void ExtractColumns(List<ILogicalExpression> expressions, ILogicalPlan input, List<string> accum)
-//    {
-//        foreach (var expr in expressions)
-//        {
-//            ExtractColumns(expr, input, accum);
-//        }
-//    }
-
-//    public void ExtractColumns(ILogicalExpression expr, ILogicalPlan input, List<string> accum)
-//    {
-//        switch (expr)
-//        {
-//            case ColumnIndex ci:
-//                accum.Add(input.Schema.Fields[ci.Index].Name);
-//                break;
-
-//            case Column c:
-//                accum.Add(c.Name);
-//                break;
-
-//            case BinaryExpr b:
-//                ExtractColumns(b.Left, input, accum);
-//                ExtractColumns(b.Right, input, accum);
-//                break;
-
-//                //alias
-//                // caset
-//            case StringValue:
-//            case NumberValue:
-//                break;
-
-//            default:
-//                throw new InvalidOperationException();
-//        }
-//    }
-//}
-
-//public record RecordBatch(Schema Schema, List<ColumnVector> Fields)
-//{
-//    public int RowCount => Fields.First().Size;
-//}
-
-//public abstract record ColumnVector(int Size)
-//{
-//    public abstract object GetValue(int i);
-//}
-
-
-//public record LiteralValueVector(object Value, int Size) : ColumnVector(Size)
-//{
-//    public override object GetValue(int i)
-//    {
-//        if (i < 0 || i > Size)
-//        {
-//            throw new IndexOutOfRangeException();
-//        }
-
-//        return Value;
-//    }
-//}
-
-//public record MinFunction(ILogicalExpression Expression) : LogicalAggregateExpression("MIN", Expression);
-
-//public record MaxFunction(ILogicalExpression Expression) : LogicalAggregateExpression("MAX", Expression);
-
-//public record StringValue(string Value) : ILogicalExpression
-//{
-//    public Field ToField(ILogicalPlan plan)
-//    {
-//        return new Field(Value);
-//    }
-//}
-
-//public record NumberValue(string Value) : ILogicalExpression
-//{
-//    public Field ToField(ILogicalPlan plan)
-//    {
-//        return new Field(Value); //TODO data type
-//    }
-//}
-
-//public record ColumnIndex(int Index) : ILogicalExpression
-//{
-//    public Field ToField(ILogicalPlan plan)
-//    {
-//        return plan.Schema.Fields[Index];
-//    }
-//}
-
-//public interface IAccumulator
-//{
-//    void Accumulate(object value);
-//    object FinalValue();
-//}
-
-//public interface IPhysicalAggregateExpression
-//{
-//    PhysicalExpression InputExpression { get; }
-//    IAccumulator CreateAccumulator();
-//}
-
-//public record MaxExpression(PhysicalExpression Expr): IPhysicalAggregateExpression
-//{
-//    public PhysicalExpression InputExpression => Expr;
-//    public IAccumulator CreateAccumulator()
-//    {
-//        throw new NotImplementedException();
-//    }
-//}
-
-//public record MinExpression(PhysicalExpression Expr) : IPhysicalAggregateExpression
-//{
-//    public PhysicalExpression InputExpression => Expr;
-//    public IAccumulator CreateAccumulator()
-//    {
-//        throw new NotImplementedException();
-//    }
-//}
 

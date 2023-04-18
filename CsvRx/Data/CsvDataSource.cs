@@ -22,7 +22,7 @@ public enum ColumnDataType
 public class CsvDataSource : DataSource
 {
     private readonly string _filePath;
-    private CsvOptions _options;
+    private readonly CsvOptions _options;
 
     public CsvDataSource(string filePath, CsvOptions options)
     {

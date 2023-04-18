@@ -33,4 +33,8 @@ public class Schema
     //{
     //    return new Schema(indices.Select((_, i) => Fields[i]).ToList());
     //}
+    public Field GetField(string name)
+    {
+        return Fields.First(f => f.Name == name);
+    }
 }
