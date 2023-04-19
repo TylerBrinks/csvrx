@@ -2,6 +2,8 @@
 using CsvRx.Logical;
 using SqlParser.Ast;
 
+namespace CsvRx;
+
 public class ExecutionContext
 {
     private readonly Dictionary<string, DataSource> _tables = new();
@@ -33,7 +35,7 @@ public class ExecutionContext
         var plan = ast.First() switch
         {
             Statement.Select s => new Planner().CreateLogicalPlan(s.Query, _tables),
-            _ => throw new InvalidOperationException()
+            _ => throw new NotImplementedException()
         };
 
         return plan;

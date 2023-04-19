@@ -1,11 +1,11 @@
 ﻿using CsvRx.Data;
 
-namespace CsvRx.Logical;
+namespace CsvRx.Logical.Plans;
 
-internal record Filter(ILogicalExpression Predicate, ILogicalPlan Plan) : ILogicalPlan
+internal record Filter(ILogicalPlan Plan, ILogicalExpression Predicate) : ILogicalPlan
 {
     public Schema Schema => Plan.Schema;
-  
+
     public override string ToString()
     {
         return $"Filter: {Predicate}::{Plan}";

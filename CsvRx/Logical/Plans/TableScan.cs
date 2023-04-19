@@ -1,14 +1,13 @@
 ﻿using CsvRx.Data;
 
-namespace CsvRx.Logical
+namespace CsvRx.Logical.Plans
 {
-    internal record TableScan(string Name, DataSource DataSource) : ILogicalPlan
+    internal record TableScan(string Name, Schema Schema) : ILogicalPlan
     {
         // table name,
         // projection
         // filters
-        public Schema Schema => DataSource.Schema;
-       
+
         public string ToStringIndented(Indentation? indentation)
         {
             return ToString();

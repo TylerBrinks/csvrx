@@ -1,10 +1,10 @@
 ﻿using CsvRx.Data;
 
-namespace CsvRx.Logical;
+namespace CsvRx.Logical.Plans;
 
 internal record EmptyRelation(bool ProduceOneRow = false) : ILogicalPlan
 {
-    public Schema Schema => new (new List<Field>());
+    public Schema Schema => new(new List<Field>());
 
     public override string ToString()
     {

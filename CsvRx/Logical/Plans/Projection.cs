@@ -1,6 +1,6 @@
 ﻿using CsvRx.Data;
 
-namespace CsvRx.Logical;
+namespace CsvRx.Logical.Plans;
 
 public record Projection(ILogicalPlan Plan, List<ILogicalExpression> Expr, Schema Schema) : ILogicalPlan
 {

@@ -22,7 +22,7 @@ public class Schema
     //        }
     //        else
     //        {
-    //            throw new InvalidOperationException();
+    //            throw new NotImplementedException();
     //        }
     //    }
 
@@ -33,8 +33,8 @@ public class Schema
     //{
     //    return new Schema(indices.Select((_, i) => Fields[i]).ToList());
     //}
-    public Field GetField(string name)
+    public Field? GetField(string name)
     {
-        return Fields.First(f => f.Name == name);
+        return Fields.FirstOrDefault(f => f.Name == name);
     }
 }

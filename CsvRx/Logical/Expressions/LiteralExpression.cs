@@ -10,14 +10,14 @@ internal record LiteralExpression(string Value) : ILogicalExpression
     }
 }
 
-internal record AggregateFunctionExpression(AggregateFunction AggregateFunction, List<ILogicalExpression> ExpressionArgs) : ILogicalExpression
-{
-    public override string ToString()
-    {
-        var exp = string.Join(", ", ExpressionArgs.Select(_ => _.ToString()));
-        return $"{AggregateFunction}({exp})";
-    }
-}
+//internal record AggregateFunctionExpression(AggregateFunctionType AggregateFunction, List<ILogicalExpression> ExpressionArgs) : ILogicalExpression
+//{
+//    public override string ToString()
+//    {
+//        var exp = string.Join(", ", ExpressionArgs.Select(_ => _.ToString()));
+//        return $"{AggregateFunction}({exp})";
+//    }
+//}
 
 internal record Wildcard : ILogicalExpression
 {
