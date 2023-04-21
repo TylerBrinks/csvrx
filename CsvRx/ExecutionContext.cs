@@ -34,23 +34,50 @@ public class ExecutionContext
 
         var plan = ast.First() switch
         {
-            Statement.Select s => new Planner().CreateLogicalPlan(s.Query, _tables),
+            Statement.Select s => new LogicalPlanner().CreateLogicalPlan(s.Query, _tables),
             _ => throw new NotImplementedException()
         };
 
         return plan;
     }
 
-    //public List<RecordBatch> Execute(DataFrame df)
-    //{
-    //    return Execute(df.LogicalPlan);
-    //}
+    public void ExecutePlan(ILogicalPlan plan)
+    {
+        var df = new DataFrame(new SessionState(), plan);
+        var execution = df.CreatePhysicalPlan();
+        
+    }
+}
 
-    //public List<RecordBatch> Execute(ILogicalPlan plan)
-    //{
-    //    var optimized = new Optimizer().Optimize(plan);
-    //    var physical = new Planner().CreatePhysicalPlan(optimized);
+internal class InlineTableScan : IAnalyzeRule
+{
+    public ILogicalPlan Analyze(ILogicalPlan plan)
+    {
+        return plan.Transform(plan, AnalyzeInternal);
+    }
 
-    //    return physical.Execute();
-    //}
+    private ILogicalPlan AnalyzeInternal(ILogicalPlan plan)
+    {
+        return plan;
+    }
+}
+internal class TypeCoercion : IAnalyzeRule
+{
+    public ILogicalPlan Analyze(ILogicalPlan plan)
+    {
+        return plan;
+    }
+}
+
+internal class CountWildcardRule : IAnalyzeRule
+{
+    public ILogicalPlan Analyze(ILogicalPlan plan)
+    {
+        return plan;
+    }
+}
+
+internal interface IAnalyzeRule
+{
+    ILogicalPlan Analyze(ILogicalPlan plan);
 }

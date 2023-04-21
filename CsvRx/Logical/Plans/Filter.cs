@@ -10,6 +10,7 @@ internal record Filter(ILogicalPlan Plan, ILogicalExpression Predicate) : ILogic
     {
         return $"Filter: {Predicate}::{Plan}";
     }
+
     public string ToStringIndented(Indentation? indentation)
     {
         var indent = indentation ?? new Indentation();

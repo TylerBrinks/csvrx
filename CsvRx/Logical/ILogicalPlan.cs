@@ -1,92 +1,90 @@
-﻿using System.Drawing;
-using CsvRx.Data;
-using CsvRx.Logical.Expressions;
+﻿using CsvRx.Data;
+using CsvRx.Logical.Plans;
 
 namespace CsvRx.Logical;
 
-public enum VisitRecursion
-{
-    Continue,
-    Skip,
-    Stop
-}
-
-public interface INode
-{
-    public VisitRecursion Apply(Func<INode, VisitRecursion> action)
-    {
-        var result = action(this);
-
-        switch (result)
-        {
-            case VisitRecursion.Skip:
-                return VisitRecursion.Continue;
-
-            case VisitRecursion.Stop:
-                return VisitRecursion.Stop;
-        }
-
-        return ApplyChildren(node => node.Apply(action));
-    }
-
-    public VisitRecursion ApplyChildren(Func<INode, VisitRecursion> action);
-}
-
-public interface ILogicalPlan// : IFriendlyFormat
+public interface ILogicalPlan : INode
 {
     Schema Schema { get; }
 
     string ToStringIndented(Indentation? indentation);
-}
 
-public record Indentation(int Size = 0)
-{
-    public int Size { get; set; } = Size;
-
-    public string Next(ILogicalPlan plan)
+    T INode.MapChildren<T>(T instance, Func<T, T> map)
     {
-        Size += 1;
+        var oldChildren = GetInputs();
 
-        return Environment.NewLine + new string(' ', Size * 2) + plan.ToStringIndented(this);
-    }
-}
+        var newChildren = oldChildren
+            .Select(p => p.Transform(p, map as Func<ILogicalPlan, ILogicalPlan>))
+            .ToList();
 
-public interface ILogicalExpression : INode
-{
-    VisitRecursion INode.ApplyChildren(Func<INode, VisitRecursion> action)
-    {
-        var children = GetChildExpressions(this);
-
-        foreach (var child in children)
+        if (oldChildren.Zip(newChildren).Any(index => index.First != index.Second))
         {
-            var result = action(child);
-
-            switch (result)
-            {
-                case VisitRecursion.Skip:
-                    return VisitRecursion.Continue;
-
-                case VisitRecursion.Stop:
-                    return result;
-            }
+            return (T) this;
         }
 
-        return VisitRecursion.Continue;
+        return (T)this;
     }
 
-    List<ILogicalExpression> GetChildExpressions(ILogicalExpression expression)
+    List<ILogicalPlan> GetInputs()
     {
-        return expression switch
+        return this switch
         {
-            Column or ScalarVariable => new List<ILogicalExpression>(),
-            BinaryExpr b => new List<ILogicalExpression> { b.Left, b.Right },
+            Aggregate a => new List<ILogicalPlan>{ a.Plan },
+            Distinct d => new List<ILogicalPlan> { d.Plan },
+            Filter f => new List<ILogicalPlan> { f.Plan },
+            Projection p => new List<ILogicalPlan> { p.Plan },
 
-            //// Like
-            //// between
-            //// Case
-            //// Aggregate fn
-            //// InList
+            _ => new List<ILogicalPlan>()
+        };
+    }
+
+    List<ILogicalExpression> GetExpressions()
+    {
+        return this switch
+        {
+            Aggregate a => a.AggregateExpressions.Select(_=>_).Concat(a.GroupExpressions).ToList(),
+            Filter f => new List<ILogicalExpression> { f.Predicate },
+            Projection p => p.Expr,
+
             _ => new List<ILogicalExpression>()
         };
+    }
+
+    VisitRecursion INode.ApplyChildren(Func<INode, VisitRecursion> action)
+    {
+        throw new NotImplementedException();
+    }
+
+    T INode.Transform<T>(T instance, Func<T, T> func)
+    {
+        var afterOpChildren = MapChildren(this, node => node.Transform(node, func as Func<ILogicalPlan, ILogicalPlan>));
+
+        var newNode = func((T)afterOpChildren);
+
+        return newNode;
+    }
+
+    public ILogicalPlan WithNewInputs(List<ILogicalPlan> newInputs)
+    {
+        return FromPlan(GetExpressions(), newInputs);
+    }
+
+    public ILogicalPlan FromPlan(List<ILogicalExpression> expressions, List<ILogicalPlan> inputs)
+    {
+        switch (this)
+        {
+            case Projection p:
+                return null;
+            case Filter f:
+                return null;
+            case Aggregate a:
+                return null;
+
+            case TableScan t:
+                return t;  // Not using filters; no need to clone.
+
+            default:
+                throw new NotImplementedException();
+        }
     }
 }

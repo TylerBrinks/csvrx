@@ -1,4 +1,6 @@
-﻿namespace CsvRx.Data;
+﻿using CsvRx.Logical.Expressions;
+
+namespace CsvRx.Data;
 
 public class Schema
 {
@@ -7,34 +9,40 @@ public class Schema
         Fields = fields;
     }
 
-    public List<Field> Fields { get; }
+    private Schema()
+    {
+    }
 
-    //public Schema Select(List<string> names)
-    //{
-    //    var fields = new List<Field>();
-    //    foreach (var name in names)
-    //    {
-    //        var m = Fields.FindAll(_ => _.Name == name);
+    public List<Field> Fields { get; } = new();
 
-    //        if (m.Count == 1)
-    //        {
-    //            fields.Add(m[0]);
-    //        }
-    //        else
-    //        {
-    //            throw new NotImplementedException();
-    //        }
-    //    }
-
-    //    return new Schema(fields);
-    //}
-
-    //public Schema Project(List<int> indices)
-    //{
-    //    return new Schema(indices.Select((_, i) => Fields[i]).ToList());
-    //}
     public Field? GetField(string name)
     {
         return Fields.FirstOrDefault(f => f.Name == name);
+    }
+
+    public int? IndexOfColumn(Column col)
+    {
+        var field = GetField(col.Name);
+        if (field == null)
+        {
+            return null;
+
+        }
+        return Fields.IndexOf(field);
+    }
+
+    public Schema Merge(Schema schema)
+    {
+        foreach (var field in schema.Fields.Where(field => Fields.All(f => f.Name != field.Name)))
+        {
+            Fields.Add(field);
+        }
+
+        return this;
+    }
+
+    public static Schema Empty()
+    {
+        return new Schema();
     }
 }

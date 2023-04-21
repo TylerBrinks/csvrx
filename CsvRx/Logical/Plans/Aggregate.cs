@@ -1,25 +1,19 @@
 ﻿using CsvRx.Data;
 
-namespace CsvRx.Logical.Plans
+namespace CsvRx.Logical.Plans;
+
+internal record Aggregate(
+    ILogicalPlan Plan,
+    List<ILogicalExpression> GroupExpressions,
+    List<ILogicalExpression> AggregateExpressions,
+    Schema Schema)
+    : ILogicalPlan
 {
-    internal record Aggregate: ILogicalPlan
+    public string ToStringIndented(Indentation? indentation)
     {
-        private readonly Schema _schema;
-
-        public Aggregate(ILogicalPlan plan,
-            List<ILogicalExpression> groupExpressions,
-            List<ILogicalExpression> aggregateExpressions)
-        {
-            var aggregateProjectionExpressions = groupExpressions.Concat(aggregateExpressions).Select(e => e).ToList();
-            //var fields = 
-            //_schema = Schema();
-        }
-
-        public Schema Schema => _schema;
-        
-        public string ToStringIndented(Indentation? indentation)
-        {
-            return "Aggregate Plan";
-        }
+        var indent = indentation ?? new Indentation();
+        var groups = string.Join(",", GroupExpressions);
+        var aggregates = string.Join(",", AggregateExpressions);
+        return $"Aggregate: groupBy=[{groups}], aggr=[{aggregates}]{indent.Next(Plan)}";
     }
 }
