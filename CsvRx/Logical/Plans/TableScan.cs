@@ -2,7 +2,7 @@
 
 namespace CsvRx.Logical.Plans
 {
-    internal record TableScan(string Name, Schema Schema, DataSource Source) : ILogicalPlan
+    internal record TableScan(string Name, Schema Schema, DataSource Source, List<uint>? Projection = null) : ILogicalPlan
     {
         public string ToStringIndented(Indentation? indentation)
         {

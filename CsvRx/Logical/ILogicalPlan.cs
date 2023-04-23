@@ -69,16 +69,22 @@ public interface ILogicalPlan : INode
         return FromPlan(GetExpressions(), newInputs);
     }
 
+    //private void InspectExpressions()
+
     public ILogicalPlan FromPlan(List<ILogicalExpression> expressions, List<ILogicalPlan> inputs)
     {
         switch (this)
         {
             case Projection p:
-                return null;
+                return new Projection(inputs[0], expressions, p.Schema);
+
             case Filter f:
-                return null;
+                var predicate = expressions[0];
+                // remove aliases visitor
+                return new Filter(inputs[0], predicate);
+
             case Aggregate a:
-                return null;
+                return a with {Plan = inputs[0]};
 
             case TableScan t:
                 return t;  // Not using filters; no need to clone.
@@ -87,4 +93,9 @@ public interface ILogicalPlan : INode
                 throw new NotImplementedException();
         }
     }
+}
+
+public interface ILogicalPlanWrapper : ILogicalPlan
+{
+    ILogicalPlan Plan { get; }
 }

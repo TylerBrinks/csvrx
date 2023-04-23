@@ -1,4 +1,5 @@
 ﻿namespace CsvRx.Logical.Functions;
+
 internal enum AggregateFunctionType
 {
     Count,

@@ -27,6 +27,7 @@
 
   <ItemGroup>
     <Folder Include="Logical\Rules\" />
+    <Folder Include="Physical\Rules\" />
   </ItemGroup>
 
 </Project>

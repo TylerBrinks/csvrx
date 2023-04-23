@@ -1,4 +1,5 @@
 ﻿using CsvRx.Logical.Expressions;
+using CsvRx.Logical.Functions;
 
 namespace CsvRx.Logical;
 
@@ -31,14 +32,24 @@ public interface ILogicalExpression : INode
         {
             Column or ScalarVariable => new List<ILogicalExpression>(),
             BinaryExpr b => new List<ILogicalExpression> { b.Left, b.Right },
-
+            AggregateFunction fn => GetAggregateChildren(fn),
             //// Like
             //// between
             //// Case
-            //// Aggregate fn
             //// InList
             _ => new List<ILogicalExpression>()
         };
+
+        List<ILogicalExpression> GetAggregateChildren(AggregateFunction fn)
+        {
+            var args = fn.Args.Select(_ => _).ToList();
+            if (fn.Filter != null)
+            {
+                args.Add(fn.Filter);
+            }
+
+            return args;
+        }
     }
 
     T INode.MapChildren<T>(T instance, Func<T, T> transformation)

@@ -1,6 +1,7 @@
 ﻿using CsvRx.Data;
 using CsvRx.Logical;
 using CsvRx.Physical;
+using CsvRx.Physical.Rules;
 
 namespace CsvRx;
 
@@ -38,7 +39,7 @@ public class LogicalPlanOptimizer
         //// simplify expressions does not simplify expressions in subqueries, so we
         //// run it again after running the optimizations that potentially converted
         //// subqueries to joins
-        new SimplifyExpressionsRule(),
+        //new SimplifyExpressionsRule(),
         //new(MergeProjection::new()),
         //Arc::new(RewriteDisjunctivePredicate::new()),
         //new(EliminateDuplicatedExpr::new()),
@@ -87,7 +88,7 @@ public class LogicalPlanOptimizer
         {
             case ApplyOrder.TopDown:
                 {
-                    ILogicalPlan optimizeSelfOpt = rule.TryOptimize(plan);
+                    var optimizeSelfOpt = rule.TryOptimize(plan);
                     ILogicalPlan optimizeInputsOpt = null!;
 
                     if (optimizeSelfOpt != null)
@@ -97,6 +98,28 @@ public class LogicalPlanOptimizer
                     else
                     {
                         optimizeInputsOpt = OptimizeInputs(rule, plan);
+                    }
+
+
+                    Console.WriteLine("");
+                    Console.WriteLine("Inputs Opt");
+                    if (optimizeInputsOpt == null)
+                    {
+                        Console.WriteLine("None");
+                    }
+                    else
+                    {
+                        Console.WriteLine(optimizeInputsOpt.ToStringIndented(new Indentation()));
+                    }
+
+                    Console.WriteLine("Self Opt");
+                    if (optimizeSelfOpt == null)
+                    {
+                        Console.WriteLine("None");
+                    }
+                    else
+                    {
+                        Console.WriteLine(optimizeSelfOpt.ToStringIndented(new Indentation()));
                     }
 
                     return optimizeInputsOpt ?? optimizeSelfOpt;
@@ -127,7 +150,7 @@ public class LogicalPlanOptimizer
         var inputs = plan.GetInputs();
         var result = inputs.Select(p => OptimizeRecursively(rule, p)).ToList();
 
-        if (!result.Any())//TODO: or all are null
+        if (!result.Any() || result.All(r => r == null))//TODO: or all are null
         {
             return null;
         }
@@ -161,55 +184,55 @@ public interface ILogicalPlanOptimizationRule
 }
 
 
-public class SimplifyExpressionsRule : ILogicalPlanOptimizationRule
-{
-    public ApplyOrder ApplyOrder => ApplyOrder.None;
-    public ILogicalPlan TryOptimize(ILogicalPlan plan)
-    {
-        //    //var childrenMergeSchema = MergeSchema(plan.GetInputs());
-        //    //var schemas = new List<Schema> { plan.Schema, childrenMergeSchema };
+//public class SimplifyExpressionsRule : ILogicalPlanOptimizationRule
+//{
+//    public ApplyOrder ApplyOrder => ApplyOrder.None;
+//    public ILogicalPlan TryOptimize(ILogicalPlan plan)
+//    {
+//        //    //var childrenMergeSchema = MergeSchema(plan.GetInputs());
+//        //    //var schemas = new List<Schema> { plan.Schema, childrenMergeSchema };
 
-        //    //var info = schemas.Aggregate(new SimplifyContext(), (context, schema) => context.WithSchema(schema));
+//        //    //var info = schemas.Aggregate(new SimplifyContext(), (context, schema) => context.WithSchema(schema));
 
-        //    //var simplifier = new ExprSimplifier(info);
+//        //    //var simplifier = new ExprSimplifier(info);
 
-        //    var newInputs = plan.GetInputs().Select(TryOptimize).ToList();
-        //    var expr = plan.GetExpressions()/*.Select(e =>
-        //    {
-        //        var name = e.CreateName();
-        //        var newExpression = simplifier.Simplify(e);
-        //        var newName = newExpression.CreateName();
+//        //    var newInputs = plan.GetInputs().Select(TryOptimize).ToList();
+//        //    var expr = plan.GetExpressions()/*.Select(e =>
+//        //    {
+//        //        var name = e.CreateName();
+//        //        var newExpression = simplifier.Simplify(e);
+//        //        var newName = newExpression.CreateName();
 
-        //        if (name != newName)
-        //        {
-        //            return newExpression;//todo alias from name variable
-        //        }
+//        //        if (name != newName)
+//        //        {
+//        //            return newExpression;//todo alias from name variable
+//        //        }
 
-        //        return newExpression;
-        //    })*/.ToList();
+//        //        return newExpression;
+//        //    })*/.ToList();
 
-        //    return plan.FromPlan(expr, newInputs);
+//        //    return plan.FromPlan(expr, newInputs);
 
-        return plan;
-    }
+//        return plan;
+//    }
 
-    Schema MergeSchema(List<ILogicalPlan> plans)
-    {
-        switch (plans.Count)
-        {
-            case 0:
-                return Schema.Empty();
-            case 1:
-                return plans[0].Schema;
-            default:
-                {
-                    //TODO duplicates?
-                    var merged = plans.Select(p => p.Schema).Aggregate((a, b) => a.Merge(b));
-                    return merged;
-                }
-        }
-    }
-}
+//    Schema MergeSchema(List<ILogicalPlan> plans)
+//    {
+//        switch (plans.Count)
+//        {
+//            case 0:
+//                return Schema.Empty();
+//            case 1:
+//                return plans[0].Schema;
+//            default:
+//                {
+//                    //TODO duplicates?
+//                    var merged = plans.Select(p => p.Schema).Aggregate((a, b) => a.Merge(b));
+//                    return merged;
+//                }
+//        }
+//    }
+//}
 
 //internal class ExprSimplifier
 //{
@@ -241,32 +264,13 @@ public class SimplifyExpressionsRule : ILogicalPlanOptimizationRule
 //    }
 //}
 
-internal class SimplifyContext
-{
-    private readonly List<Schema> _schemas = new();
+//internal class SimplifyContext
+//{
+//    private readonly List<Schema> _schemas = new();
 
-    internal SimplifyContext WithSchema(Schema schema)
-    {
-        _schemas.Add(schema);
-        return this;
-    }
-}
-
-public class PushDownProjectionRule : ILogicalPlanOptimizationRule
-{
-    public ApplyOrder ApplyOrder => ApplyOrder.TopDown;
-    public ILogicalPlan TryOptimize(ILogicalPlan plan)
-    {
-        return plan;
-    }
-}
-
-public class EliminateProjectionRule : ILogicalPlanOptimizationRule
-{
-    public ApplyOrder ApplyOrder => ApplyOrder.TopDown;
-
-    public ILogicalPlan TryOptimize(ILogicalPlan plan)
-    {
-        return plan;
-    }
-}
+//    internal SimplifyContext WithSchema(Schema schema)
+//    {
+//        _schemas.Add(schema);
+//        return this;
+//    }
+//}

@@ -7,7 +7,7 @@ internal record Aggregate(
     List<ILogicalExpression> GroupExpressions,
     List<ILogicalExpression> AggregateExpressions,
     Schema Schema)
-    : ILogicalPlan
+    : ILogicalPlanWrapper
 {
     public string ToStringIndented(Indentation? indentation)
     {
@@ -15,5 +15,12 @@ internal record Aggregate(
         var groups = string.Join(",", GroupExpressions);
         var aggregates = string.Join(",", AggregateExpressions);
         return $"Aggregate: groupBy=[{groups}], aggr=[{aggregates}]{indent.Next(Plan)}";
+    }
+
+    public static Aggregate TryNew(ILogicalPlan plan, List<ILogicalExpression> groupExpressions, List<ILogicalExpression> aggregateExpressions)
+    {
+        var allExpressions = groupExpressions.Concat(aggregateExpressions).ToList();
+        var schema = new Schema(Extensions.ExprListToFields(allExpressions, plan));
+        return new Aggregate(plan, groupExpressions, aggregateExpressions, schema);
     }
 }

@@ -2,7 +2,7 @@
 
 namespace CsvRx.Logical.Plans;
 
-internal record Distinct(ILogicalPlan Plan) : ILogicalPlan
+internal record Distinct(ILogicalPlan Plan) : ILogicalPlanWrapper
 {
     public Schema Schema => Plan.Schema;
 
