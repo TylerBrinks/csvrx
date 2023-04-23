@@ -8,6 +8,4 @@ var plan = context.Sql("SELECT c1, MAX(c3) FROM aggregate_test_100 WHERE c11 > 0
 //var plan = context.Sql("SELECT MAX(c3) FROM aggregate_test_100");
 //var plan = context.Sql("SELECT c1 FROM aggregate_test_100");
 
-Console.Write(plan.ToStringIndented(new Indentation()));
-
 context.ExecutePlan(plan);

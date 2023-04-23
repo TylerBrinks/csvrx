@@ -29,27 +29,15 @@ public class LogicalPlanOptimizer
 {
     private static readonly List<ILogicalPlanOptimizationRule> Rules = new()
     {
-        //Arc::new(SimplifyExpressions::new()),
-        // Arc::new(UnwrapCastInComparison::new()),
         //new ReplaceDistinctWithAggregate::new()),
-        // Arc::new(DecorrelateWhereExists::new()),
-        // Arc::new(DecorrelateWhereIn::new()),
-        // Arc::new(ScalarSubqueryToJoin::new()),
-        // Arc::new(ExtractEquijoinPredicate::new()),
-        //// simplify expressions does not simplify expressions in subqueries, so we
-        //// run it again after running the optimizations that potentially converted
-        //// subqueries to joins
         //new SimplifyExpressionsRule(),
         //new(MergeProjection::new()),
-        //Arc::new(RewriteDisjunctivePredicate::new()),
         //new(EliminateDuplicatedExpr::new()),
         //new(EliminateFilter::new()),
-        // Arc::new(EliminateCrossJoin::new()),
-        // Arc::new(CommonSubexprEliminate::new()),
         //new(EliminateLimit::new()),
-        // Arc::new(PropagateEmptyRelation::new()),
-        // Arc::new(FilterNullJoinKeys::default()),
-        // Arc::new(EliminateOuterJoin::new()),
+        //new(PropagateEmptyRelation::new()),
+        //new(FilterNullJoinKeys::default()),
+        //new(EliminateOuterJoin::new()),
         //// Filters can't be pushed down past Limits, we should do PushDownFilter after PushDownLimit
         //new(PushDownLimit::new()),
         //new(PushDownFilter::new()),
@@ -61,7 +49,7 @@ public class LogicalPlanOptimizer
         // new(CommonSubexprEliminate::new()),
         new PushDownProjectionRule(),
         new EliminateProjectionRule(),
-        //// PushDownProjection can pushdown Projections through Limits, do PushDownLimit again.
+        //// PushDownProjection can push down Projections through Limits, do PushDownLimit again.
         //new(PushDownLimit::new()),
     };
 
@@ -69,14 +57,15 @@ public class LogicalPlanOptimizer
     {
         var newPlan = logicalPlan;
 
-        var previousPlans = new HashSet<ILogicalPlan>();
-        previousPlans.Add(newPlan);
+        //var previousPlans = new HashSet<ILogicalPlan>();
+        //previousPlans.Add(newPlan);
 
         // wrap in passes?
 
         foreach (var rule in Rules)
         {
             var result = OptimizeRecursively(rule, newPlan);
+            newPlan = result;
         }
 
         return newPlan;
@@ -98,28 +87,6 @@ public class LogicalPlanOptimizer
                     else
                     {
                         optimizeInputsOpt = OptimizeInputs(rule, plan);
-                    }
-
-
-                    Console.WriteLine("");
-                    Console.WriteLine("Inputs Opt");
-                    if (optimizeInputsOpt == null)
-                    {
-                        Console.WriteLine("None");
-                    }
-                    else
-                    {
-                        Console.WriteLine(optimizeInputsOpt.ToStringIndented(new Indentation()));
-                    }
-
-                    Console.WriteLine("Self Opt");
-                    if (optimizeSelfOpt == null)
-                    {
-                        Console.WriteLine("None");
-                    }
-                    else
-                    {
-                        Console.WriteLine(optimizeSelfOpt.ToStringIndented(new Indentation()));
                     }
 
                     return optimizeInputsOpt ?? optimizeSelfOpt;

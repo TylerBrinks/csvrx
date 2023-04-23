@@ -31,18 +31,33 @@ public class Schema
         return Fields.IndexOf(field);
     }
 
-    public Schema Merge(Schema schema)
-    {
-        foreach (var field in schema.Fields.Where(field => Fields.All(f => f.Name != field.Name)))
-        {
-            Fields.Add(field);
-        }
+    //public Schema Merge(Schema schema)
+    //{
+    //    foreach (var field in schema.Fields.Where(field => Fields.All(f => f.Name != field.Name)))
+    //    {
+    //        Fields.Add(field);
+    //    }
 
-        return this;
+    //    return this;
+    //}
+
+    //public static Schema Empty()
+    //{
+    //    return new Schema();
+    //}
+
+    public override bool Equals(object? obj)
+    {
+        return Equals(obj as Schema);
     }
 
-    public static Schema Empty()
+    public bool Equals(Schema? other)
     {
-        return new Schema();
+        if (other == null)
+        {
+            return false;
+        }
+
+        return Fields.SequenceEqual(other.Fields);
     }
 }

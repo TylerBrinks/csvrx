@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using CsvRx.Data;
+﻿using CsvRx.Data;
 using CsvRx.Logical;
 using CsvRx.Logical.Expressions;
 using CsvRx.Logical.Plans;
