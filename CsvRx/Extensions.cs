@@ -5,6 +5,7 @@ using CsvRx.Data;
 using CsvRx.Logical.Plans;
 using SqlParser.Ast;
 using System.Runtime.InteropServices;
+using CsvRx.Physical.Expressions;
 
 namespace CsvRx;
 
@@ -18,7 +19,7 @@ internal static class Extensions
             Column c => c.Name, //{}.{}
             BinaryExpr b => $"{CreateName(b.Left)} {b.Op} {CreateName(b.Right)}",
             AggregateFunction fn => GetFunctionName(fn, false, fn.Args),
-            LiteralExpression l => l.Value,
+            LiteralExpression l => l.Value.RawValue.ToString(),
             //Like
             // Case
             // cast
@@ -536,10 +537,10 @@ internal static class Extensions
                 return ParseSqlNumber(n);
 
             case Value.SingleQuotedString sq:
-                return new LiteralExpression(sq.Value);
+                return new LiteralExpression(new StringScalarValue(sq.Value));
 
             case Value.Boolean b:
-                return new LiteralExpression(b.Value.ToString());
+                return new LiteralExpression(new BooleanScalarValue(b.Value));
 
             default:
                 throw new NotImplementedException();
@@ -565,11 +566,21 @@ internal static class Extensions
         throw new InvalidOperationException("Invalid function");
     }
 
-
     internal static ILogicalExpression ParseSqlNumber(Value.Number number)
     {
-        return new LiteralExpression(number.Value);
+        if (long.TryParse(number.Value, out var parsedInt))
+        {
+            return new LiteralExpression(new IntegerScalarValue(parsedInt));
+        }
+
+        if (float.TryParse(number.Value, out var parsedFloat))
+        {
+            return new LiteralExpression(new FloatScalarValue(parsedFloat));
+        }
+
+        return new LiteralExpression(new StringScalarValue(number.Value));
     }
+    
     internal static List<ILogicalExpression> FindNestedExpressions(List<ILogicalExpression> expressions, Func<ILogicalExpression, bool> predicate)
     {
         return expressions
@@ -603,5 +614,71 @@ internal static class Extensions
 
         return expressions;
     }
+    #endregion
+
+    #region Physical Expression
+    internal static IPhysicalExpression CreatePhysicalExpr(ILogicalExpression expression, Schema inputDfSchema, Schema inputSchema)
+    {
+        switch (expression)
+        {
+            case Column c:
+                var index = inputDfSchema.IndexOfColumn(c);
+                return new PhysicalColumn(c.Name, index!.Value);
+
+            case BinaryExpr b:
+                {
+                    var left = CreatePhysicalExpr(b.Left, inputDfSchema, inputSchema);
+                    var right = CreatePhysicalExpr(b.Right, inputDfSchema, inputSchema);
+
+                    return new PhysicalBinaryExpr(left, b.Op, right);
+                }
+            case LiteralExpression l:
+                return new Literal(l.Value);
+
+            default:
+                throw new NotImplementedException($"Expression type {expression.GetType().Name} is not yet supported.");
+        };
+    }
+
+    internal static string GetPhysicalName(ILogicalExpression expr)
+    {
+        return expr switch
+        {
+            Column c => c.Name,
+            BinaryExpr b => $"{GetPhysicalName(b.Left)} {b.Op} {GetPhysicalName(b.Right)}",
+            AggregateFunction fn => CreateFunctionPhysicalName(fn, fn.Distinct, fn.Args),
+            _ => throw new NotImplementedException()
+        };
+
+       
+    }
+
+    internal static string CreateFunctionPhysicalName(AggregateFunction fn, bool distinct, List<ILogicalExpression> args)
+    {
+        var names = args.Select(e => CreatePhysicalName(e, false)).ToList();
+
+        var distinctText = distinct ? "DISTINCT " : "";
+
+        return $"{fn.FunctionType}({distinctText}{string.Join(",", names)})";
+    }
+
+    internal static string CreatePhysicalName(ILogicalExpression expression, bool isFirst)
+    {
+        switch (expression)
+        {
+            case Column c:
+                return c.Name;//todo is first?name:flatname
+
+            case BinaryExpr b:
+                return $"{CreatePhysicalName(b.Left, false)} {b.Op} {CreatePhysicalName(b.Left, false)}";
+
+            case AggregateFunction fn:
+                return CreateFunctionPhysicalName(fn, fn.Distinct, fn.Args);
+
+            default:
+                throw new NotImplementedException();
+        }
+    }
+
     #endregion
 }

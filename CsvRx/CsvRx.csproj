@@ -27,6 +27,8 @@
 
   <ItemGroup>
     <Folder Include="Logical\Rules\" />
+    <Folder Include="Physical\Execution\" />
+    <Folder Include="Physical\Expressions\" />
     <Folder Include="Physical\Rules\" />
   </ItemGroup>
 

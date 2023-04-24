@@ -127,8 +127,8 @@ public class PushDownProjectionRule : ILogicalPlanOptimizationRule
 
     private ILogicalPlan PushDownScan(HashSet<Column> usedColumns, TableScan tableScan)//, bool hasProjection)
     {
-        var projection = usedColumns.Select(c => (uint)tableScan.Schema.IndexOfColumn(c)!).ToList();
-        var fields = projection.Select(i => tableScan.Schema.Fields[(int)i]).ToList();
+        var projection = usedColumns.Select(c => tableScan.Schema.IndexOfColumn(c)!.Value).ToList();
+        var fields = projection.Select(i => tableScan.Schema.Fields[i]).ToList();
         var schema = new Schema(fields);
 
         return tableScan with {Schema = schema, Projection = projection};

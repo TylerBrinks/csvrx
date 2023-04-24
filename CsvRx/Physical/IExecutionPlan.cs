@@ -1,4 +1,5 @@
-﻿using CsvRx.Data;
+﻿
+using CsvRx.Data;
 
 namespace CsvRx.Physical;
 

@@ -2,27 +2,15 @@
 using System.Text.RegularExpressions;
 using CsvHelper;
 using CsvHelper.Configuration;
+using CsvRx.Physical;
 
 namespace CsvRx.Data;
-
-[Flags]
-public enum ColumnDataType
-{
-    Boolean = 1 << 0,
-    Integer = 1 << 1,
-    Decimal = 1 << 2,
-    Date32 = 1 << 3,
-    TimestampSecond = 1 << 4,
-    TimestampMillisecond = 1 << 5,
-    TimestampMicrosecond = 1 << 6,
-    TimestampNanosecond = 1 << 7,
-    Utf8 = 1 << 8,
-}
 
 public class CsvDataSource : DataSource
 {
     private readonly string _filePath;
     private readonly CsvOptions _options;
+    private Schema _schema;
 
     public CsvDataSource(string filePath, CsvOptions options)
     {
@@ -33,6 +21,11 @@ public class CsvDataSource : DataSource
 
     private Schema InferSchema()
     {
+        if (_schema != null)
+        {
+            return _schema;
+        }
+
         using var reader = new StreamReader(_filePath);
         var config = new CsvConfiguration(CultureInfo.InvariantCulture)
         {
@@ -67,10 +60,16 @@ public class CsvDataSource : DataSource
 
         var fields = headers.Select((h, i) => new Field(h, columnTypes[i].DataType)).ToList();
 
-        return new Schema(fields);
+        _schema = new Schema(fields);
+        return _schema;
     }
 
     public override Schema Schema { get; }
+
+    public override IExecutionPlan Scan(List<int> projection)
+    {
+        return new CsvExec(_schema, projection);
+    }
 }
 
 public partial class InferredDataType
@@ -136,4 +135,20 @@ public partial class InferredDataType
     [GeneratedRegex("^\\d{4}-\\d\\d-\\d\\d[T ]\\d\\d:\\d\\d:\\d\\d.\\d{1,9}$", RegexOptions.None, "en-US")]
     private static partial Regex TimestampNanosecond();
     #endregion
+}
+
+public class CsvExec : IExecutionPlan
+{
+    private readonly List<int> _projection;
+
+    public CsvExec(Schema schema, List<int> projection)
+    {
+        var fields = schema.Fields.Where((_, i) => projection.Contains(i)).ToList();
+        Schema = new Schema(fields);
+        _projection = projection;
+    }
+    // hasHeader
+    //delimiter
+
+    public Schema Schema { get; }
 }

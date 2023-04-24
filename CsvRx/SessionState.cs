@@ -1,5 +1,4 @@
-﻿using CsvRx.Data;
-using CsvRx.Logical;
+﻿using CsvRx.Logical;
 using CsvRx.Physical;
 using CsvRx.Physical.Rules;
 
@@ -16,8 +15,6 @@ public class SessionState
 
     public ILogicalPlan OptimizeLogicalPlan(ILogicalPlan logicalPlan)
     {
-        // logicalPlan = new LogicalPlanAnalyzer().Check(logicalPlan);
-
         logicalPlan = new LogicalPlanOptimizer().Optimize(logicalPlan);
 
         Console.Write(logicalPlan.ToStringIndented(new Indentation()));
@@ -149,95 +146,3 @@ public interface ILogicalPlanOptimizationRule
     ApplyOrder ApplyOrder { get; }
     ILogicalPlan TryOptimize(ILogicalPlan plan);
 }
-
-
-//public class SimplifyExpressionsRule : ILogicalPlanOptimizationRule
-//{
-//    public ApplyOrder ApplyOrder => ApplyOrder.None;
-//    public ILogicalPlan TryOptimize(ILogicalPlan plan)
-//    {
-//        //    //var childrenMergeSchema = MergeSchema(plan.GetInputs());
-//        //    //var schemas = new List<Schema> { plan.Schema, childrenMergeSchema };
-
-//        //    //var info = schemas.Aggregate(new SimplifyContext(), (context, schema) => context.WithSchema(schema));
-
-//        //    //var simplifier = new ExprSimplifier(info);
-
-//        //    var newInputs = plan.GetInputs().Select(TryOptimize).ToList();
-//        //    var expr = plan.GetExpressions()/*.Select(e =>
-//        //    {
-//        //        var name = e.CreateName();
-//        //        var newExpression = simplifier.Simplify(e);
-//        //        var newName = newExpression.CreateName();
-
-//        //        if (name != newName)
-//        //        {
-//        //            return newExpression;//todo alias from name variable
-//        //        }
-
-//        //        return newExpression;
-//        //    })*/.ToList();
-
-//        //    return plan.FromPlan(expr, newInputs);
-
-//        return plan;
-//    }
-
-//    Schema MergeSchema(List<ILogicalPlan> plans)
-//    {
-//        switch (plans.Count)
-//        {
-//            case 0:
-//                return Schema.Empty();
-//            case 1:
-//                return plans[0].Schema;
-//            default:
-//                {
-//                    //TODO duplicates?
-//                    var merged = plans.Select(p => p.Schema).Aggregate((a, b) => a.Merge(b));
-//                    return merged;
-//                }
-//        }
-//    }
-//}
-
-//internal class ExprSimplifier
-//{
-//    private readonly SimplifyContext _context;
-
-//    public ExprSimplifier(SimplifyContext context)
-//    {
-//        _context = context;
-//    }
-
-//    //public ILogicalExpression Simplify(ILogicalExpression expr)
-//    //{
-//    //    //var simplifier = new Simp
-//    //    var constEvaluator = new ConstEvalulator(this);
-
-//    //    expr.Rewrite(constEvaluator)
-//    //        .Rewrite(this)
-//    //        .Rewrite(constEvaluator)
-//    //        .Rewrite(this);
-//    //    return expr;
-//    //}
-//}
-
-//internal class ConstEvalulator : IRewriter<ILogicalExpression>
-//{
-//    public ConstEvalulator(ExprSimplifier exprSimplifier)
-//    {
-//        throw new NotImplementedException();
-//    }
-//}
-
-//internal class SimplifyContext
-//{
-//    private readonly List<Schema> _schemas = new();
-
-//    internal SimplifyContext WithSchema(Schema schema)
-//    {
-//        _schemas.Add(schema);
-//        return this;
-//    }
-//}
