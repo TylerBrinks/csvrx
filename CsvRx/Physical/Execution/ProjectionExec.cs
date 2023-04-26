@@ -19,8 +19,10 @@ public record ProjectionExec(
         return new ProjectionExec(physicalExpressions, schema, plan);//todo alias_map, metrics?
     }
 
-    public RecordBatch Execute()
+    public IEnumerable<RecordBatch> Execute()
     {
-        return Plan.Execute();
+        var batches = Plan.Execute();
+
+        return batches;
     }
 }

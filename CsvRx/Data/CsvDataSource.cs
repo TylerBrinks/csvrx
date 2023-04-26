@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using CsvHelper;
 using CsvHelper.Configuration;
 using CsvRx.Physical;
+using CsvRx.Physical.Execution;
 
 namespace CsvRx.Data;
 
@@ -64,7 +65,7 @@ public class CsvDataSource : DataSource
         return _schema;
     }
 
-    internal List<string?[]> Read(List<int> indices)
+    internal IEnumerable<List<string?[]>> Read(List<int> indices)
     {
         using var reader = new StreamReader(_filePath);
         var config = new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -77,21 +78,31 @@ public class CsvDataSource : DataSource
         csv.Read();
         csv.ReadHeader();
 
-        // while (csv.Read())
         var lines = new List<string?[]>();
-        for (var i = 0; i < 3; i++)
+        var count = 0;
+
+        while (csv.Read())
         {
-            csv.Read();
             var line = new string?[indices.Count];
+
             for (var j = 0; j < indices.Count; j++)
             {
                 var value = csv.GetField(indices[j]);
                 line[j] = value;
             }
+            
             lines.Add(line);
+
+            if (++count == 3)
+            {
+                count = 0;
+                var slice = lines.Select(_=>_).ToList();
+                lines.Clear();
+                yield return slice;
+            }
         }
 
-        return lines;
+        yield return lines;
     }
 
     public override Schema Schema { get; }
@@ -165,38 +176,4 @@ public partial class InferredDataType
     [GeneratedRegex("^\\d{4}-\\d\\d-\\d\\d[T ]\\d\\d:\\d\\d:\\d\\d.\\d{1,9}$", RegexOptions.None, "en-US")]
     private static partial Regex TimestampNanosecond();
     #endregion
-}
-
-public class CsvExec : IExecutionPlan
-{
-    private readonly List<int> _projection;
-    private readonly CsvDataSource _dataSource;
-
-    public CsvExec(Schema schema, List<int> projection, CsvDataSource dataSource)
-    {
-        var fields = schema.Fields.Where((_, i) => projection.Contains(i)).ToList();
-        Schema = new Schema(fields);
-        _projection = projection;
-        _dataSource = dataSource;
-    }
-    // hasHeader
-    // delimiter
-
-    public Schema Schema { get; }
-
-    public RecordBatch Execute()
-    {
-        var lines = _dataSource.Read(_projection);
-        var batch = new RecordBatch(Schema);
-        
-        foreach (var line in lines)
-        {
-            for (var i = 0; i < line.Length; i++)
-            {
-               batch.Results[i].Add(line[i]);
-            }
-        }
-
-        return batch;
-    }
 }

@@ -38,7 +38,7 @@ public class LogicalPlanner
         }
         else
         {
-            // check having expr
+            //todo check having expr
         }
 
         //having

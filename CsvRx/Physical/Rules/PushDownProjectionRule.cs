@@ -2,6 +2,8 @@
 using CsvRx.Logical;
 using CsvRx.Logical.Expressions;
 using CsvRx.Logical.Plans;
+using SqlParser.Ast;
+
 namespace CsvRx.Physical.Rules;
 
 public class PushDownProjectionRule : ILogicalPlanOptimizationRule
@@ -51,15 +53,6 @@ public class PushDownProjectionRule : ILogicalPlanOptimizationRule
         {
             case Projection p:
             {
-                //var replaceMap = childPlan.Schema.Fields.Select((f, i) =>
-                //    {
-                //        var expr = childPlan.GetExpressions()[i];
-                //        return (Field: f, Expr: expr);
-                //    }
-                //).ToDictionary(_ => _.Field, _ => _.Expr);
-
-                //var newExprs = projection.GetExpressions().ToList();
-
                 var newPlan = new Projection(p.Plan, projection.GetExpressions().ToList(), projection.Schema);
                 return TryOptimize(newPlan);
             }
@@ -85,7 +78,6 @@ public class PushDownProjectionRule : ILogicalPlanOptimizationRule
 
                 var newAgg = Aggregate.TryNew(a.Plan, a.GroupExpressions, newAggrExpr);
                 
-                //return empty ? newAgg : projection.WithNewInputs(new List<ILogicalPlan>{newAgg});
                 return GeneratePlan(empty, projection, newAgg);
             }
             case Filter f:
@@ -116,7 +108,7 @@ public class PushDownProjectionRule : ILogicalPlanOptimizationRule
                     Extensions.ExprToColumns(expr, usedColumns);
                 }
 
-                var scan = PushDownScan(usedColumns, t);//, true);
+                var scan = PushDownScan(usedColumns, t);
 
                 return projection.WithNewInputs(new List<ILogicalPlan> {scan});
             }
@@ -127,11 +119,11 @@ public class PushDownProjectionRule : ILogicalPlanOptimizationRule
 
     private ILogicalPlan PushDownScan(HashSet<Column> usedColumns, TableScan tableScan)//, bool hasProjection)
     {
-        var projection = usedColumns.Select(c => tableScan.Schema.IndexOfColumn(c)!.Value).ToList();
-        var fields = projection.Select(i => tableScan.Schema.Fields[i]).ToList();
+        var projection = usedColumns.Select(c => tableScan.Source.Schema.IndexOfColumn(c)!.Value).ToList();
+        var fields = projection.Select(i => tableScan.Source.Schema.Fields[i]).ToList();
         var schema = new Schema(fields);
 
-        return tableScan with {Schema = schema, Projection = projection};
+        return tableScan with { Schema = schema, Projection = projection };
     }
 
     ILogicalPlan GeneratePlan(bool empty, ILogicalPlan plan, ILogicalPlan newPlan)

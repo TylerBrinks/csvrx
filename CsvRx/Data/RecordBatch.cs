@@ -1,5 +1,4 @@
-﻿
-using System.Collections;
+﻿using System.Collections;
 using CsvRx.Logical.Expressions;
 
 namespace CsvRx.Data
@@ -30,6 +29,8 @@ namespace CsvRx.Data
         public Schema Schema { get; }
 
         public List<RecordArray> Results { get; set; } = new();
+
+        public int RowCount => Results.Count > 0 ? Results.First().Array.Count : 0;
     }
 
     public abstract record ColumnValue(ColumnDataType DataType)
@@ -70,7 +71,7 @@ namespace CsvRx.Data
 
     public abstract class RecordArray
     {
-        public abstract void Add(string? value);
+        public abstract void Add(object? value);
         public abstract IList Array { get; }
     }
 
@@ -81,9 +82,9 @@ namespace CsvRx.Data
 
     public class StringArray : TypedRecordArray<string?>
     {
-        public override void Add(string? s)
+        public override void Add(object? s)
         {
-            List.Add(s);
+            List.Add((string)s);
         }
 
         public override IList Array => List;
@@ -92,9 +93,9 @@ namespace CsvRx.Data
 
     public class IntegerArray : TypedRecordArray<int?>
     {
-        public override void Add(string? s)
+        public override void Add(object? s)
         {
-            var parsed = int.TryParse(s, out var result);
+            var parsed = int.TryParse(s.ToString(), out var result);
             if (parsed)
             {
                 List.Add(result);
@@ -110,9 +111,9 @@ namespace CsvRx.Data
 
     public class BooleanArray : TypedRecordArray<bool?>
     {
-        public override void Add(string? s)
+        public override void Add(object? s)
         {
-            var parsed = bool.TryParse(s, out var result);
+            var parsed = bool.TryParse(s.ToString(), out var result);
             if (parsed)
             {
                 List.Add(result);
@@ -128,9 +129,9 @@ namespace CsvRx.Data
 
     public class DecimalArray : TypedRecordArray<decimal?>
     {
-        public override void Add(string? s)
+        public override void Add(object? s)
         {
-            var parsed = decimal.TryParse(s, out var result);
+            var parsed = decimal.TryParse(s.ToString(), out var result);
             if (parsed)
             {
                 List.Add(result);

@@ -54,11 +54,6 @@ public class LogicalPlanOptimizer
     {
         var newPlan = logicalPlan;
 
-        //var previousPlans = new HashSet<ILogicalPlan>();
-        //previousPlans.Add(newPlan);
-
-        // wrap in passes?
-
         foreach (var rule in Rules)
         {
             var result = OptimizeRecursively(rule, newPlan);

@@ -12,6 +12,6 @@ internal record Literal(ScalarValue Value) : IPhysicalExpression
 
     public ColumnValue Evaluate(RecordBatch batch)
     {
-        return new ScalarColumnValue(Value, batch.Results.First().Array.Count, Value.DataType);
+        return new ScalarColumnValue(Value, batch.RowCount, Value.DataType);
     }
 }

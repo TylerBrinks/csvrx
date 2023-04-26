@@ -261,20 +261,17 @@ internal static class Extensions
         var groupingSets = GroupingSetToExprList(groupByExpressions);
         var allExpressions = groupingSets.Concat(aggregateExpressions).ToList();
         // validate unique names
-        var fields = Extensions.ExprListToFields(allExpressions, plan);
+        var fields = ExprListToFields(allExpressions, plan);
         var schema = new Schema(fields);
         var aggregatePlan = new Aggregate(plan, groupByExpressions, aggregateExpressions, schema);
 
         var aggregateProjectionExpressions = groupByExpressions.Select(_ => _).Concat(aggregateExpressions).ToList();
         // resolve columns
         aggregateProjectionExpressions = aggregateProjectionExpressions.Select(e => ResolveColumns(e, plan)).ToList();
-        //var columnExpressionsPostAggregate = aggregateProjectionExpressions.Select(a => ExprAsColumnExpr(a, plan)).ToList();
         aggregateProjectionExpressions = aggregateProjectionExpressions.Select(e => ResolveColumns(e, plan)).ToList();
-
 
         var selectExpressionsPostAggregate = selectExpressions.Select(e => RebaseExpr(e, aggregateProjectionExpressions, plan)).ToList();
         // rewrite having columns
-
 
         return (aggregatePlan, selectExpressionsPostAggregate, new List<ILogicalExpression>());
     }
@@ -365,7 +362,7 @@ internal static class Extensions
             }
         }
 
-        var fields = Extensions.ExprListToFields(projectedExpressions, plan);
+        var fields = ExprListToFields(projectedExpressions, plan);
         return new Projection(plan, expressions, new Schema(fields));
 
         ILogicalExpression ToColumnExpr(ILogicalExpression expr)
@@ -637,7 +634,7 @@ internal static class Extensions
 
             default:
                 throw new NotImplementedException($"Expression type {expression.GetType().Name} is not yet supported.");
-        };
+        }
     }
 
     internal static string GetPhysicalName(ILogicalExpression expr)

@@ -9,10 +9,6 @@ public class Schema
         Fields = fields;
     }
 
-    private Schema()
-    {
-    }
-
     public List<Field> Fields { get; } = new();
 
     public Field? GetField(string name)

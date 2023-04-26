@@ -46,7 +46,8 @@ public class ExecutionContext
     {
         var df = new DataFrame(new SessionState(), plan);
         var physicalPlan = df.CreatePhysicalPlan();
-        physicalPlan.Execute();
+        var phexp = physicalPlan.Execute();
+        phexp.ToList();
     }
 }
 

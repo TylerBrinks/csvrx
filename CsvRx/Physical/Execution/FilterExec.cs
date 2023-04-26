@@ -19,27 +19,36 @@ public record FilterExec(IPhysicalExpression Predicate, IExecutionPlan Plan) : I
         return new FilterExec(predicate, plan);
     }
 
-    public RecordBatch Execute()
+    public IEnumerable<RecordBatch> Execute()
     {
-        var batch = Plan.Execute();
+        var batches = Plan.Execute();
 
-        var filterFlags = Predicate.Evaluate(batch) as BooleanColumnValue;
-
-        var filterIndices = new List<int>();
-        for (var i = filterFlags.Size - 1; i >= 0; i--)
+        foreach (var batch in batches)
         {
-            if (filterFlags.Values[i]) { continue; }
-            filterIndices.Add(i);
-        }
+            var filterFlags = (BooleanColumnValue) Predicate.Evaluate(batch);
 
-        foreach (var column in batch.Results)
-        {
-            foreach (var i in filterIndices.Where(i => !filterFlags.Values[i]))
+            var filterIndices = new List<int>();
+            for (var i = filterFlags.Size - 1; i >= 0; i--)
             {
-                column.Array.RemoveAt(i);
+                if (filterFlags.Values[i])
+                {
+                    continue;
+                }
+
+                filterIndices.Add(i);
             }
+
+            foreach (var column in batch.Results)
+            {
+                foreach (var i in filterIndices.Where(i => !filterFlags.Values[i]))
+                {
+                    column.Array.RemoveAt(i);
+                }
+            }
+
+            yield return batch;
         }
 
-        return batch;
+        //return batches;
     }
 }
