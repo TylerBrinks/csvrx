@@ -6,7 +6,7 @@ namespace CsvRx.Physical.Execution;
 public record ProjectionExec(
     List<(IPhysicalExpression Expression, string Name)> Expressions, 
     Schema Schema,
-    IExecutionPlan InputExec) : IExecutionPlan
+    IExecutionPlan Plan) : IExecutionPlan
 {
     public static IExecutionPlan TryNew(List<(IPhysicalExpression Expression, string Name)> physicalExpressions, IExecutionPlan plan)
     {
@@ -17,5 +17,10 @@ public record ProjectionExec(
         //TODO output ordering respect alias
 
         return new ProjectionExec(physicalExpressions, schema, plan);//todo alias_map, metrics?
+    }
+
+    public RecordBatch Execute()
+    {
+        return Plan.Execute();
     }
 }

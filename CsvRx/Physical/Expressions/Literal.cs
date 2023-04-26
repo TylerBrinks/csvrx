@@ -9,4 +9,9 @@ internal record Literal(ScalarValue Value) : IPhysicalExpression
     {
         return Value.DataType;
     }
+
+    public ColumnValue Evaluate(RecordBatch batch)
+    {
+        return new ScalarColumnValue(Value, batch.Results.First().Array.Count, Value.DataType);
+    }
 }

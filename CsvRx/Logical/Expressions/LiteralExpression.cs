@@ -10,7 +10,7 @@ internal record LiteralExpression(ScalarValue Value) : ILogicalExpression
     }
 }
 
-internal abstract record ScalarValue(object? RawValue, ColumnDataType DataType)
+public abstract record ScalarValue(object? RawValue, ColumnDataType DataType)
 {
     public override string ToString()
     {

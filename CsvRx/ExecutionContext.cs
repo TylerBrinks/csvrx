@@ -1,5 +1,6 @@
 ﻿using CsvRx.Data;
 using CsvRx.Logical;
+using CsvRx.Physical;
 using SqlParser.Ast;
 
 namespace CsvRx;
@@ -44,8 +45,8 @@ public class ExecutionContext
     public void ExecutePlan(ILogicalPlan plan)
     {
         var df = new DataFrame(new SessionState(), plan);
-        var execution = df.CreatePhysicalPlan();
-        
+        var physicalPlan = df.CreatePhysicalPlan();
+        physicalPlan.Execute();
     }
 }
 

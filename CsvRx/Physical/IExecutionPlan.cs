@@ -6,4 +6,5 @@ namespace CsvRx.Physical;
 public interface IExecutionPlan
 {
     Schema Schema { get; }
+    RecordBatch Execute();
 }

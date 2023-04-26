@@ -8,4 +8,9 @@ public record PhysicalColumn(string Name, int Index) : IPhysicalExpression
     {
         return schema.Fields[Index].DataType;
     }
+
+    public ColumnValue Evaluate(RecordBatch batch)
+    {
+        return new ArrayColumnValue(batch.Results[Index].Array, batch.Schema.Fields[Index].DataType);
+    }
 }

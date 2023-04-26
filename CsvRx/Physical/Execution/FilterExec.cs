@@ -4,9 +4,9 @@ using CsvRx.Physical.Expressions;
 
 namespace CsvRx.Physical.Execution;
 
-public record FilterExec(IPhysicalExpression Predicate, IExecutionPlan ExecutionPlan) : IExecutionPlan
+public record FilterExec(IPhysicalExpression Predicate, IExecutionPlan Plan) : IExecutionPlan
 {
-    public Schema Schema => ExecutionPlan.Schema;
+    public Schema Schema => Plan.Schema;
 
     public static FilterExec TryNew(IPhysicalExpression predicate, IExecutionPlan plan)
     {
@@ -17,5 +17,29 @@ public record FilterExec(IPhysicalExpression Predicate, IExecutionPlan Execution
         }
 
         return new FilterExec(predicate, plan);
+    }
+
+    public RecordBatch Execute()
+    {
+        var batch = Plan.Execute();
+
+        var filterFlags = Predicate.Evaluate(batch) as BooleanColumnValue;
+
+        var filterIndices = new List<int>();
+        for (var i = filterFlags.Size - 1; i >= 0; i--)
+        {
+            if (filterFlags.Values[i]) { continue; }
+            filterIndices.Add(i);
+        }
+
+        foreach (var column in batch.Results)
+        {
+            foreach (var i in filterIndices.Where(i => !filterFlags.Values[i]))
+            {
+                column.Array.RemoveAt(i);
+            }
+        }
+
+        return batch;
     }
 }

@@ -66,4 +66,9 @@ public record AggregateExec(
     {
         return GroupBy.Expr.Select((e, i) => (IPhysicalExpression) new PhysicalColumn(e.Name, i)).ToList();
     }
+
+    public RecordBatch Execute()
+    {
+        return Plan.Execute();
+    }
 }

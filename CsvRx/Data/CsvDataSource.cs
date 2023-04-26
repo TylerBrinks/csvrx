@@ -64,11 +64,41 @@ public class CsvDataSource : DataSource
         return _schema;
     }
 
+    internal List<string?[]> Read(List<int> indices)
+    {
+        using var reader = new StreamReader(_filePath);
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+        {
+            Delimiter = _options.Delimiter,
+            HasHeaderRecord = _options.HasHeader,
+        };
+        using var csv = new CsvReader(reader, config);
+
+        csv.Read();
+        csv.ReadHeader();
+
+        // while (csv.Read())
+        var lines = new List<string?[]>();
+        for (var i = 0; i < 3; i++)
+        {
+            csv.Read();
+            var line = new string?[indices.Count];
+            for (var j = 0; j < indices.Count; j++)
+            {
+                var value = csv.GetField(indices[j]);
+                line[j] = value;
+            }
+            lines.Add(line);
+        }
+
+        return lines;
+    }
+
     public override Schema Schema { get; }
 
     public override IExecutionPlan Scan(List<int> projection)
     {
-        return new CsvExec(_schema, projection);
+        return new CsvExec(_schema, projection, this);
     }
 }
 
@@ -97,7 +127,7 @@ public partial class InferredDataType
         var matched = false;
         for (var i = 0; i < TypeExpressions.Count; i++)
         {
-            if (!TypeExpressions[i].IsMatch(value)){ continue; }
+            if (!TypeExpressions[i].IsMatch(value)) { continue; }
 
             DataType |= (ColumnDataType)(1 << i);
             matched = true;
@@ -140,15 +170,33 @@ public partial class InferredDataType
 public class CsvExec : IExecutionPlan
 {
     private readonly List<int> _projection;
+    private readonly CsvDataSource _dataSource;
 
-    public CsvExec(Schema schema, List<int> projection)
+    public CsvExec(Schema schema, List<int> projection, CsvDataSource dataSource)
     {
         var fields = schema.Fields.Where((_, i) => projection.Contains(i)).ToList();
         Schema = new Schema(fields);
         _projection = projection;
+        _dataSource = dataSource;
     }
     // hasHeader
-    //delimiter
+    // delimiter
 
     public Schema Schema { get; }
+
+    public RecordBatch Execute()
+    {
+        var lines = _dataSource.Read(_projection);
+        var batch = new RecordBatch(Schema);
+        
+        foreach (var line in lines)
+        {
+            for (var i = 0; i < line.Length; i++)
+            {
+               batch.Results[i].Add(line[i]);
+            }
+        }
+
+        return batch;
+    }
 }

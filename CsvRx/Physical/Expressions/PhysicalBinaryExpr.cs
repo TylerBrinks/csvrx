@@ -11,7 +11,7 @@ public record PhysicalBinaryExpr(IPhysicalExpression Left, BinaryOperator Op, IP
 
         return Op switch
         {
-            BinaryOperator.Eq 
+            BinaryOperator.Eq
                 or BinaryOperator.NotEq
                 or BinaryOperator.And
                 or BinaryOperator.Or
@@ -90,7 +90,7 @@ public record PhysicalBinaryExpr(IPhysicalExpression Left, BinaryOperator Op, IP
 
         return (leftDataType, rightDataType) switch
         {
-            (ColumnDataType.Decimal, _ )
+            (ColumnDataType.Decimal, _)
                 or (ColumnDataType.Decimal, _) => ColumnDataType.Decimal,
 
             (ColumnDataType.Integer, _)
@@ -118,8 +118,8 @@ public record PhysicalBinaryExpr(IPhysicalExpression Left, BinaryOperator Op, IP
 
     private ColumnDataType? StringCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
     {
-        return leftDataType == ColumnDataType.Utf8 && rightDataType == ColumnDataType.Utf8 
-            ? ColumnDataType.Utf8 
+        return leftDataType == ColumnDataType.Utf8 && rightDataType == ColumnDataType.Utf8
+            ? ColumnDataType.Utf8
             : null;
     }
 
@@ -146,4 +146,120 @@ public record PhysicalBinaryExpr(IPhysicalExpression Left, BinaryOperator Op, IP
             _ => null
         };
     }
+
+    public ColumnValue Evaluate(RecordBatch batch)
+    {
+        var leftValue = Left.Evaluate(batch);
+        var rightValue = Right.Evaluate(batch);
+
+        if (leftValue.Size != rightValue.Size)
+        {
+            throw new InvalidOperationException("size mismatch");
+        }
+
+        //todo check types
+        var leftDataType = leftValue.DataType;
+        var rightDataType = rightValue.DataType;
+
+        //if (leftDataType != rightDataType)
+        //{
+        //    throw new InvalidOperationException("Data type mismatch");
+        //}
+
+        return Compare(leftValue, rightValue);
+    }
+
+    public BooleanColumnValue Compare(ColumnValue leftValue, ColumnValue rightValue)
+    {
+        var bitVector = new bool[leftValue.Size];
+
+        for (var i = 0; i < leftValue.Size; i++)
+        {
+            var value = CompareValues(leftValue.GetValue(i), rightValue.GetValue(i), leftValue.DataType);
+            bitVector[i] = value;
+        }
+
+        return new BooleanColumnValue(bitVector);
+    }
+
+    private bool CompareValues(object left, object right, ColumnDataType dataType)
+    {
+        switch (dataType)
+        {
+            case ColumnDataType.Utf8:
+                return CompareStrings(left, right);
+
+            case ColumnDataType.Integer:
+                return CompareIntegers(left, right);
+
+            case ColumnDataType.Decimal:
+                return CompareDecimals(left, right);
+
+            case ColumnDataType.Boolean:
+                return CompareBooleans(left, right);
+
+            default:
+                throw new NotImplementedException();
+        }
+    }
+
+    private bool CompareStrings(object left, object right)
+    {
+        var leftValue = (string)left;
+        var rightValue = (string)right;
+
+        return Op switch
+        {
+            BinaryOperator.Eq => leftValue == rightValue,
+            BinaryOperator.NotEq => leftValue != rightValue,
+            _ => throw new NotImplementedException()
+        };
+    }
+
+    private bool CompareIntegers(object left, object right)
+    {
+        var leftValue = (int)left;
+        var rightValue = (int)right;
+
+        return Op switch
+        {
+            BinaryOperator.Eq => leftValue == rightValue,
+            BinaryOperator.NotEq => leftValue != rightValue,
+            _ => throw new NotImplementedException()
+        };
+    }
+   
+    private bool CompareDecimals(object left, object right)
+    {
+        var leftValue = Convert.ToDecimal(left);
+        var rightValue = Convert.ToDecimal(right);
+
+        return Op switch
+        {
+            BinaryOperator.Eq => leftValue == rightValue,
+            BinaryOperator.NotEq => leftValue != rightValue,
+            BinaryOperator.Gt => leftValue > rightValue,
+            BinaryOperator.Lt => leftValue < rightValue,
+            BinaryOperator.GtEq => leftValue >= rightValue,
+            BinaryOperator.LtEq => leftValue <= rightValue,
+            _ => throw new NotImplementedException()
+        };
+    }
+
+    private bool CompareBooleans(object left, object right)
+    {
+        var leftValue = (bool)left;
+        var rightValue = (bool)right;
+
+        return Op switch
+        {
+            BinaryOperator.Eq => leftValue == rightValue,
+            BinaryOperator.NotEq => leftValue != rightValue,
+            BinaryOperator.And => leftValue && rightValue,
+            BinaryOperator.Or => leftValue || rightValue,
+
+            _ => throw new NotImplementedException()
+        };
+    }
+
 }
