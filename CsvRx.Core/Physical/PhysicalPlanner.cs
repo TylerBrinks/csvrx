@@ -1,4 +1,5 @@
-﻿using CsvRx.Core.Data;
+﻿using CsvRx.Core;
+using CsvRx.Core.Data;
 using CsvRx.Core.Logical;
 using CsvRx.Core.Logical.Expressions;
 using CsvRx.Core.Logical.Functions;

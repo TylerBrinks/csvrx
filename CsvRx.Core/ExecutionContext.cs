@@ -1,5 +1,6 @@
 ﻿using CsvRx.Core.Data;
 using CsvRx.Core.Logical;
+using CsvRx.Physical;
 using SqlParser.Ast;
 
 namespace CsvRx.Core;
@@ -49,8 +50,19 @@ public class ExecutionContext
 
     internal IEnumerable<RecordBatch> ExecutePlan(ILogicalPlan plan)
     {
-        var df = new DataFrame(new SessionState(), plan);
-        var physicalPlan = df.CreatePhysicalPlan();
-        return physicalPlan.Execute();
+        var optimized = OptimizeLogicalPlan(plan);
+        return CreatePhysicalPlan(optimized).Execute();
+    }
+
+    internal IExecutionPlan CreatePhysicalPlan(ILogicalPlan logicalPlan)
+    {
+        var optimized = OptimizeLogicalPlan(logicalPlan);
+
+        return new PhysicalPlanner().CreateInitialPlan(optimized);
+    }
+
+    internal ILogicalPlan OptimizeLogicalPlan(ILogicalPlan logicalPlan)
+    {
+        return new LogicalPlanOptimizer().Optimize(logicalPlan);
     }
 }

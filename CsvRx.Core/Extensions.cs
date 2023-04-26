@@ -1,14 +1,14 @@
-﻿using CsvRx.Data;
-using SqlParser.Ast;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using CsvRx.Core.Data;
 using CsvRx.Core.Logical;
 using CsvRx.Core.Logical.Expressions;
 using CsvRx.Core.Logical.Functions;
 using CsvRx.Core.Logical.Plans;
 using CsvRx.Core.Physical.Expressions;
+using CsvRx.Data;
+using SqlParser.Ast;
 
-namespace CsvRx;
+namespace CsvRx.Core;
 
 internal static class Extensions
 {
@@ -17,7 +17,7 @@ internal static class Extensions
         return expr switch
         {
             //Alias
-            Column c => c.Name, //{}.{}
+            Column c => c.Name, 
             BinaryExpr b => $"{CreateName(b.Left)} {b.Op} {CreateName(b.Right)}",
             AggregateFunction fn => GetFunctionName(fn, false, fn.Args),
             LiteralExpression l => l.Value.RawValue.ToString(),
@@ -30,14 +30,7 @@ internal static class Extensions
             Wildcard => "*",
             _ => throw new NotImplementedException("need to implement")
         };
-
-        //string GetBinaryName(BinaryExpr binary)
-        //{
-        //    var left = CreateName(binary.Left);
-        //    var right = CreateName(binary.Right);
-        //    return $"{left} {binary.Op} {right}";
-        //}
-
+        
         string GetFunctionName(AggregateFunction fn, bool distinct, List<ILogicalExpression> args)
         {
             var names = args.Select(CreateName).ToList();

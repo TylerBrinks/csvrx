@@ -1,4 +1,4 @@
-﻿namespace CsvRx;
+﻿namespace CsvRx.Core;
 
 public enum VisitRecursion
 {
