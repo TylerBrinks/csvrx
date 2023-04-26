@@ -10,14 +10,14 @@ public class Schema
         Fields = fields;
     }
 
-    public List<Field> Fields { get; } = new();
+    public List<Field> Fields { get; }
 
     public Field? GetField(string name)
     {
         return Fields.FirstOrDefault(f => f.Name == name);
     }
 
-    public int? IndexOfColumn(Column col)
+    internal int? IndexOfColumn(Column col)
     {
         var field = GetField(col.Name);
         if (field == null)

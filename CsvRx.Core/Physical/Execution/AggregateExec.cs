@@ -12,7 +12,7 @@ public enum AggregationMode
     Final
 }
 
-public record AggregateExec(
+internal record AggregateExec(
     AggregationMode Mode,
     PhysicalGroupBy GroupBy,
     List<AggregateExpression> AggregateExpressions,

@@ -1,9 +1,9 @@
 ﻿using CsvRx.Core.Logical;
 using CsvRx.Physical;
 
-namespace CsvRx.Data;
+namespace CsvRx.Core.Data;
 
-public record DataFrame(SessionState State, ILogicalPlan Plan)
+internal record DataFrame(SessionState State, ILogicalPlan Plan)
 {
     public IExecutionPlan CreatePhysicalPlan()
     {

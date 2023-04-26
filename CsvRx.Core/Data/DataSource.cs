@@ -1,7 +1,6 @@
-﻿using CsvRx.Core.Data;
-using CsvRx.Physical;
+﻿using CsvRx.Physical;
 
-namespace CsvRx.Data;
+namespace CsvRx.Core.Data;
 
 public abstract class DataSource
 {

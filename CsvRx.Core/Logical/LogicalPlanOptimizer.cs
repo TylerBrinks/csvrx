@@ -2,7 +2,7 @@
 
 namespace CsvRx.Core.Logical;
 
-public class LogicalPlanOptimizer
+internal class LogicalPlanOptimizer
 {
     private static readonly List<ILogicalPlanOptimizationRule> Rules = new()
     {

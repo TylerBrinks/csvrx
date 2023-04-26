@@ -3,9 +3,9 @@ using CsvRx.Data;
 
 namespace CsvRx.Core.Physical.Expressions;
 
-public interface IPhysicalExpression
+internal interface IPhysicalExpression
 {
-    ColumnDataType GetDataType(Schema schema);
+    internal ColumnDataType GetDataType(Schema schema);
 
     ColumnValue Evaluate(RecordBatch batch);
 }

@@ -5,7 +5,7 @@ using CsvRx.Data;
 
 namespace CsvRx.Core.Logical.Rules;
 
-public class EliminateProjectionRule : ILogicalPlanOptimizationRule
+internal class EliminateProjectionRule : ILogicalPlanOptimizationRule
 {
     public ApplyOrder ApplyOrder => ApplyOrder.TopDown;
 

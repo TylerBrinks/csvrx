@@ -1,10 +1,11 @@
-﻿using CsvRx.Core.Logical.Plans;
+﻿using CsvRx.Core.Data;
+using CsvRx.Core.Logical.Plans;
 using CsvRx.Data;
 using SqlParser.Ast;
 
 namespace CsvRx.Core.Logical;
 
-public class LogicalPlanner
+internal class LogicalPlanner
 {
     public ILogicalPlan CreateLogicalPlan(Query query, Dictionary<string, DataSource> dataSources)
     {

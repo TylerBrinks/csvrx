@@ -4,7 +4,7 @@ using CsvRx.Physical;
 
 namespace CsvRx.Core.Physical.Execution;
 
-public class CsvExec : IExecutionPlan
+internal class CsvExec : IExecutionPlan
 {
     private readonly List<int> _projection;
     private readonly CsvDataSource _dataSource;

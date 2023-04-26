@@ -4,7 +4,7 @@ using CsvRx.Data;
 
 namespace CsvRx.Core.Physical.Expressions;
 
-public abstract record AggregateExpression(IPhysicalExpression InputExpression) : IPhysicalExpression
+internal abstract record AggregateExpression(IPhysicalExpression InputExpression) : IPhysicalExpression
 {
     public ColumnDataType GetDataType(Schema schema)
     {
@@ -13,9 +13,9 @@ public abstract record AggregateExpression(IPhysicalExpression InputExpression) 
 
     public abstract ColumnValue Evaluate(RecordBatch batch);
 
-    public virtual List<Field> StateFields { get; } = new();
+    internal virtual List<Field> StateFields { get; } = new();
 
-    public virtual Field Field { get; }
+    internal virtual Field Field { get; }
 
-    public abstract Accumulator CreateAccumulator();
+    internal abstract Accumulator CreateAccumulator();
 }

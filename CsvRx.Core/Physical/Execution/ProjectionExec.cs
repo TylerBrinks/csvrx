@@ -5,7 +5,7 @@ using CsvRx.Physical;
 
 namespace CsvRx.Core.Physical.Execution;
 
-public record ProjectionExec(
+internal record ProjectionExec(
     List<(IPhysicalExpression Expression, string Name)> Expressions, 
     Schema Schema,
     IExecutionPlan Plan) : IExecutionPlan

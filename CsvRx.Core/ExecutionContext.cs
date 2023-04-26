@@ -1,10 +1,8 @@
 ﻿using CsvRx.Core.Data;
 using CsvRx.Core.Logical;
-using CsvRx.Data;
-using CsvRx.Physical;
 using SqlParser.Ast;
 
-namespace CsvRx;
+namespace CsvRx.Core;
 
 public class ExecutionContext
 {
@@ -25,7 +23,13 @@ public class ExecutionContext
         _tables.Add(tableName, df);
     }
 
-    public ILogicalPlan Sql(string sql)
+    public IEnumerable<RecordBatch> ExecuteSql(string sql)
+    {
+        var logicalPlan = Sql(sql);
+        return ExecutePlan(logicalPlan);
+    }
+
+    internal ILogicalPlan Sql(string sql)
     {
         var ast = new Parser().ParseSql(sql);
 
@@ -43,43 +47,10 @@ public class ExecutionContext
         return plan;
     }
 
-    public IEnumerable<RecordBatch> ExecutePlan(ILogicalPlan plan)
+    internal IEnumerable<RecordBatch> ExecutePlan(ILogicalPlan plan)
     {
         var df = new DataFrame(new SessionState(), plan);
         var physicalPlan = df.CreatePhysicalPlan();
         return physicalPlan.Execute();
     }
 }
-
-//internal class InlineTableScan : IAnalyzeRule
-//{
-//    public ILogicalPlan Analyze(ILogicalPlan plan)
-//    {
-//        return plan.Transform(plan, AnalyzeInternal);
-//    }
-
-//    private ILogicalPlan AnalyzeInternal(ILogicalPlan plan)
-//    {
-//        return plan;
-//    }
-//}
-//internal class TypeCoercion : IAnalyzeRule
-//{
-//    public ILogicalPlan Analyze(ILogicalPlan plan)
-//    {
-//        return plan;
-//    }
-//}
-
-//internal class CountWildcardRule : IAnalyzeRule
-//{
-//    public ILogicalPlan Analyze(ILogicalPlan plan)
-//    {
-//        return plan;
-//    }
-//}
-
-//internal interface IAnalyzeRule
-//{
-//    ILogicalPlan Analyze(ILogicalPlan plan);
-//}

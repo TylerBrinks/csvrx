@@ -3,7 +3,7 @@ using CsvRx.Physical;
 
 namespace CsvRx;
 
-public class SessionState
+internal class SessionState
 {
     public IExecutionPlan CreatePhysicalPlan(ILogicalPlan logicalPlan)
     {

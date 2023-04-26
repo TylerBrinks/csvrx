@@ -4,7 +4,7 @@ using CsvRx.Core.Logical.Plans;
 
 namespace CsvRx.Core.Logical.Rules;
 
-public class PushDownProjectionRule : ILogicalPlanOptimizationRule
+internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
 {
     public ApplyOrder ApplyOrder => ApplyOrder.TopDown;
 

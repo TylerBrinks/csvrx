@@ -1,13 +1,13 @@
 ﻿using System.Globalization;
 using CsvHelper;
 using CsvHelper.Configuration;
-using CsvRx.Core.Data;
 using CsvRx.Core.Physical.Execution;
+using CsvRx.Data;
 using CsvRx.Physical;
 
-namespace CsvRx.Data;
+namespace CsvRx.Core.Data;
 
-public class CsvDataSource : DataSource
+internal class CsvDataSource : DataSource
 {
     private readonly string _filePath;
     private readonly CsvOptions _options;

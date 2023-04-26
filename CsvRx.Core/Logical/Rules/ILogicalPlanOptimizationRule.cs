@@ -1,6 +1,6 @@
 ﻿namespace CsvRx.Core.Logical.Rules;
 
-public interface ILogicalPlanOptimizationRule
+internal interface ILogicalPlanOptimizationRule
 {
     ApplyOrder ApplyOrder { get; }
     ILogicalPlan TryOptimize(ILogicalPlan plan);

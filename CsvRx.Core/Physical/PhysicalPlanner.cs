@@ -10,7 +10,7 @@ using CsvRx.Data;
 
 namespace CsvRx.Physical
 {
-    public class PhysicalPlanner
+    internal class PhysicalPlanner
     {
         public IExecutionPlan CreateInitialPlan(ILogicalPlan optimized)
         {
@@ -216,7 +216,7 @@ namespace CsvRx.Physical
         }
     }
 
-    public record PhysicalGroupBy(
+    internal record PhysicalGroupBy(
         List<(IPhysicalExpression Expression, string Name)> Expr,
         List<(IPhysicalExpression Expression, string Name)> NullExpressions,
         List<List<bool>> Groups)

@@ -1,6 +1,6 @@
 ﻿namespace CsvRx.Core.Physical.Aggregation;
 
-public record MinAccumulator : Accumulator
+internal record MinAccumulator : Accumulator
 {
     private object _value = null!;
 

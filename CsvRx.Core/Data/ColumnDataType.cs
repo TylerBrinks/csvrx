@@ -1,5 +1,6 @@
 ﻿namespace CsvRx.Data;
 
+//TODO: simplify timestamps
 [Flags]
 public enum ColumnDataType
 {

@@ -6,7 +6,7 @@ using CsvRx.Physical;
 
 namespace CsvRx.Core.Physical.Execution;
 
-public record FilterExec(IPhysicalExpression Predicate, IExecutionPlan Plan) : IExecutionPlan
+internal record FilterExec(IPhysicalExpression Predicate, IExecutionPlan Plan) : IExecutionPlan
 {
     public Schema Schema => Plan.Schema;
 

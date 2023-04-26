@@ -1,6 +1,6 @@
 ﻿namespace CsvRx.Core.Logical;
 
-public record Indentation(int Size = 0)
+internal record Indentation(int Size = 0)
 {
     public int Size { get; set; } = Size;
 

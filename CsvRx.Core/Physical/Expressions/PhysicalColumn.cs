@@ -3,7 +3,7 @@ using CsvRx.Data;
 
 namespace CsvRx.Core.Physical.Expressions;
 
-public record PhysicalColumn(string Name, int Index) : IPhysicalExpression
+internal record PhysicalColumn(string Name, int Index) : IPhysicalExpression
 {
     public ColumnDataType GetDataType(Schema schema)
     {

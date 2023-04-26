@@ -1,6 +1,6 @@
 ﻿namespace CsvRx.Core.Physical.Aggregation;
 
-public record CountAccumulator : Accumulator
+internal record CountAccumulator : Accumulator
 {
     public override void Accumulate(object value)
     {

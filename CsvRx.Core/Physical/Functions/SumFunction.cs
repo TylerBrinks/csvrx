@@ -5,17 +5,17 @@ using CsvRx.Data;
 
 namespace CsvRx.Core.Physical.Functions;
 
-public record SumFunction(IPhysicalExpression InputExpression, string Name, ColumnDataType DataType) : AggregateExpression(InputExpression)
+internal record SumFunction(IPhysicalExpression InputExpression, string Name, ColumnDataType DataType) : AggregateExpression(InputExpression)
 {
-    public override List<Field> StateFields => new() { new($"{Name}[sum]", DataType) };
-    public override Field Field => new(Name, DataType);
+    internal override List<Field> StateFields => new() { new($"{Name}[sum]", DataType) };
+    internal override Field Field => new(Name, DataType);
 
     public override ColumnValue Evaluate(RecordBatch batch)
     {
         throw new NotImplementedException();
     }
 
-    public override Accumulator CreateAccumulator()
+    internal override Accumulator CreateAccumulator()
     {
         return new SumAccumulator();
     }

@@ -3,7 +3,7 @@ using CsvRx.Core.Logical.Plans;
 
 namespace CsvRx.Core.Logical;
 
-public interface ILogicalPlan : INode
+internal interface ILogicalPlan : INode
 {
     Schema Schema { get; }
 
@@ -64,14 +64,12 @@ public interface ILogicalPlan : INode
         return newNode;
     }
 
-    public ILogicalPlan WithNewInputs(List<ILogicalPlan> newInputs)
+    internal ILogicalPlan WithNewInputs(List<ILogicalPlan> newInputs)
     {
         return FromPlan(GetExpressions(), newInputs);
     }
 
-    //private void InspectExpressions()
-
-    public ILogicalPlan FromPlan(List<ILogicalExpression> expressions, List<ILogicalPlan> inputs)
+    internal ILogicalPlan FromPlan(List<ILogicalExpression> expressions, List<ILogicalPlan> inputs)
     {
         switch (this)
         {
@@ -95,7 +93,7 @@ public interface ILogicalPlan : INode
     }
 }
 
-public interface ILogicalPlanWrapper : ILogicalPlan
+internal interface ILogicalPlanWrapper : ILogicalPlan
 {
     ILogicalPlan Plan { get; }
 }
