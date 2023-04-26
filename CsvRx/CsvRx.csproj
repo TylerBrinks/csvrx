@@ -17,19 +17,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CsvHelper" Version="30.0.1" />
     <PackageReference Include="SqlParserCS" Version="0.1.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\CsvRx.Core\CsvRx.Core.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Logical\Rules\" />
-    <Folder Include="Physical\Execution\" />
-    <Folder Include="Physical\Expressions\" />
-    <Folder Include="Physical\Rules\" />
   </ItemGroup>
 
 </Project>
