@@ -93,7 +93,7 @@ internal interface ILogicalPlan : INode
     }
 }
 
-internal interface ILogicalPlanWrapper : ILogicalPlan
+internal interface ILogicalPlanParent : ILogicalPlan
 {
     ILogicalPlan Plan { get; }
 }

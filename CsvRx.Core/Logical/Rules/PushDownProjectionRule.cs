@@ -23,7 +23,7 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
 
             var optimizedChild = TryOptimize(childProjection);
 
-            return (ILogicalPlanWrapper)plan.WithNewInputs(new List<ILogicalPlan> { optimizedChild });
+            return (ILogicalPlanParent)plan.WithNewInputs(new List<ILogicalPlan> { optimizedChild });
         }
 
         if (plan is TableScan { Projection: null } scan)

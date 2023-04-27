@@ -2,7 +2,7 @@
 
 namespace CsvRx.Core.Logical.Plans;
 
-internal record Projection(ILogicalPlan Plan, List<LogicalExpression> Expr, Schema Schema) : ILogicalPlanWrapper
+internal record Projection(ILogicalPlan Plan, List<LogicalExpression> Expr, Schema Schema) : ILogicalPlanParent
 {
     public string ToStringIndented(Indentation? indentation)
     {

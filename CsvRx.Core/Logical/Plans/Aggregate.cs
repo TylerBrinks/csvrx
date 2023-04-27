@@ -7,7 +7,7 @@ internal record Aggregate(
     List<LogicalExpression> GroupExpressions,
     List<LogicalExpression> AggregateExpressions,
     Schema Schema)
-    : ILogicalPlanWrapper
+    : ILogicalPlanParent
 {
     public string ToStringIndented(Indentation? indentation)
     {
