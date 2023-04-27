@@ -16,5 +16,5 @@ internal class DecimalArray : TypedRecordArray<decimal?>
             List.Add(null);
         }
     }
-    public override IList Array => List;
+    public override IList Values => List;
 }

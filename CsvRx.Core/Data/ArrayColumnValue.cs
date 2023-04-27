@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using CsvRx.Data;
 
 namespace CsvRx.Core.Data;
 

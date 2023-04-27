@@ -2,7 +2,7 @@
 
 namespace CsvRx.Core.Logical.Expressions;
 
-internal record BinaryExpr(ILogicalExpression Left, BinaryOperator Op, ILogicalExpression Right) : ILogicalExpression
+internal record BinaryExpr(LogicalExpression Left, BinaryOperator Op, LogicalExpression Right) : LogicalExpression
 {
     public override string ToString()
     {

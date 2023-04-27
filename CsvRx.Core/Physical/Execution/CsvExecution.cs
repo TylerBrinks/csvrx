@@ -1,15 +1,14 @@
 ﻿using CsvRx.Core.Data;
-using CsvRx.Data;
 using CsvRx.Physical;
 
 namespace CsvRx.Core.Physical.Execution;
 
-internal class CsvExec : IExecutionPlan
+internal class CsvExecution : IExecutionPlan
 {
     private readonly List<int> _projection;
     private readonly CsvDataSource _dataSource;
 
-    public CsvExec(Schema schema, List<int> projection, CsvDataSource dataSource)
+    public CsvExecution(Schema schema, List<int> projection, CsvDataSource dataSource)
     {
         var fields = schema.Fields.Where((_, i) => projection.Contains(i)).ToList();
         Schema = new Schema(fields);

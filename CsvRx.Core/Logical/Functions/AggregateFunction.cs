@@ -2,9 +2,9 @@
 
 internal record AggregateFunction(
        AggregateFunctionType FunctionType,
-       List<ILogicalExpression> Args,
+       List<LogicalExpression> Args,
        bool Distinct,
-       ILogicalExpression? Filter = null) : ILogicalExpression
+       LogicalExpression? Filter = null) : LogicalExpression
 {
     internal static AggregateFunctionType? GetFunctionType(string name)
     {

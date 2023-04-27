@@ -9,5 +9,5 @@ internal class StringArray : TypedRecordArray<string?>
         List.Add((string)s);
     }
 
-    public override IList Array => List;
+    public override IList Values => List;
 }

@@ -1,11 +1,10 @@
 ﻿using CsvRx.Core.Data;
 using CsvRx.Core.Physical.Expressions;
-using CsvRx.Data;
 using CsvRx.Physical;
 
 namespace CsvRx.Core.Physical.Execution;
 
-internal record ProjectionExec(
+internal record ProjectionExecution(
     List<(IPhysicalExpression Expression, string Name)> Expressions, 
     Schema Schema,
     IExecutionPlan Plan) : IExecutionPlan
@@ -18,7 +17,7 @@ internal record ProjectionExec(
         //TODO alias loop
         //TODO output ordering respect alias
 
-        return new ProjectionExec(physicalExpressions, schema, plan);//todo alias_map, metrics?
+        return new ProjectionExecution(physicalExpressions, schema, plan);//todo alias_map, metrics?
     }
 
     public IEnumerable<RecordBatch> Execute()

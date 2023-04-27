@@ -1,6 +1,5 @@
 ﻿
 using CsvRx.Core.Data;
-using CsvRx.Data;
 
 namespace CsvRx.Physical;
 

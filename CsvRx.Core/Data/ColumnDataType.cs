@@ -1,4 +1,4 @@
-﻿namespace CsvRx.Data;
+﻿namespace CsvRx.Core.Data;
 
 //TODO: simplify timestamps
 [Flags]

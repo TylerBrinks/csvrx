@@ -58,7 +58,7 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
                 {
                     var requiredColumns = new HashSet<Column>();
                     Extensions.ExprListToColumns(projection.GetExpressions(), requiredColumns);
-                    var newAggrExpr = new List<ILogicalExpression>();
+                    var newAggrExpr = new List<LogicalExpression>();
 
                     foreach (var aggExpr in a.AggregateExpressions)
                     {
@@ -88,7 +88,7 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
                     }
                     var requiredColumns = new HashSet<Column>();
                     Extensions.ExprListToColumns(projection.GetExpressions(), requiredColumns);
-                    Extensions.ExprListToColumns(new List<ILogicalExpression> { f.Predicate }, requiredColumns);
+                    Extensions.ExprListToColumns(new List<LogicalExpression> { f.Predicate }, requiredColumns);
 
                     var newExpr = GetExpr(requiredColumns, f.Plan.Schema);
                     var newProjection = Projection.TryNew(f.Plan, newExpr);
@@ -161,9 +161,9 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
         return true;
     }
 
-    private List<ILogicalExpression> GetExpr(HashSet<Column> columns, Schema schema)
+    private List<LogicalExpression> GetExpr(HashSet<Column> columns, Schema schema)
     {
-        var expr = schema.Fields.Select(f => (ILogicalExpression)new Column(f.Name))
+        var expr = schema.Fields.Select(f => (LogicalExpression)new Column(f.Name))
             .Where(columns.Contains)
             .ToList();
 

@@ -1,5 +1,4 @@
 ﻿using CsvRx.Core.Logical.Expressions;
-using CsvRx.Data;
 
 namespace CsvRx.Core.Data;
 

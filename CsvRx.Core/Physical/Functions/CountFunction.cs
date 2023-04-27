@@ -1,11 +1,11 @@
 ﻿using CsvRx.Core.Data;
 using CsvRx.Core.Physical.Aggregation;
 using CsvRx.Core.Physical.Expressions;
-using CsvRx.Data;
 
 namespace CsvRx.Core.Physical.Functions;
 
-internal record CountFunction(IPhysicalExpression InputExpression, string Name, ColumnDataType DataType) : AggregateExpression(InputExpression)
+internal record CountFunction(IPhysicalExpression InputExpression, string Name, ColumnDataType DataType) 
+    : AggregateExpression(InputExpression), IAggregation
 {
     internal override List<Field> StateFields => new() { new($"{Name}[count]", DataType) };
 
@@ -16,8 +16,13 @@ internal record CountFunction(IPhysicalExpression InputExpression, string Name, 
         throw new NotImplementedException();
     }
 
-    internal override Accumulator CreateAccumulator()
+    public Accumulator CreateAccumulator()
     {
         return new CountAccumulator();
     }
+}
+
+internal interface IAggregation
+{
+    Accumulator CreateAccumulator();
 }

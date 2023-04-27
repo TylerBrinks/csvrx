@@ -1,5 +1,4 @@
 ﻿using System.Text.RegularExpressions;
-using CsvRx.Data;
 
 namespace CsvRx.Core.Data;
 

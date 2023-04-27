@@ -38,15 +38,15 @@ internal interface ILogicalPlan : INode
         };
     }
 
-    List<ILogicalExpression> GetExpressions()
+    List<LogicalExpression> GetExpressions()
     {
         return this switch
         {
             Aggregate a => a.AggregateExpressions.Select(_=>_).Concat(a.GroupExpressions).ToList(),
-            Filter f => new List<ILogicalExpression> { f.Predicate },
+            Filter f => new List<LogicalExpression> { f.Predicate },
             Projection p => p.Expr,
 
-            _ => new List<ILogicalExpression>()
+            _ => new List<LogicalExpression>()
         };
     }
 
@@ -69,7 +69,7 @@ internal interface ILogicalPlan : INode
         return FromPlan(GetExpressions(), newInputs);
     }
 
-    internal ILogicalPlan FromPlan(List<ILogicalExpression> expressions, List<ILogicalPlan> inputs)
+    internal ILogicalPlan FromPlan(List<LogicalExpression> expressions, List<ILogicalPlan> inputs)
     {
         switch (this)
         {

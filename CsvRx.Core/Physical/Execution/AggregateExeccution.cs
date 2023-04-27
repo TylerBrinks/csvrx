@@ -1,7 +1,7 @@
 ﻿using CsvRx.Core.Data;
 using CsvRx.Core.Physical.Aggregation;
 using CsvRx.Core.Physical.Expressions;
-using CsvRx.Data;
+using CsvRx.Core.Physical.Functions;
 using CsvRx.Physical;
 
 namespace CsvRx.Core.Physical.Execution;
@@ -12,7 +12,7 @@ public enum AggregationMode
     Final
 }
 
-internal record AggregateExec(
+internal record AggregateExeccution(
     AggregationMode Mode,
     PhysicalGroupBy GroupBy,
     List<AggregateExpression> AggregateExpressions,
@@ -21,7 +21,7 @@ internal record AggregateExec(
     Schema InputSchema
     ) : IExecutionPlan
 {
-    public static AggregateExec TryNew(
+    public static AggregateExeccution TryNew(
         AggregationMode mode, 
         PhysicalGroupBy groupBy, 
         List<AggregateExpression> aggregateExpressions, 
@@ -30,7 +30,7 @@ internal record AggregateExec(
     {
         var schema = CreateSchema(plan.Schema, groupBy.Expr, aggregateExpressions, mode);
 
-        return new AggregateExec(mode, groupBy, aggregateExpressions, plan, schema, inputSchema);
+        return new AggregateExeccution(mode, groupBy, aggregateExpressions, plan, schema, inputSchema);
     }
 
     private static Schema CreateSchema(
@@ -86,7 +86,7 @@ internal record AggregateExec(
 
                 if (accumulators == null || accumulators.Count == 0)
                 {
-                    accumulators = AggregateExpressions.Select(ae => ae.CreateAccumulator()).ToList();
+                    accumulators = AggregateExpressions.Cast<IAggregation>().Select(fn => fn.CreateAccumulator()).ToList();
                     map.Add(rowKey, accumulators);
                 }
 

@@ -1,5 +1,6 @@
 ﻿using CsvRx.Core.Data;
 using CsvRx.Core.Logical;
+using CsvRx.Core.Physical;
 using CsvRx.Physical;
 using SqlParser.Ast;
 
@@ -16,21 +17,21 @@ public class ExecutionContext
 
     public void RegisterCsv(string tableName, string path, CsvOptions options)
     {
-        Register(tableName, new CsvDataSource(path, options));
+        RegisterDataSource(tableName, new CsvDataSource(path, options));
     }
 
-    public void Register(string tableName, DataSource df)
+    public void RegisterDataSource(string tableName, DataSource df)
     {
         _tables.Add(tableName, df);
     }
 
     public IEnumerable<RecordBatch> ExecuteSql(string sql)
     {
-        var logicalPlan = Sql(sql);
-        return ExecutePlan(logicalPlan);
+        var logicalPlan = BuildLogicalPlan(sql);
+        return ExecuteLogicalPlan(logicalPlan);
     }
 
-    internal ILogicalPlan Sql(string sql)
+    internal ILogicalPlan BuildLogicalPlan(string sql)
     {
         var ast = new Parser().ParseSql(sql);
 
@@ -48,20 +49,20 @@ public class ExecutionContext
         return plan;
     }
 
-    internal IEnumerable<RecordBatch> ExecutePlan(ILogicalPlan plan)
+    internal static IEnumerable<RecordBatch> ExecuteLogicalPlan(ILogicalPlan plan)
     {
         var optimized = OptimizeLogicalPlan(plan);
         return CreatePhysicalPlan(optimized).Execute();
     }
 
-    internal IExecutionPlan CreatePhysicalPlan(ILogicalPlan logicalPlan)
+    internal static IExecutionPlan CreatePhysicalPlan(ILogicalPlan logicalPlan)
     {
         var optimized = OptimizeLogicalPlan(logicalPlan);
 
         return new PhysicalPlanner().CreateInitialPlan(optimized);
     }
 
-    internal ILogicalPlan OptimizeLogicalPlan(ILogicalPlan logicalPlan)
+    internal static ILogicalPlan OptimizeLogicalPlan(ILogicalPlan logicalPlan)
     {
         return new LogicalPlanOptimizer().Optimize(logicalPlan);
     }

@@ -1,6 +1,4 @@
-﻿using CsvRx.Data;
-
-namespace CsvRx.Core.Data
+﻿namespace CsvRx.Core.Data
 {
     public record RecordBatch
     {
@@ -14,14 +12,15 @@ namespace CsvRx.Core.Data
             }
         }
 
-        private RecordArray GetArrayType(Field field)
+        private static RecordArray GetArrayType(Field field)
         {
             return field.DataType switch
             {
                 ColumnDataType.Utf8 => new StringArray(),
                 ColumnDataType.Integer => new IntegerArray(),
                 ColumnDataType.Boolean => new BooleanArray(),
-                ColumnDataType.Decimal => new DecimalArray()
+                ColumnDataType.Decimal => new DecimalArray(),
+                _ => throw new NotSupportedException()
             };
         }
 
@@ -29,6 +28,6 @@ namespace CsvRx.Core.Data
 
         public List<RecordArray> Results { get; set; } = new();
 
-        public int RowCount => Results.Count > 0 ? Results.First().Array.Count : 0;
+        public int RowCount => Results.Count > 0 ? Results.First().Values.Count : 0;
     }
 }

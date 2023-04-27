@@ -1,11 +1,11 @@
 ﻿using CsvRx.Core.Data;
 using CsvRx.Core.Physical.Aggregation;
 using CsvRx.Core.Physical.Expressions;
-using CsvRx.Data;
 
 namespace CsvRx.Core.Physical.Functions;
 
-internal record SumFunction(IPhysicalExpression InputExpression, string Name, ColumnDataType DataType) : AggregateExpression(InputExpression)
+internal record SumFunction(IPhysicalExpression InputExpression, string Name, ColumnDataType DataType) 
+    : AggregateExpression(InputExpression), IAggregation
 {
     internal override List<Field> StateFields => new() { new($"{Name}[sum]", DataType) };
     internal override Field Field => new(Name, DataType);
@@ -15,7 +15,7 @@ internal record SumFunction(IPhysicalExpression InputExpression, string Name, Co
         throw new NotImplementedException();
     }
 
-    internal override Accumulator CreateAccumulator()
+    public Accumulator CreateAccumulator()
     {
         return new SumAccumulator();
     }

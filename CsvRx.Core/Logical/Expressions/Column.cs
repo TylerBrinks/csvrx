@@ -1,6 +1,6 @@
 ﻿namespace CsvRx.Core.Logical.Expressions;
 
-internal record Column(string Name) : ILogicalExpression
+internal record Column(string Name) : LogicalExpression
 {
     public override string ToString()
     {

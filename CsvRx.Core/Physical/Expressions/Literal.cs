@@ -1,6 +1,5 @@
 ﻿using CsvRx.Core.Data;
 using CsvRx.Core.Logical.Expressions;
-using CsvRx.Data;
 
 namespace CsvRx.Core.Physical.Expressions;
 

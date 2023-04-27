@@ -2,7 +2,6 @@
 using CsvHelper;
 using CsvHelper.Configuration;
 using CsvRx.Core.Physical.Execution;
-using CsvRx.Data;
 using CsvRx.Physical;
 
 namespace CsvRx.Core.Data;
@@ -11,13 +10,13 @@ internal class CsvDataSource : DataSource
 {
     private readonly string _filePath;
     private readonly CsvOptions _options;
-    private Schema _schema;
+    private Schema? _schema;
 
     public CsvDataSource(string filePath, CsvOptions options)
     {
         _filePath = filePath;
         _options = options;
-        Schema = InferSchema();
+        _schema = InferSchema();
     }
 
     private Schema InferSchema()
@@ -39,7 +38,7 @@ internal class CsvDataSource : DataSource
         csv.ReadHeader();
 
         var headers = csv.HeaderRecord;
-        var columnTypes = new List<Core.Data.InferredDataType>(Enumerable.Range(0, headers.Length).Select(_ => new Core.Data.InferredDataType()));
+        var columnTypes = new List<InferredDataType>(Enumerable.Range(0, headers.Length).Select(_ => new InferredDataType()));
         var rowCount = 0;
 
         while (csv.Read())
@@ -93,22 +92,25 @@ internal class CsvDataSource : DataSource
             
             lines.Add(line);
 
-            if (++count == 3)
+            if (++count != _options.ReadBatchSize)
             {
-                count = 0;
-                var slice = lines.Select(_=>_).ToList();
-                lines.Clear();
-                yield return slice;
+                continue;
             }
+
+            count = 0;
+            var slice = lines.Select(_=>_).ToList();
+            lines.Clear();
+
+            yield return slice;
         }
 
         yield return lines;
     }
 
-    public override Schema Schema { get; }
-
     public override IExecutionPlan Scan(List<int> projection)
     {
-        return new CsvExec(_schema, projection, this);
+        return new CsvExecution(_schema!, projection, this);
     }
+
+    public override Schema? Schema => _schema;
 }

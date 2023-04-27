@@ -2,7 +2,7 @@
 
 namespace CsvRx.Core.Logical.Plans;
 
-internal record Filter(ILogicalPlan Plan, ILogicalExpression Predicate) : ILogicalPlanWrapper
+internal record Filter(ILogicalPlan Plan, LogicalExpression Predicate) : ILogicalPlanWrapper
 {
     public Schema Schema => Plan.Schema;
 

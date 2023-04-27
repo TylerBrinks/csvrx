@@ -1,5 +1,4 @@
 ﻿using CsvRx.Core.Data;
-using CsvRx.Data;
 
 namespace CsvRx.Core.Logical.Plans;
 

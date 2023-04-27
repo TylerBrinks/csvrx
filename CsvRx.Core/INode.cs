@@ -7,9 +7,9 @@ public enum VisitRecursion
     Stop
 }
 
-public interface INode
+internal interface INode
 {
-    public VisitRecursion Apply(Func<INode, VisitRecursion> action)
+    VisitRecursion Apply(Func<INode, VisitRecursion> action)
     {
         var result = action(this);
 
@@ -21,9 +21,9 @@ public interface INode
         };
     }
 
-    public T Transform<T>(T instance, Func<T, T> func) where T : INode;
+    internal T Transform<T>(T instance, Func<T, T> func) where T : INode;
 
-    public VisitRecursion ApplyChildren(Func<INode, VisitRecursion> action);
+    internal VisitRecursion ApplyChildren(Func<INode, VisitRecursion> action);
 
-    public T MapChildren<T>(T instance, Func<T, T> transformation) where T : INode;
+    internal T MapChildren<T>(T instance, Func<T, T> transformation) where T : INode;
 }

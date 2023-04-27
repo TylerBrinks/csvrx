@@ -16,5 +16,5 @@ internal class IntegerArray : TypedRecordArray<int?>
             List.Add(null);
         }
     }
-    public override IList Array => List;
+    public override IList Values => List;
 }

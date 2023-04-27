@@ -16,5 +16,6 @@ internal class BooleanArray : TypedRecordArray<bool?>
             List.Add(null);
         }
     }
-    public override IList Array => List;
+
+    public override IList Values => List;
 }

@@ -3,7 +3,7 @@ using CsvRx.Core.Logical.Functions;
 
 namespace CsvRx.Core.Logical;
 
-public interface ILogicalExpression : INode
+internal abstract record LogicalExpression : INode
 {
     VisitRecursion INode.ApplyChildren(Func<INode, VisitRecursion> action)
     {
@@ -26,21 +26,21 @@ public interface ILogicalExpression : INode
         return VisitRecursion.Continue;
     }
 
-    List<ILogicalExpression> GetChildExpressions(ILogicalExpression expression)
+    internal List<LogicalExpression> GetChildExpressions(LogicalExpression expression)
     {
         return expression switch
         {
-            Column or ScalarVariable => new List<ILogicalExpression>(),
-            BinaryExpr b => new List<ILogicalExpression> { b.Left, b.Right },
+            Column or ScalarVariable => new List<LogicalExpression>(),
+            BinaryExpr b => new List<LogicalExpression> { b.Left, b.Right },
             AggregateFunction fn => GetAggregateChildren(fn),
             //// Like
             //// between
             //// Case
             //// InList
-            _ => new List<ILogicalExpression>()
+            _ => new List<LogicalExpression>()
         };
 
-        List<ILogicalExpression> GetAggregateChildren(AggregateFunction fn)
+        List<LogicalExpression> GetAggregateChildren(AggregateFunction fn)
         {
             var args = fn.Args.Select(_ => _).ToList();
             if (fn.Filter != null)

@@ -1,4 +1,4 @@
-﻿using CsvRx.Data;
+﻿using CsvRx.Core.Data;
 
 namespace CsvRx.Core.Logical.Expressions;
 

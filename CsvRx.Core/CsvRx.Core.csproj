@@ -11,8 +11,4 @@
     <PackageReference Include="SqlParserCS" Version="0.1.1" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Physical\Rules\" />
-  </ItemGroup>
-
 </Project>

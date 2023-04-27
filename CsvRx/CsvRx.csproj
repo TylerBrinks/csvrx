@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Spectre.Console" Version="0.46.0" />
     <PackageReference Include="SqlParserCS" Version="0.1.1" />
   </ItemGroup>
 

@@ -1,7 +1,6 @@
 ﻿using CsvRx.Core.Data;
 using CsvRx.Core.Logical.Expressions;
 using CsvRx.Core.Logical.Plans;
-using CsvRx.Data;
 
 namespace CsvRx.Core.Logical.Rules;
 
