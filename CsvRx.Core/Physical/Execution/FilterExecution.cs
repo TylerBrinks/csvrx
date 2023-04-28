@@ -1,7 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using CsvRx.Core.Data;
 using CsvRx.Core.Physical.Expressions;
-using CsvRx.Physical;
+using CsvRx.Core.Values;
 
 namespace CsvRx.Core.Physical.Execution;
 
@@ -20,13 +20,11 @@ internal record FilterExecution(IPhysicalExpression Predicate, IExecutionPlan Pl
         return new FilterExecution(predicate, plan);
     }
 
-    public IEnumerable<RecordBatch> Execute()
+    public async IAsyncEnumerable<RecordBatch> Execute()
     {
-        var batches = Plan.Execute();
-
-        foreach (var batch in batches)
+        await foreach (var batch in Plan.Execute())
         {
-            var filterFlags = (BooleanColumnValue) Predicate.Evaluate(batch);
+            var filterFlags = (BooleanColumnValue)Predicate.Evaluate(batch);
 
             var filterIndices = new List<int>();
             for (var i = filterFlags.Size - 1; i >= 0; i--)

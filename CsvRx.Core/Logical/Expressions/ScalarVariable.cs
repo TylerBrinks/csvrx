@@ -1,6 +1,6 @@
 ﻿namespace CsvRx.Core.Logical.Expressions;
 
-internal record ScalarVariable(IEnumerable<string> Names) : LogicalExpression
+internal record ScalarVariable(IEnumerable<string> Names) : ILogicalExpression
 {
     public override string ToString()
     {

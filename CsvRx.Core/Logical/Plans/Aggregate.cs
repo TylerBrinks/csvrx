@@ -1,11 +1,12 @@
 ﻿using CsvRx.Core.Data;
+using CsvRx.Core.Logical.Expressions;
 
 namespace CsvRx.Core.Logical.Plans;
 
 internal record Aggregate(
     ILogicalPlan Plan,
-    List<LogicalExpression> GroupExpressions,
-    List<LogicalExpression> AggregateExpressions,
+    List<ILogicalExpression> GroupExpressions,
+    List<ILogicalExpression> AggregateExpressions,
     Schema Schema)
     : ILogicalPlanParent
 {
@@ -18,10 +19,10 @@ internal record Aggregate(
         return $"Aggregate: groupBy=[{groups}], aggr=[{aggregates}]{indent.Next(Plan)}";
     }
 
-    public static Aggregate TryNew(ILogicalPlan plan, List<LogicalExpression> groupExpressions, List<LogicalExpression> aggregateExpressions)
+    public static Aggregate TryNew(ILogicalPlan plan, List<ILogicalExpression> groupExpressions, List<ILogicalExpression> aggregateExpressions)
     {
         var allExpressions = groupExpressions.Concat(aggregateExpressions).ToList();
-        var schema = new Schema(Extensions.ExprListToFields(allExpressions, plan));
+        var schema = new Schema(LogicalExtensions.ExprListToFields(allExpressions, plan));
         return new Aggregate(plan, groupExpressions, aggregateExpressions, schema);
     }
 }

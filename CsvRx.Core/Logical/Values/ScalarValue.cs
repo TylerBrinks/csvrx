@@ -1,6 +1,6 @@
 ﻿using CsvRx.Core.Data;
 
-namespace CsvRx.Core.Logical.Expressions;
+namespace CsvRx.Core.Logical.Values;
 
 public abstract record ScalarValue(object? RawValue, ColumnDataType DataType)
 {

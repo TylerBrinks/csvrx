@@ -1,6 +1,6 @@
 ﻿using CsvRx.Core.Data;
 using CsvRx.Core.Logical;
-using CsvRx.Core.Logical.Functions;
+using CsvRx.Core.Logical.Expressions;
 using CsvRx.Core.Physical.Expressions;
 using CsvRx.Core.Physical.Functions;
 
@@ -9,14 +9,14 @@ namespace CsvRx.Core.Physical
     internal static class PhysicalExtensions
     {
         internal static PhysicalGroupBy CreateGroupingPhysicalExpr(
-            List<LogicalExpression> groupExpressions,
+            List<ILogicalExpression> groupExpressions,
             Schema inputDfSchema,
             Schema inputSchema)
         {
             if (groupExpressions.Count == 1)
             {
-                var expr = Extensions.CreatePhysicalExpr(groupExpressions[0], inputDfSchema, inputSchema);
-                var name = Extensions.CreatePhysicalName(groupExpressions[0], true);
+                var expr = LogicalExtensions.CreatePhysicalExpr(groupExpressions[0], inputDfSchema, inputSchema);
+                var name = LogicalExtensions.CreatePhysicalName(groupExpressions[0], true);
 
                 var a = new List<(IPhysicalExpression Expression, string Name)>
                 {
@@ -28,8 +28,8 @@ namespace CsvRx.Core.Physical
 
             var group = groupExpressions.Select(e =>
                 (
-                    Extensions.CreatePhysicalExpr(e, inputDfSchema, inputSchema),
-                    Extensions.CreatePhysicalName(e, true)
+                    LogicalExtensions.CreatePhysicalExpr(e, inputDfSchema, inputSchema),
+                    LogicalExtensions.CreatePhysicalName(e, true)
                 ))
                 .ToList();
 
@@ -123,20 +123,20 @@ namespace CsvRx.Core.Physical
             }
         }
         
-        internal static AggregateExpression CreateAggregateExpression(LogicalExpression expression, Schema logicalSchema, Schema physicalSchema)
+        internal static AggregateExpression CreateAggregateExpression(ILogicalExpression expression, Schema logicalSchema, Schema physicalSchema)
         {
             //todo handle alias
-            var name = Extensions.CreatePhysicalName(expression, true);
+            var name = LogicalExtensions.CreatePhysicalName(expression, true);
 
             return CreateAggregateExprWithName(expression, name, logicalSchema, physicalSchema);
         }
 
-        internal static AggregateExpression CreateAggregateExprWithName(LogicalExpression expression, string name, Schema logicalSchema, Schema physicalSchema)
+        internal static AggregateExpression CreateAggregateExprWithName(ILogicalExpression expression, string name, Schema logicalSchema, Schema physicalSchema)
         {
             switch (expression)
             {
                 case AggregateFunction fn:
-                    var args = fn.Args.Select(e => Extensions.CreatePhysicalExpr(e, logicalSchema, physicalSchema)).ToList();
+                    var args = fn.Args.Select(e => LogicalExtensions.CreatePhysicalExpr(e, logicalSchema, physicalSchema)).ToList();
                     return CreateAggregateExpr(fn, fn.Distinct, args, physicalSchema, name);
 
                 default:

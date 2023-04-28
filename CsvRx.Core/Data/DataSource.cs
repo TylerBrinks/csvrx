@@ -1,4 +1,4 @@
-﻿using CsvRx.Physical;
+﻿using CsvRx.Core.Physical;
 
 namespace CsvRx.Core.Data;
 

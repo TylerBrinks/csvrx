@@ -2,7 +2,6 @@
 using CsvRx.Core.Logical.Expressions;
 using CsvRx.Core.Logical.Plans;
 using CsvRx.Core.Physical.Execution;
-using CsvRx.Physical;
 
 namespace CsvRx.Core.Physical;
 
@@ -27,13 +26,13 @@ internal class PhysicalPlanner
                         .Select(e => PhysicalExtensions.CreateAggregateExpression(e, logicalSchema, physicalSchema))
                         .ToList();
 
-                    var initialAggregate = AggregateExeccution.TryNew(AggregationMode.Partial, groups, aggregates, inputExec, physicalSchema);
+                    var initialAggregate = AggregateExecution.TryNew(AggregationMode.Partial, groups, aggregates, inputExec, physicalSchema);
 
                     var finalGroup = initialAggregate.OutputGroupExpr();
 
                     var finalGroupingSet = PhysicalGroupBy.NewSingle(finalGroup.Select((e, i) => (e, groups.Expr[i].Name)).ToList());
 
-                    return AggregateExeccution.TryNew(AggregationMode.Final, finalGroupingSet, aggregates, initialAggregate, physicalSchema);
+                    return AggregateExecution.TryNew(AggregationMode.Final, finalGroupingSet, aggregates, initialAggregate, physicalSchema);
                 }
             case Projection p:
                 {
@@ -49,14 +48,14 @@ internal class PhysicalPlanner
                             var index = inputSchema.IndexOfColumn(col);
                             physicalName = index != null
                                 ? inputExec.Schema.Fields[index.Value].Name
-                                : Extensions.GetPhysicalName(e);
+                                : LogicalExtensions.GetPhysicalName(e);
                         }
                         else
                         {
-                            physicalName = Extensions.GetPhysicalName(e);
+                            physicalName = LogicalExtensions.GetPhysicalName(e);
                         }
 
-                        return (Expression: Extensions.CreatePhysicalExpr(e, inputSchema, inputExec.Schema), Name: physicalName);
+                        return (Expression: LogicalExtensions.CreatePhysicalExpr(e, inputSchema, inputExec.Schema), Name: physicalName);
                     }).ToList();
 
                     return ProjectionExecution.TryNew(physicalExpressions, inputExec);
@@ -66,7 +65,7 @@ internal class PhysicalPlanner
                     var physicalInput = CreateInitialPlan(f.Plan);
                     var inputSchema = physicalInput.Schema;
                     var inputDfSchema = f.Plan.Schema;
-                    var runtimeExpr = Extensions.CreatePhysicalExpr(f.Predicate, inputDfSchema, inputSchema);
+                    var runtimeExpr = LogicalExtensions.CreatePhysicalExpr(f.Predicate, inputDfSchema, inputSchema);
 
                     return FilterExecution.TryNew(runtimeExpr, physicalInput);
                 }

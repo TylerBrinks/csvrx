@@ -1,4 +1,4 @@
-﻿namespace CsvRx.Core.Logical.Functions;
+﻿namespace CsvRx.Core.Logical.Expressions;
 
 internal enum AggregateFunctionType
 {

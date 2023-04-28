@@ -1,6 +1,5 @@
 ﻿using CsvRx.Core.Data;
 using CsvRx.Core.Physical.Expressions;
-using CsvRx.Physical;
 
 namespace CsvRx.Core.Physical.Execution;
 
@@ -20,10 +19,11 @@ internal record ProjectionExecution(
         return new ProjectionExecution(physicalExpressions, schema, plan);//todo alias_map, metrics?
     }
 
-    public IEnumerable<RecordBatch> Execute()
+    public async IAsyncEnumerable<RecordBatch> Execute()
     {
-        var batches = Plan.Execute();
-
-        return batches;
+        await foreach (var batch in Plan.Execute())
+        {
+            yield return batch;
+        }
     }
 }

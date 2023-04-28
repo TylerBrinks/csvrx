@@ -1,8 +1,9 @@
 ﻿using CsvRx.Core.Data;
+using CsvRx.Core.Logical.Expressions;
 
 namespace CsvRx.Core.Logical.Plans;
 
-internal record Filter(ILogicalPlan Plan, LogicalExpression Predicate) : ILogicalPlanParent
+internal record Filter(ILogicalPlan Plan, ILogicalExpression Predicate) : ILogicalPlanParent
 {
     public Schema Schema => Plan.Schema;
 

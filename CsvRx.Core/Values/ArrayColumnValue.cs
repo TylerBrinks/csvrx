@@ -1,6 +1,7 @@
 ﻿using System.Collections;
+using CsvRx.Core.Data;
 
-namespace CsvRx.Core.Data;
+namespace CsvRx.Core.Values;
 
 internal record ArrayColumnValue(IList Values, ColumnDataType DataType) : ColumnValue(DataType)
 {

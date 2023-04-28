@@ -1,4 +1,5 @@
 ﻿using CsvRx.Core.Data;
+using CsvRx.Core.Values;
 using SqlParser.Ast;
 
 namespace CsvRx.Core.Physical.Expressions;
@@ -66,7 +67,7 @@ internal record PhysicalBinaryExpr(IPhysicalExpression Left, BinaryOperator Op, 
         };
     }
 
-    private ColumnDataType BitwiseCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
+    private static ColumnDataType BitwiseCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
     {
         return (leftDataType, rightDataType) switch
         {
@@ -84,7 +85,7 @@ internal record PhysicalBinaryExpr(IPhysicalExpression Left, BinaryOperator Op, 
         };
     }
 
-    private ColumnDataType MathNumericalCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
+    private static ColumnDataType MathNumericalCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
     {
         //todo check both not null and both numeric
 
@@ -116,14 +117,14 @@ internal record PhysicalBinaryExpr(IPhysicalExpression Left, BinaryOperator Op, 
                throw new NotImplementedException("Coercion not implemented");
     }
 
-    private ColumnDataType? StringCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
+    private static ColumnDataType? StringCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
     {
         return leftDataType == ColumnDataType.Utf8 && rightDataType == ColumnDataType.Utf8
             ? ColumnDataType.Utf8
             : null;
     }
 
-    private ColumnDataType? ComparisonBinaryNumericCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
+    private static ColumnDataType? ComparisonBinaryNumericCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
     {
         // todo check if non-numeric types
         if (leftDataType == rightDataType)

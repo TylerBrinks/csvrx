@@ -3,23 +3,26 @@
 var context = new CsvRx.Core.ExecutionContext();
 // ReSharper disable StringLiteralTypo
 context.RegisterCsv("aggregate_test_100", @"C:\Users\tyler\source\repos\sink\sqldatafusion\testing\data\csv\aggregate_test_100.csv");
-var batches = context.ExecuteSql("SELECT c1, MAX(c3) FROM aggregate_test_100 GROUP BY c1"); //WHERE c11 > .2 AND c11 < 0.9 
+var results = context.ExecuteSql("SELECT c1, MAX(c3) FROM aggregate_test_100 GROUP BY c1"); //WHERE c11 > .2 AND c11 < 0.9 
 Console.WriteLine();
 
+Table? table = null;
 
-var schema = batches.First().Schema;
-
-var table = new Table();
-foreach (var field in schema.Fields)
+await foreach (var batch in results)
 {
-    table.AddColumn(field.Name);
-}
+    if(table == null)
+    {
+        table = new Table();
+        foreach (var field in batch.Schema.Fields)
+        {
+            table.AddColumn(field.Name);
+        }
+    }
 
-foreach (var batch in batches)
-{
     for (var i = 0; i < batch.RowCount; i++)
     {
         table.AddRow(batch.Results.Select(value => value.Values[i]?.ToString() ?? "").ToArray());
     }
 }
+
 AnsiConsole.Write(table);

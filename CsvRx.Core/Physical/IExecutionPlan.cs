@@ -1,10 +1,9 @@
-﻿
-using CsvRx.Core.Data;
+﻿using CsvRx.Core.Data;
 
-namespace CsvRx.Physical;
+namespace CsvRx.Core.Physical;
 
 public interface IExecutionPlan
 {
     Schema Schema { get; }
-    IEnumerable<RecordBatch> Execute();
+    IAsyncEnumerable<RecordBatch> Execute();
 }

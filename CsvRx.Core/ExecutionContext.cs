@@ -1,7 +1,6 @@
 ﻿using CsvRx.Core.Data;
 using CsvRx.Core.Logical;
 using CsvRx.Core.Physical;
-using CsvRx.Physical;
 using SqlParser.Ast;
 
 namespace CsvRx.Core;
@@ -25,10 +24,13 @@ public class ExecutionContext
         _tables.Add(tableName, df);
     }
 
-    public IEnumerable<RecordBatch> ExecuteSql(string sql)
+    public async IAsyncEnumerable<RecordBatch> ExecuteSql(string sql)
     {
         var logicalPlan = BuildLogicalPlan(sql);
-        return ExecuteLogicalPlan(logicalPlan);
+        await foreach (var batch in ExecuteLogicalPlan(logicalPlan))
+        {
+            yield return batch;
+        }
     }
 
     internal ILogicalPlan BuildLogicalPlan(string sql)
@@ -49,10 +51,13 @@ public class ExecutionContext
         return plan;
     }
 
-    internal static IEnumerable<RecordBatch> ExecuteLogicalPlan(ILogicalPlan plan)
+    internal static async IAsyncEnumerable<RecordBatch> ExecuteLogicalPlan(ILogicalPlan plan)
     {
         var optimized = OptimizeLogicalPlan(plan);
-        return CreatePhysicalPlan(optimized).Execute();
+        await foreach (var batch in CreatePhysicalPlan(optimized).Execute())
+        {
+            yield return batch;
+        }
     }
 
     internal static IExecutionPlan CreatePhysicalPlan(ILogicalPlan logicalPlan)

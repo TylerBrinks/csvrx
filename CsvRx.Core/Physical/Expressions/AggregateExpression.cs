@@ -1,4 +1,6 @@
 ﻿using CsvRx.Core.Data;
+using CsvRx.Core.Values;
+
 namespace CsvRx.Core.Physical.Expressions;
 
 internal abstract record AggregateExpression(IPhysicalExpression InputExpression) : IPhysicalExpression
@@ -10,7 +12,7 @@ internal abstract record AggregateExpression(IPhysicalExpression InputExpression
 
     public abstract ColumnValue Evaluate(RecordBatch batch);
 
-    internal virtual List<Field> StateFields { get; } = new();
+    internal abstract List<Field> StateFields { get; }
 
     internal abstract Field Field { get; }
 }

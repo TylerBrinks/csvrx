@@ -1,4 +1,6 @@
-﻿namespace CsvRx.Core.Data;
+﻿using CsvRx.Core.Data;
+
+namespace CsvRx.Core.Values;
 
 internal abstract record ColumnValue(ColumnDataType DataType)
 {

@@ -1,4 +1,5 @@
 ﻿using CsvRx.Core.Data;
+using CsvRx.Core.Logical.Expressions;
 using CsvRx.Core.Logical.Plans;
 
 namespace CsvRx.Core.Logical;
@@ -38,15 +39,15 @@ internal interface ILogicalPlan : INode
         };
     }
 
-    List<LogicalExpression> GetExpressions()
+    List<ILogicalExpression> GetExpressions()
     {
         return this switch
         {
             Aggregate a => a.AggregateExpressions.Select(_=>_).Concat(a.GroupExpressions).ToList(),
-            Filter f => new List<LogicalExpression> { f.Predicate },
+            Filter f => new List<ILogicalExpression> { f.Predicate },
             Projection p => p.Expr,
 
-            _ => new List<LogicalExpression>()
+            _ => new List<ILogicalExpression>()
         };
     }
 
@@ -64,12 +65,12 @@ internal interface ILogicalPlan : INode
         return newNode;
     }
 
-    internal ILogicalPlan WithNewInputs(List<ILogicalPlan> newInputs)
+    ILogicalPlan WithNewInputs(List<ILogicalPlan> newInputs)
     {
         return FromPlan(GetExpressions(), newInputs);
     }
 
-    internal ILogicalPlan FromPlan(List<LogicalExpression> expressions, List<ILogicalPlan> inputs)
+    ILogicalPlan FromPlan(List<ILogicalExpression> expressions, List<ILogicalPlan> inputs)
     {
         switch (this)
         {

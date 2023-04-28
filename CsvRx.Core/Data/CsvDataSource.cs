@@ -1,8 +1,8 @@
 ﻿using System.Globalization;
 using CsvHelper;
 using CsvHelper.Configuration;
+using CsvRx.Core.Physical;
 using CsvRx.Core.Physical.Execution;
-using CsvRx.Physical;
 
 namespace CsvRx.Core.Data;
 
@@ -64,7 +64,7 @@ internal class CsvDataSource : DataSource
         return _schema;
     }
 
-    internal IEnumerable<List<string?[]>> Read(List<int> indices)
+    internal async IAsyncEnumerable<List<string?[]>> Read(List<int> indices)
     {
         using var reader = new StreamReader(_filePath);
         var config = new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -74,13 +74,13 @@ internal class CsvDataSource : DataSource
         };
         using var csv = new CsvReader(reader, config);
 
-        csv.Read();
+        await csv.ReadAsync();
         csv.ReadHeader();
 
         var lines = new List<string?[]>();
         var count = 0;
 
-        while (csv.Read())
+        while (await csv.ReadAsync())
         {
             var line = new string?[indices.Count];
 

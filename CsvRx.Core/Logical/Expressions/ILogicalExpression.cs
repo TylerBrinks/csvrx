@@ -1,9 +1,6 @@
-﻿using CsvRx.Core.Logical.Expressions;
-using CsvRx.Core.Logical.Functions;
+﻿namespace CsvRx.Core.Logical.Expressions;
 
-namespace CsvRx.Core.Logical;
-
-internal abstract record LogicalExpression : INode
+internal interface ILogicalExpression : INode
 {
     VisitRecursion INode.ApplyChildren(Func<INode, VisitRecursion> action)
     {
@@ -26,21 +23,21 @@ internal abstract record LogicalExpression : INode
         return VisitRecursion.Continue;
     }
 
-    internal List<LogicalExpression> GetChildExpressions(LogicalExpression expression)
+    internal List<ILogicalExpression> GetChildExpressions(ILogicalExpression expression)
     {
         return expression switch
         {
-            Column or ScalarVariable => new List<LogicalExpression>(),
-            BinaryExpr b => new List<LogicalExpression> { b.Left, b.Right },
+            Column or ScalarVariable => new List<ILogicalExpression>(),
+            BinaryExpression b => new List<ILogicalExpression> { b.Left, b.Right },
             AggregateFunction fn => GetAggregateChildren(fn),
             //// Like
             //// between
             //// Case
             //// InList
-            _ => new List<LogicalExpression>()
+            _ => new List<ILogicalExpression>()
         };
 
-        List<LogicalExpression> GetAggregateChildren(AggregateFunction fn)
+        List<ILogicalExpression> GetAggregateChildren(AggregateFunction fn)
         {
             var args = fn.Args.Select(_ => _).ToList();
             if (fn.Filter != null)

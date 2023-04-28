@@ -1,6 +1,7 @@
 ﻿using CsvRx.Core.Data;
 using CsvRx.Core.Physical.Aggregation;
 using CsvRx.Core.Physical.Expressions;
+using CsvRx.Core.Values;
 
 namespace CsvRx.Core.Physical.Functions;
 

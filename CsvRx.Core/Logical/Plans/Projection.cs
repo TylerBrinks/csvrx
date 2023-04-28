@@ -1,8 +1,9 @@
 ﻿using CsvRx.Core.Data;
+using CsvRx.Core.Logical.Expressions;
 
 namespace CsvRx.Core.Logical.Plans;
 
-internal record Projection(ILogicalPlan Plan, List<LogicalExpression> Expr, Schema Schema) : ILogicalPlanParent
+internal record Projection(ILogicalPlan Plan, List<ILogicalExpression> Expr, Schema Schema) : ILogicalPlanParent
 {
     public string ToStringIndented(Indentation? indentation)
     {
@@ -13,9 +14,9 @@ internal record Projection(ILogicalPlan Plan, List<LogicalExpression> Expr, Sche
         return $"Projection: {projections} {indent.Next(Plan)}";
     }
 
-    public static Projection TryNew(ILogicalPlan plan, List<LogicalExpression> expressions)
+    public static Projection TryNew(ILogicalPlan plan, List<ILogicalExpression> expressions)
     {
-        var schema = new Schema(Extensions.ExprListToFields(expressions, plan));
+        var schema = new Schema(LogicalExtensions.ExprListToFields(expressions, plan));
         return new Projection(plan, expressions, schema);
     }
 }

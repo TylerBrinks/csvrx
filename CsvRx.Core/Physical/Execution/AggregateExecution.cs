@@ -2,7 +2,6 @@
 using CsvRx.Core.Physical.Aggregation;
 using CsvRx.Core.Physical.Expressions;
 using CsvRx.Core.Physical.Functions;
-using CsvRx.Physical;
 
 namespace CsvRx.Core.Physical.Execution;
 
@@ -12,7 +11,7 @@ public enum AggregationMode
     Final
 }
 
-internal record AggregateExeccution(
+internal record AggregateExecution(
     AggregationMode Mode,
     PhysicalGroupBy GroupBy,
     List<AggregateExpression> AggregateExpressions,
@@ -21,7 +20,7 @@ internal record AggregateExeccution(
     Schema InputSchema
     ) : IExecutionPlan
 {
-    public static AggregateExeccution TryNew(
+    public static AggregateExecution TryNew(
         AggregationMode mode, 
         PhysicalGroupBy groupBy, 
         List<AggregateExpression> aggregateExpressions, 
@@ -30,12 +29,12 @@ internal record AggregateExeccution(
     {
         var schema = CreateSchema(plan.Schema, groupBy.Expr, aggregateExpressions, mode);
 
-        return new AggregateExeccution(mode, groupBy, aggregateExpressions, plan, schema, inputSchema);
+        return new AggregateExecution(mode, groupBy, aggregateExpressions, plan, schema, inputSchema);
     }
 
     private static Schema CreateSchema(
         Schema planSchema,
-        List<(IPhysicalExpression Expression, string Name)> groupBy, 
+        IEnumerable<(IPhysicalExpression Expression, string Name)> groupBy, 
         List<AggregateExpression> aggregateExpressions, 
         AggregationMode mode)
     {
@@ -63,11 +62,11 @@ internal record AggregateExeccution(
         return GroupBy.Expr.Select((e, i) => (IPhysicalExpression) new PhysicalColumn(e.Name, i)).ToList();
     }
 
-    public IEnumerable<RecordBatch> Execute()
+    public async IAsyncEnumerable<RecordBatch> Execute()
     {
         var map = new Dictionary<Sequence<object>, List<Accumulator>>();
 
-        foreach (var batch in Plan.Execute())
+        await foreach (var batch in Plan.Execute())
         {
             var groupKey = GroupBy.Expr.Select(e => e.Expression.Evaluate(batch)).ToList();
 

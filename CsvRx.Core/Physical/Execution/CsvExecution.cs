@@ -1,5 +1,4 @@
 ﻿using CsvRx.Core.Data;
-using CsvRx.Physical;
 
 namespace CsvRx.Core.Physical.Execution;
 
@@ -18,9 +17,9 @@ internal class CsvExecution : IExecutionPlan
 
     public Schema Schema { get; }
 
-    public IEnumerable<RecordBatch> Execute()
+    public async IAsyncEnumerable<RecordBatch> Execute()
     {
-        foreach (var slice in _dataSource.Read(_projection))
+        await foreach(var slice in _dataSource.Read(_projection))
         {
             var batch = new RecordBatch(Schema);
 

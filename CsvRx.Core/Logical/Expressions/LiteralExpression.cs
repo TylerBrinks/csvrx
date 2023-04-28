@@ -1,6 +1,8 @@
-﻿namespace CsvRx.Core.Logical.Expressions;
+﻿using CsvRx.Core.Logical.Values;
 
-internal record LiteralExpression(ScalarValue Value) : LogicalExpression
+namespace CsvRx.Core.Logical.Expressions;
+
+internal record LiteralExpression(ScalarValue Value) : ILogicalExpression
 {
     public override string ToString()
     {

@@ -1,6 +1,6 @@
 ﻿using CsvRx.Core.Data;
 
-namespace CsvRx.Core.Logical.Expressions;
+namespace CsvRx.Core.Logical.Values;
 
 internal record BooleanScalarValue(bool Value) : ScalarValue(Value, ColumnDataType.Boolean)
 {

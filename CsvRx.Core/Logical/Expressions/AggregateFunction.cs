@@ -1,10 +1,10 @@
-﻿namespace CsvRx.Core.Logical.Functions;
+﻿namespace CsvRx.Core.Logical.Expressions;
 
 internal record AggregateFunction(
        AggregateFunctionType FunctionType,
-       List<LogicalExpression> Args,
+       List<ILogicalExpression> Args,
        bool Distinct,
-       LogicalExpression? Filter = null) : LogicalExpression
+       ILogicalExpression? Filter = null) : ILogicalExpression
 {
     internal static AggregateFunctionType? GetFunctionType(string name)
     {
