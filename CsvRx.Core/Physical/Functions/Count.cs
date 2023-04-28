@@ -6,7 +6,7 @@ using CsvRx.Core.Values;
 namespace CsvRx.Core.Physical.Functions;
 
 internal record CountFunction(IPhysicalExpression InputExpression, string Name, ColumnDataType DataType) 
-    : AggregateExpression(InputExpression), IAggregation
+    : Aggregate(InputExpression), IAggregation
 {
     internal override List<Field> StateFields => new() { new($"{Name}[count]", DataType) };
 

@@ -6,6 +6,10 @@ using CsvRx.Core.Logical.Plans;
 using CsvRx.Core.Logical.Values;
 using CsvRx.Core.Physical.Expressions;
 using SqlParser.Ast;
+using Aggregate = CsvRx.Core.Logical.Plans.Aggregate;
+using Binary = CsvRx.Core.Physical.Expressions.Binary;
+using Column = CsvRx.Core.Physical.Expressions.Column;
+using Literal = CsvRx.Core.Logical.Expressions.Literal;
 
 namespace CsvRx.Core;
 
@@ -16,10 +20,10 @@ internal static class LogicalExtensions
         return expr switch
         {
             //Alias
-            Column c => c.Name, 
-            BinaryExpression b => $"{CreateName(b.Left)} {b.Op} {CreateName(b.Right)}",
+            Logical.Expressions.Column c => c.Name, 
+            Logical.Expressions.Binary b => $"{CreateName(b.Left)} {b.Op} {CreateName(b.Right)}",
             AggregateFunction fn => GetFunctionName(fn, false, fn.Args),
-            LiteralExpression l => l.Value.RawValue.ToString(),
+            Literal l => l.Value.RawValue.ToString(),
             //Like
             // Case
             // cast
@@ -39,7 +43,7 @@ internal static class LogicalExtensions
         }
     }
 
-    internal static void ExprListToColumns(List<ILogicalExpression> expressions, HashSet<Column> accumulator)
+    internal static void ExprListToColumns(List<ILogicalExpression> expressions, HashSet<Logical.Expressions.Column> accumulator)
     {
         foreach (var expr in expressions)
         {
@@ -47,7 +51,7 @@ internal static class LogicalExtensions
         }
     }
 
-    internal static void ExprToColumns(ILogicalExpression expression, HashSet<Column> accumulator)
+    internal static void ExprToColumns(ILogicalExpression expression, HashSet<Logical.Expressions.Column> accumulator)
     {
         InspectExprPre(expression, Inspect);
 
@@ -55,12 +59,12 @@ internal static class LogicalExtensions
         {
             switch (expr)
             {
-                case Column col:
+                case Logical.Expressions.Column col:
                     accumulator.Add(col);
                     break;
 
                 case ScalarVariable sv:
-                    accumulator.Add(new Column(string.Join(".", sv.Names)));
+                    accumulator.Add(new Logical.Expressions.Column(string.Join(".", sv.Names)));
                     break;
             }
         }
@@ -89,7 +93,7 @@ internal static class LogicalExtensions
 
     internal static Field ToField(ILogicalExpression expression, Schema schema)
     {
-        if (expression is not Column c)
+        if (expression is not Logical.Expressions.Column c)
         {
             return new Field(expression.CreateName(), GetDataType(expression, schema));
         }
@@ -103,7 +107,7 @@ internal static class LogicalExtensions
     {
         return expression switch
         {
-            Column c => schema.GetField(c.Name)!.DataType,
+            Logical.Expressions.Column c => schema.GetField(c.Name)!.DataType,
             AggregateFunction fn => GetAggregateDataType(fn),
             _ => throw new NotImplementedException(),
         };
@@ -190,7 +194,7 @@ internal static class LogicalExtensions
         }
 
         var filterExpression = SqlToExpr(selection, plan.Schema);
-        var usingColumns = new HashSet<Column>();
+        var usingColumns = new HashSet<Logical.Expressions.Column>();
         LogicalExtensions.ExprToColumns(filterExpression, usingColumns);
         //filterExpression = NormalizeColumn(filterExpression, new []{ plan.Schema }, usingColumns);
         return new Filter(plan, filterExpression);
@@ -228,7 +232,7 @@ internal static class LogicalExtensions
                         throw new InvalidOperationException("SELECT * with no table is not valid");
                     }
 
-                    return plan.Schema.Fields.Select(f => (ILogicalExpression)new Column(f.Name)).ToList();
+                    return plan.Schema.Fields.Select(f => (ILogicalExpression)new Logical.Expressions.Column(f.Name)).ToList();
 
                 //case SelectItem.QualifiedWildcard q:
                 //    return ExpandQualifiedWildcard(qualifier, plan.Schema);
@@ -361,7 +365,7 @@ internal static class LogicalExtensions
         {
             switch (expr)
             {
-                case Column:
+                case Logical.Expressions.Column:
                     return expr;
 
                 //case Alias:
@@ -371,7 +375,7 @@ internal static class LogicalExtensions
                 default:
                     var name = expr.CreateName();
                     var field = schema.GetField(name);
-                    return field != null ? expr : new Column(name);
+                    return field != null ? expr : new Logical.Expressions.Column(name);
             }
         }
 
@@ -437,7 +441,7 @@ internal static class LogicalExtensions
 
         return expr switch
         {
-            Column => expr,
+            Logical.Expressions.Column => expr,
             AggregateFunction fn => fn with { Args = fn.Args.Select(_ => CloneWithReplacement(_, replacementFunc)).ToList() },
 
             _ => throw new NotImplementedException() //todo other types
@@ -448,9 +452,9 @@ internal static class LogicalExtensions
     {
         return CloneWithReplacement(expr, nested =>
         {
-            if (nested is Column c)
+            if (nested is Logical.Expressions.Column c)
             {
-                return new Column(plan.Schema.GetField(c.Name)!.Name);
+                return new Logical.Expressions.Column(plan.Schema.GetField(c.Name)!.Name);
             }
 
             return null;
@@ -461,14 +465,14 @@ internal static class LogicalExtensions
 
     internal static ILogicalExpression ExprAsColumnExpr(ILogicalExpression expr, ILogicalPlan plan)
     {
-        if (expr is Column c)
+        if (expr is Logical.Expressions.Column c)
         {
             var field = plan.Schema.GetField(c.Name);
             //TODO qualified name
-            return new Column(field!.Name);
+            return new Logical.Expressions.Column(field!.Name);
         }
 
-        return new Column(expr.CreateName());
+        return new Logical.Expressions.Column(expr.CreateName());
     }
 
     internal static ILogicalExpression RebaseExpr(ILogicalExpression expr, ICollection<ILogicalExpression> baseExpressions, ILogicalPlan plan)
@@ -489,7 +493,7 @@ internal static class LogicalExtensions
 
     internal static ILogicalExpression ParseSqlBinaryOp(Expression left, BinaryOperator op, Expression right, Schema schema)
     {
-        return new BinaryExpression(SqlExprToLogicalExpr(left, schema), op, SqlExprToLogicalExpr(right, schema));
+        return new Logical.Expressions.Binary(SqlExprToLogicalExpr(left, schema), op, SqlExprToLogicalExpr(right, schema));
     }
 
     internal static ILogicalExpression SqlExprToLogicalInternal(Expression expr, Schema schema)
@@ -512,7 +516,7 @@ internal static class LogicalExtensions
 
     internal static ILogicalExpression SqlIdentifierToExpr(Expression.Identifier ident, Schema schema)
     {
-        return new Column(schema.GetField(ident.Ident.Value)!.Name);
+        return new Logical.Expressions.Column(schema.GetField(ident.Ident.Value)!.Name);
     }
 
 
@@ -526,10 +530,10 @@ internal static class LogicalExtensions
                 return ParseSqlNumber(n);
 
             case Value.SingleQuotedString sq:
-                return new LiteralExpression(new StringScalarValue(sq.Value));
+                return new Literal(new StringScalar(sq.Value));
 
             case Value.Boolean b:
-                return new LiteralExpression(new BooleanScalarValue(b.Value));
+                return new Literal(new BooleanScalar(b.Value));
 
             default:
                 throw new NotImplementedException();
@@ -559,15 +563,15 @@ internal static class LogicalExtensions
     {
         if (long.TryParse(number.Value, out var parsedInt))
         {
-            return new LiteralExpression(new IntegerScalarValue(parsedInt));
+            return new Literal(new IntegerScalar(parsedInt));
         }
 
         if (float.TryParse(number.Value, out var parsedFloat))
         {
-            return new LiteralExpression(new FloatScalarValue(parsedFloat));
+            return new Literal(new FloatScalar(parsedFloat));
         }
 
-        return new LiteralExpression(new StringScalarValue(number.Value));
+        return new Literal(new StringScalar(number.Value));
     }
     
     internal static List<ILogicalExpression> FindNestedExpressions(List<ILogicalExpression> expressions, Func<ILogicalExpression, bool> predicate)
@@ -610,19 +614,19 @@ internal static class LogicalExtensions
     {
         switch (expression)
         {
-            case Column c:
+            case Logical.Expressions.Column c:
                 var index = inputDfSchema.IndexOfColumn(c);
-                return new PhysicalColumn(c.Name, index!.Value);
+                return new Column(c.Name, index!.Value);
 
-            case BinaryExpression b:
+            case Logical.Expressions.Binary b:
                 {
                     var left = CreatePhysicalExpr(b.Left, inputDfSchema, inputSchema);
                     var right = CreatePhysicalExpr(b.Right, inputDfSchema, inputSchema);
 
-                    return new PhysicalBinaryExpr(left, b.Op, right);
+                    return new Binary(left, b.Op, right);
                 }
-            case LiteralExpression l:
-                return new Literal(l.Value);
+            case Literal l:
+                return new Physical.Expressions.Literal(l.Value);
 
             default:
                 throw new NotImplementedException($"Expression type {expression.GetType().Name} is not yet supported.");
@@ -633,8 +637,8 @@ internal static class LogicalExtensions
     {
         return expr switch
         {
-            Column c => c.Name,
-            BinaryExpression b => $"{GetPhysicalName(b.Left)} {b.Op} {GetPhysicalName(b.Right)}",
+            Logical.Expressions.Column c => c.Name,
+            Logical.Expressions.Binary b => $"{GetPhysicalName(b.Left)} {b.Op} {GetPhysicalName(b.Right)}",
             AggregateFunction fn => CreateFunctionPhysicalName(fn, fn.Distinct, fn.Args),
             _ => throw new NotImplementedException()
         };
@@ -655,10 +659,10 @@ internal static class LogicalExtensions
     {
         switch (expression)
         {
-            case Column c:
+            case Logical.Expressions.Column c:
                 return c.Name;//todo is first?name:flatname
 
-            case BinaryExpression b:
+            case Logical.Expressions.Binary b:
                 return $"{CreatePhysicalName(b.Left, false)} {b.Op} {CreatePhysicalName(b.Left, false)}";
 
             case AggregateFunction fn:

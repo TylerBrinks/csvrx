@@ -2,7 +2,7 @@
 
 namespace CsvRx.Core.Logical.Values;
 
-internal record StringScalarValue(string Value) : ScalarValue(Value, ColumnDataType.Utf8)
+internal record StringScalar(string Value) : ScalarValue(Value, ColumnDataType.Utf8)
 {
     public override string ToString()
     {

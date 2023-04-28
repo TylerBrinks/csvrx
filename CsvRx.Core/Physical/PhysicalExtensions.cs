@@ -8,7 +8,7 @@ namespace CsvRx.Core.Physical
 {
     internal static class PhysicalExtensions
     {
-        internal static PhysicalGroupBy CreateGroupingPhysicalExpr(
+        internal static GroupBy CreateGroupingPhysicalExpr(
             List<ILogicalExpression> groupExpressions,
             Schema inputDfSchema,
             Schema inputSchema)
@@ -23,7 +23,7 @@ namespace CsvRx.Core.Physical
                     (expr, name)
                 };
 
-                return PhysicalGroupBy.NewSingle(a);
+                return GroupBy.NewSingle(a);
             }
 
             var group = groupExpressions.Select(e =>
@@ -33,7 +33,7 @@ namespace CsvRx.Core.Physical
                 ))
                 .ToList();
 
-            return PhysicalGroupBy.NewSingle(group);
+            return GroupBy.NewSingle(group);
         }
 
         internal static List<ColumnDataType> CoerceTypes(AggregateFunction fn, List<ColumnDataType> inputTypes)
@@ -94,7 +94,7 @@ namespace CsvRx.Core.Physical
             }
         }
 
-        internal static AggregateExpression CreateAggregateExpr(
+        internal static Aggregate CreateAggregateExpr(
             AggregateFunction fn,
             bool distinct,
             List<IPhysicalExpression> inputPhysicalExpressions,
@@ -123,7 +123,7 @@ namespace CsvRx.Core.Physical
             }
         }
         
-        internal static AggregateExpression CreateAggregateExpression(ILogicalExpression expression, Schema logicalSchema, Schema physicalSchema)
+        internal static Aggregate CreateAggregateExpression(ILogicalExpression expression, Schema logicalSchema, Schema physicalSchema)
         {
             //todo handle alias
             var name = LogicalExtensions.CreatePhysicalName(expression, true);
@@ -131,7 +131,7 @@ namespace CsvRx.Core.Physical
             return CreateAggregateExprWithName(expression, name, logicalSchema, physicalSchema);
         }
 
-        internal static AggregateExpression CreateAggregateExprWithName(ILogicalExpression expression, string name, Schema logicalSchema, Schema physicalSchema)
+        internal static Aggregate CreateAggregateExprWithName(ILogicalExpression expression, string name, Schema logicalSchema, Schema physicalSchema)
         {
             switch (expression)
             {

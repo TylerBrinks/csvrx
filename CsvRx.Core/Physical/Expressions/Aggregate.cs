@@ -3,7 +3,7 @@ using CsvRx.Core.Values;
 
 namespace CsvRx.Core.Physical.Expressions;
 
-internal abstract record AggregateExpression(IPhysicalExpression InputExpression) : IPhysicalExpression
+internal abstract record Aggregate(IPhysicalExpression InputExpression) : IPhysicalExpression
 {
     public virtual ColumnDataType GetDataType(Schema schema)
     {

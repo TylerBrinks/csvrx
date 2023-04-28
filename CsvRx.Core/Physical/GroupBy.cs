@@ -2,14 +2,14 @@
 
 namespace CsvRx.Core.Physical;
 
-internal record PhysicalGroupBy(
+internal record GroupBy(
     List<(IPhysicalExpression Expression, string Name)> Expr,
     List<(IPhysicalExpression Expression, string Name)> NullExpressions,
     List<List<bool>> Groups)
 {
-    public static PhysicalGroupBy NewSingle(List<(IPhysicalExpression Expression, string Name)> expressions)
+    public static GroupBy NewSingle(List<(IPhysicalExpression Expression, string Name)> expressions)
     {
-        return new PhysicalGroupBy(
+        return new GroupBy(
             expressions,
             new List<(IPhysicalExpression Expression, string Name)>(),
             new List<List<bool>>(expressions.Count));

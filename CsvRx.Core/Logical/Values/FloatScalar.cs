@@ -2,7 +2,7 @@
 
 namespace CsvRx.Core.Logical.Values;
 
-internal record FloatScalarValue(float Value) : ScalarValue(Value, ColumnDataType.Decimal)
+internal record FloatScalar(float Value) : ScalarValue(Value, ColumnDataType.Decimal)
 {
     public override string ToString()
     {

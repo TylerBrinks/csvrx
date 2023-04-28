@@ -28,7 +28,7 @@ internal interface ILogicalExpression : INode
         return expression switch
         {
             Column or ScalarVariable => new List<ILogicalExpression>(),
-            BinaryExpression b => new List<ILogicalExpression> { b.Left, b.Right },
+            Binary b => new List<ILogicalExpression> { b.Left, b.Right },
             AggregateFunction fn => GetAggregateChildren(fn),
             //// Like
             //// between

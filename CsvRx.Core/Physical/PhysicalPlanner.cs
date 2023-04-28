@@ -30,7 +30,7 @@ internal class PhysicalPlanner
 
                     var finalGroup = initialAggregate.OutputGroupExpr();
 
-                    var finalGroupingSet = PhysicalGroupBy.NewSingle(finalGroup.Select((e, i) => (e, groups.Expr[i].Name)).ToList());
+                    var finalGroupingSet = GroupBy.NewSingle(finalGroup.Select((e, i) => (e, groups.Expr[i].Name)).ToList());
 
                     return AggregateExecution.TryNew(AggregationMode.Final, finalGroupingSet, aggregates, initialAggregate, physicalSchema);
                 }

@@ -4,7 +4,7 @@ using SqlParser.Ast;
 
 namespace CsvRx.Core.Physical.Expressions;
 
-internal record PhysicalBinaryExpr(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExpression Right) : IPhysicalExpression
+internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExpression Right) : IPhysicalExpression
 {
     public ColumnDataType GetDataType(Schema schema)
     {

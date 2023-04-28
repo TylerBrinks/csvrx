@@ -13,8 +13,8 @@ public enum AggregationMode
 
 internal record AggregateExecution(
     AggregationMode Mode,
-    PhysicalGroupBy GroupBy,
-    List<AggregateExpression> AggregateExpressions,
+    GroupBy GroupBy,
+    List<Aggregate> AggregateExpressions,
     IExecutionPlan Plan,
     Schema Schema,
     Schema InputSchema
@@ -22,8 +22,8 @@ internal record AggregateExecution(
 {
     public static AggregateExecution TryNew(
         AggregationMode mode, 
-        PhysicalGroupBy groupBy, 
-        List<AggregateExpression> aggregateExpressions, 
+        GroupBy groupBy, 
+        List<Aggregate> aggregateExpressions, 
         IExecutionPlan plan, 
         Schema inputSchema)
     {
@@ -35,7 +35,7 @@ internal record AggregateExecution(
     private static Schema CreateSchema(
         Schema planSchema,
         IEnumerable<(IPhysicalExpression Expression, string Name)> groupBy, 
-        List<AggregateExpression> aggregateExpressions, 
+        List<Aggregate> aggregateExpressions, 
         AggregationMode mode)
     {
         var fields = groupBy
@@ -59,7 +59,7 @@ internal record AggregateExecution(
 
     public List<IPhysicalExpression> OutputGroupExpr()
     {
-        return GroupBy.Expr.Select((e, i) => (IPhysicalExpression) new PhysicalColumn(e.Name, i)).ToList();
+        return GroupBy.Expr.Select((e, i) => (IPhysicalExpression) new Column(e.Name, i)).ToList();
     }
 
     public async IAsyncEnumerable<RecordBatch> Execute()

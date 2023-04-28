@@ -2,7 +2,7 @@
 
 namespace CsvRx.Core.Logical.Expressions;
 
-internal record LiteralExpression(ScalarValue Value) : ILogicalExpression
+internal record Literal(ScalarValue Value) : ILogicalExpression
 {
     public override string ToString()
     {
