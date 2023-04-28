@@ -53,8 +53,7 @@ public class ExecutionContext
 
     internal static async IAsyncEnumerable<RecordBatch> ExecuteLogicalPlan(ILogicalPlan plan)
     {
-        var optimized = OptimizeLogicalPlan(plan);
-        await foreach (var batch in CreatePhysicalPlan(optimized).Execute())
+        await foreach (var batch in CreatePhysicalPlan(plan).Execute())
         {
             yield return batch;
         }
