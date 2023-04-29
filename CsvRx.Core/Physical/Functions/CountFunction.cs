@@ -17,9 +17,9 @@ internal record CountFunction(IPhysicalExpression InputExpression, string Name, 
     {
         return new CountAccumulator();
     }
-}
 
-internal interface IAggregation
-{
-    Accumulator CreateAccumulator();
+    //internal override Aggregate ConeWithIndex(int index)
+    //{
+    //    return new CountFunction()
+    //}
 }

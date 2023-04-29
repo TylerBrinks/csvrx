@@ -74,17 +74,10 @@ internal record AggregateExecution(
         }
         else
         {
-            await foreach (var batch in new GroupedHashAggregation(Schema,  GroupBy, AggregateExpressions, Plan))
+            await foreach (var batch in new GroupedHashAggregation(Mode, Schema,  GroupBy, AggregateExpressions, Plan))
             {
                 yield return batch;
             }
         }
     }
-
-    //private List<IPhysicalExpression> MergeExpressions(int columnIndex, Aggregate aggregate)
-    //{
-    //    return aggregate.StateFields
-    //        .Select((f, i) => (IPhysicalExpression)new Column(f.Name, columnIndex + i))
-    //        .ToList();
-    //}
 }

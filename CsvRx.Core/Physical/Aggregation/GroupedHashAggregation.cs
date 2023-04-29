@@ -2,6 +2,7 @@
 using CsvRx.Core.Execution;
 using CsvRx.Core.Physical.Expressions;
 using CsvRx.Core.Physical.Functions;
+using CsvRx.Core.Values;
 
 namespace CsvRx.Core.Physical.Aggregation;
 
@@ -10,19 +11,24 @@ internal class GroupedHashAggregation : IAsyncEnumerable<RecordBatch>
     private readonly IExecutionPlan _plan;
     private readonly GroupBy _groupBy;
     private readonly Schema _schema;
-    private readonly List<Aggregate> _aggregates;
+    private List<Aggregate> _aggregates;
+    private readonly AggregationMode _aggregationMode;
 
     public GroupedHashAggregation(
+        AggregationMode aggregationMode,
         Schema schema,
         GroupBy groupBy,
         List<Aggregate> aggregates,
         IExecutionPlan plan
     )
     {
+        _aggregationMode = aggregationMode;
         _plan = plan;
         _groupBy = groupBy;
         _schema = schema;
         _aggregates = aggregates;
+
+        //MapAggregateIndices();
     }
 
     public async IAsyncEnumerator<RecordBatch> GetAsyncEnumerator(CancellationToken cancellationToken = new ())
@@ -33,7 +39,7 @@ internal class GroupedHashAggregation : IAsyncEnumerable<RecordBatch>
         {
             var groupKey = _groupBy.Expr.Select(e => e.Expression.Evaluate(batch)).ToList();
 
-            var aggregateInputValues = _aggregates.Select(ae => ae.InputExpression.Evaluate(batch)).ToList();
+            var aggregateInputValues = GetAggregateInputs(batch);
 
             for (var rowIndex = 0; rowIndex < batch.RowCount; rowIndex++)
             {
@@ -48,7 +54,6 @@ internal class GroupedHashAggregation : IAsyncEnumerable<RecordBatch>
 
                 if (accumulators == null || accumulators.Count == 0)
                 {
-                    //accumulators = _aggregateExpressions.Cast<IAggregation>().Select(fn => fn.CreateAccumulator()).ToList();
                     accumulators = _aggregates.Cast<IAggregation>().Select(fn => fn.CreateAccumulator()).ToList();
                     map.Add(rowKey, accumulators);
                 }
@@ -76,7 +81,6 @@ internal class GroupedHashAggregation : IAsyncEnumerable<RecordBatch>
                 aggregatedBatch.Results[j].Add(groupKey[j]);
             }
 
-            //for (var j = 0; j < _aggregateExpressions.Count; j++)
             for (var j = 0; j < _aggregates.Count; j++)
             {
                 aggregatedBatch.Results[groupCount + j].Add(accumulators[j].Value);
@@ -84,5 +88,16 @@ internal class GroupedHashAggregation : IAsyncEnumerable<RecordBatch>
         }
 
         yield return aggregatedBatch;
+    }
+
+    private List<ColumnValue> GetAggregateInputs(RecordBatch batch)
+    {
+        if (_aggregationMode == AggregationMode.Partial)
+        {
+            return _aggregates.Select(ae => ae.InputExpression.Evaluate(batch)).ToList();
+        }
+
+        var index = _groupBy.Expr.Count;
+        return _aggregates.Select(ae => ae.InputExpression.Evaluate(batch, index++)).ToList();
     }
 }

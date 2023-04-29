@@ -13,7 +13,7 @@ public class Schema
 
     public Field? GetField(string name)
     {
-        return Fields.FirstOrDefault(f => f.Name == name);
+        return Fields.FirstOrDefault(f => f != null && f.Name == name);
     }
 
     internal int? IndexOfColumn(Column col)

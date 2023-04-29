@@ -81,7 +81,6 @@ internal class NoGroupingAggregation : IAsyncEnumerable<RecordBatch>
         return aggregate.StateFields.Select((f, i) => (IPhysicalExpression)new Column(f.Name, index + i)).ToList();
     }
 
-
     private List<object?> FinalizeAggregation(IEnumerable<Accumulator> accumulators)
     {
         if (_aggregationMode == AggregationMode.Partial)

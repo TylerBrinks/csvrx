@@ -7,5 +7,5 @@ internal interface IPhysicalExpression
 {
     internal ColumnDataType GetDataType(Schema schema);
 
-    ColumnValue Evaluate(RecordBatch batch);
+    ColumnValue Evaluate(RecordBatch batch, int? schemaIndex = null);
 }

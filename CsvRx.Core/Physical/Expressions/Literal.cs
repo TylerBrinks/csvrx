@@ -12,7 +12,7 @@ internal record Literal(ScalarValue Value) : IPhysicalExpression
         return Value.DataType;
     }
 
-    public ColumnValue Evaluate(RecordBatch batch)
+    public ColumnValue Evaluate(RecordBatch batch, int? schemaIndex = null)
     {
         return new ScalarColumnValue(Value, batch.RowCount, Value.DataType);
     }

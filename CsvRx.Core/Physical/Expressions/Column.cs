@@ -10,8 +10,8 @@ internal record Column(string Name, int Index) : IPhysicalExpression
         return schema.Fields[Index].DataType;
     }
 
-    public ColumnValue Evaluate(RecordBatch batch)
+    public ColumnValue Evaluate(RecordBatch batch, int? schemaIndex = null)
     {
-        return new ArrayColumnValue(batch.Results[Index].Values, batch.Schema.Fields[Index].DataType);
+        return new ArrayColumnValue(batch.Results[schemaIndex ?? Index].Values, batch.Schema.Fields[schemaIndex ?? Index].DataType);
     }
 }

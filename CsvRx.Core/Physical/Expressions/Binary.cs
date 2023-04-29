@@ -148,7 +148,7 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
         };
     }
 
-    public ColumnValue Evaluate(RecordBatch batch)
+    public ColumnValue Evaluate(RecordBatch batch, int? schemaIndex = null)
     {
         var leftValue = Left.Evaluate(batch);
         var rightValue = Right.Evaluate(batch);
