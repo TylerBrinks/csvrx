@@ -1,10 +1,10 @@
 ﻿using CsvRx.Core.Data;
 using CsvRx.Core.Physical.Expressions;
 
-namespace CsvRx.Core.Physical.Execution;
+namespace CsvRx.Core.Execution;
 
 internal record ProjectionExecution(
-    List<(IPhysicalExpression Expression, string Name)> Expressions, 
+    List<(IPhysicalExpression Expression, string Name)> Expressions,
     Schema Schema,
     IExecutionPlan Plan) : IExecutionPlan
 {

@@ -3,7 +3,7 @@ using CsvRx.Core.Data;
 using CsvRx.Core.Physical.Expressions;
 using CsvRx.Core.Values;
 
-namespace CsvRx.Core.Physical.Execution;
+namespace CsvRx.Core.Execution;
 
 internal record FilterExecution(IPhysicalExpression Predicate, IExecutionPlan Plan) : IExecutionPlan
 {

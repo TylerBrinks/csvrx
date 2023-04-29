@@ -1,4 +1,5 @@
 ﻿using CsvRx.Core.Data;
+using CsvRx.Core.Execution;
 using CsvRx.Core.Logical;
 using CsvRx.Core.Physical;
 using SqlParser.Ast;
@@ -53,7 +54,8 @@ public class ExecutionContext
 
     internal static async IAsyncEnumerable<RecordBatch> ExecuteLogicalPlan(ILogicalPlan plan)
     {
-        await foreach (var batch in CreatePhysicalPlan(plan).Execute())
+        var physicalPlan = CreatePhysicalPlan(plan);
+        await foreach (var batch in physicalPlan.Execute())
         {
             yield return batch;
         }

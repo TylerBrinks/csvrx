@@ -1,6 +1,6 @@
 ﻿using CsvRx.Core.Data;
 
-namespace CsvRx.Core.Physical.Execution;
+namespace CsvRx.Core.Execution;
 
 internal class CsvExecution : IExecutionPlan
 {
@@ -19,7 +19,7 @@ internal class CsvExecution : IExecutionPlan
 
     public async IAsyncEnumerable<RecordBatch> Execute()
     {
-        await foreach(var slice in _dataSource.Read(_projection))
+        await foreach (var slice in _dataSource.Read(_projection))
         {
             var batch = new RecordBatch(Schema);
 

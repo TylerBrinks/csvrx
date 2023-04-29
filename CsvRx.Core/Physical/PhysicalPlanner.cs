@@ -1,7 +1,7 @@
-﻿using CsvRx.Core.Logical;
+﻿using CsvRx.Core.Execution;
+using CsvRx.Core.Logical;
 using CsvRx.Core.Logical.Expressions;
 using CsvRx.Core.Logical.Plans;
-using CsvRx.Core.Physical.Execution;
 
 namespace CsvRx.Core.Physical;
 

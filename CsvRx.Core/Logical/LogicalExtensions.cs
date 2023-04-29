@@ -117,7 +117,9 @@ internal static class LogicalExtensions
 
             return function.FunctionType switch
             {
-                AggregateFunctionType.Max => CoercedTypes(function, dataTypes),
+                AggregateFunctionType.Min or AggregateFunctionType.Max  => CoercedTypes(function, dataTypes),
+                AggregateFunctionType.Sum => ColumnDataType.Integer,
+                AggregateFunctionType.Count => ColumnDataType.Integer,
                 _ => throw new NotImplementedException("need to implement"),
             };
         }
@@ -126,11 +128,11 @@ internal static class LogicalExtensions
         {
             return function.FunctionType switch
             {
-                AggregateFunctionType.Min or AggregateFunctionType.Max => GetMinMaxType(),//inputTypes
+                AggregateFunctionType.Min or AggregateFunctionType.Max => GetMinMaxType(),
                 _ => throw new NotImplementedException("need to implement"),
             };
 
-            ColumnDataType GetMinMaxType()//IReadOnlyList<ColumnDataType> inputTypes
+            ColumnDataType GetMinMaxType()
             {
                 if (inputTypes.Count != 1)
                 {
@@ -281,20 +283,21 @@ internal static class LogicalExtensions
         IReadOnlyCollection<FunctionArg>? args,
         Schema schema)
     {
-        List<ILogicalExpression> arguments = null!;
+        List<ILogicalExpression> arguments;
 
         if (functionType == AggregateFunctionType.Count)
         {
-            //
+            functionType = AggregateFunctionType.Count;
+            arguments = FunctionArgsToExpr();
         }
         else
         {
-            arguments = FunctionArgsToExpr();// args, schema
+            arguments = FunctionArgsToExpr();
         }
 
         return (functionType, arguments);
 
-        List<ILogicalExpression> FunctionArgsToExpr()//IReadOnlyCollection<FunctionArg>? args, Schema schema
+        List<ILogicalExpression> FunctionArgsToExpr()
         {
             return args == null
                 ? new List<ILogicalExpression>()

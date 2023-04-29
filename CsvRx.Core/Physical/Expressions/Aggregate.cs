@@ -10,9 +10,14 @@ internal abstract record Aggregate(IPhysicalExpression InputExpression) : IPhysi
         throw new NotImplementedException();
     }
 
-    public abstract ColumnValue Evaluate(RecordBatch batch);
+    public ColumnValue Evaluate(RecordBatch batch)
+    {
+        throw new NotSupportedException();
+    }
 
     internal abstract List<Field> StateFields { get; }
 
     internal abstract Field Field { get; }
+
+    internal abstract List<IPhysicalExpression> Expressions { get; }
 }

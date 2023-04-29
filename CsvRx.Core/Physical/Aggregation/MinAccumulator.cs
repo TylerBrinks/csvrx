@@ -1,35 +1,51 @@
-﻿namespace CsvRx.Core.Physical.Aggregation;
+﻿using CsvRx.Core.Logical.Values;
+using CsvRx.Core.Values;
+
+namespace CsvRx.Core.Physical.Aggregation;
 
 internal record MinAccumulator : Accumulator
 {
-    private object _value = null!;
+    private object? _value;
 
-    public override void Accumulate(object value)
+    public override void Accumulate(object? value)
     {
-        if (value != null)
+        if (value == null)
         {
-            if (_value == null)
-            {
-                _value = value;
-            }
-            else
-            {
-                switch (value)
-                {
-                    case int i when i < (int)_value:
-                        _value = i;
-                        break;
+            return;
+        }
 
-                    case decimal d when d < (decimal)_value:
-                        _value = d;
-                        break;
-
-                    default:
-                        throw new NotImplementedException();
-                }
-            }
+        if (_value == null)
+        {
+            _value = value;
+        }
+        else
+        {
+            _value = value switch
+            {
+                int i when i < (int) _value => i,
+                long l when l < (long) _value => l,
+                decimal d when d < (decimal) _value => d,
+                _ => _value
+            };
         }
     }
 
-    public override object Value => _value;
+    public override void UpdateBatch(List<ArrayColumnValue> values)
+    {
+        foreach (var value in values[0].Values)
+        {
+            Accumulate(value);
+        }
+    }
+
+    public override void MergeBatch(List<ArrayColumnValue> values)
+    {
+        UpdateBatch(values);
+    }
+
+    public override object? Value => _value;
+
+    public override List<ScalarValue> State => new() { Evaluate };
+
+    public override ScalarValue Evaluate => new IntegerScalar((long)_value);
 }

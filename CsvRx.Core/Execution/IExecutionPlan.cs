@@ -1,6 +1,6 @@
 ﻿using CsvRx.Core.Data;
 
-namespace CsvRx.Core.Physical;
+namespace CsvRx.Core.Execution;
 
 public interface IExecutionPlan
 {

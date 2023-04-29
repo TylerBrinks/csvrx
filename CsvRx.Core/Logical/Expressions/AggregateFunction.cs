@@ -12,6 +12,8 @@ internal record AggregateFunction(
         {
             "min" => AggregateFunctionType.Min,
             "max" => AggregateFunctionType.Max,
+            "sum" => AggregateFunctionType.Sum,
+            "count" => AggregateFunctionType.Count,
             _ => null
         };
     }

@@ -1,8 +1,7 @@
 ﻿using System.Globalization;
 using CsvHelper;
 using CsvHelper.Configuration;
-using CsvRx.Core.Physical;
-using CsvRx.Core.Physical.Execution;
+using CsvRx.Core.Execution;
 
 namespace CsvRx.Core.Data;
 
@@ -104,7 +103,10 @@ internal class CsvDataSource : DataSource
             yield return slice;
         }
 
-        yield return lines;
+        if (count > 0)
+        {
+            yield return lines;
+        }
     }
 
     public override IExecutionPlan Scan(List<int> projection)

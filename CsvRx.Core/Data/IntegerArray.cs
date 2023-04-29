@@ -2,11 +2,11 @@
 
 namespace CsvRx.Core.Data;
 
-internal class IntegerArray : TypedRecordArray<int?>
+internal class IntegerArray : TypedRecordArray<long?>
 {
     public override void Add(object? s)
     {
-        var parsed = int.TryParse(s.ToString(), out var result);
+        var parsed = long.TryParse(s.ToString(), out var result);
         if (parsed)
         {
             List.Add(result);
