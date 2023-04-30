@@ -24,7 +24,7 @@ internal record MaxAccumulator : Accumulator
             {
                 int i when i > (int)_value => i,
                 long l when l > (long)_value => l,
-                decimal d when d > (decimal)_value => d,
+                double d when d > (double)_value => d,
                 _ => _value
             };
         }

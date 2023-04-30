@@ -9,7 +9,7 @@ public class Schema
         Fields = fields;
     }
 
-    public List<Field> Fields { get; }
+    public List<Field?> Fields { get; }
 
     public Field? GetField(string name)
     {

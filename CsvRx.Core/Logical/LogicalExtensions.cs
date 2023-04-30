@@ -18,7 +18,7 @@ internal static class LogicalExtensions
     {
         return expr switch
         {
-            //Alias
+            Alias a => a.Name, 
             Expressions.Column c => c.Name,
             Expressions.Binary b => $"{b.Left.CreateName()} {b.Op} {b.Right.CreateName()}",
             AggregateFunction fn => GetFunctionName(fn, false, fn.Args),
@@ -87,7 +87,9 @@ internal static class LogicalExtensions
 
     internal static List<Field> ExprListToFields(IEnumerable<ILogicalExpression> expressions, ILogicalPlan plan)
     {
-        return expressions.Select(e => ToField(e, plan.Schema)).ToList();
+        var fields = expressions.Select(e => ToField(e, plan.Schema)).ToList();
+        
+        return fields;
     }
 
     internal static Field ToField(ILogicalExpression expression, Schema schema)
@@ -120,6 +122,8 @@ internal static class LogicalExtensions
                 AggregateFunctionType.Min or AggregateFunctionType.Max  => CoercedTypes(function, dataTypes),
                 AggregateFunctionType.Sum => ColumnDataType.Integer,
                 AggregateFunctionType.Count => ColumnDataType.Integer,
+                AggregateFunctionType.Avg => ColumnDataType.Double,
+
                 _ => throw new NotImplementedException("need to implement"),
             };
         }
@@ -140,6 +144,25 @@ internal static class LogicalExtensions
                 }
 
                 return inputTypes[0];
+            }
+        }
+    }
+
+    internal static void MergeSchemas(this Schema self, Schema second)
+    {
+        if (!second.Fields.Any())
+        {
+            return;
+        }
+
+        // TODO null fields?
+        foreach (var field in second.Fields.Where(f => f != null))
+        {
+            var duplicate = self.Fields.FirstOrDefault(f => f != null && f.Name == field.Name) != null;
+
+            if (!duplicate)
+            {
+                self.Fields.Add(field);
             }
         }
     }
@@ -316,7 +339,7 @@ internal static class LogicalExtensions
         }
     }
 
-    internal static List<ILogicalExpression> FindGroupByExprs(IReadOnlyCollection<Expression>? selectGroupBy, Schema schema)
+    internal static List<ILogicalExpression> FindGroupByExprs(IReadOnlyCollection<Expression>? selectGroupBy, Schema combinedSchema/*, Schema planSchema*/)
     {
         if (selectGroupBy == null)
         {
@@ -325,7 +348,9 @@ internal static class LogicalExtensions
 
         return selectGroupBy.Select(expr =>
         {
-            var groupByExpr = SqlExprToLogicalExpr(expr, schema);
+            var groupByExpr = SqlExprToLogicalExpr(expr, combinedSchema);
+
+            // resolve aliases
 
             return groupByExpr;
         }).ToList();
@@ -355,28 +380,31 @@ internal static class LogicalExtensions
             }
             else
             {
-                projectedExpressions.Add(ToColumnExpr(expr));
+                projectedExpressions.Add(ToColumnExpr(expr, plan.Schema));
             }
         }
 
         var fields = ExprListToFields(projectedExpressions, plan);
         return new Projection(plan, expressions, new Schema(fields));
 
-        ILogicalExpression ToColumnExpr(ILogicalExpression expr)
+        ILogicalExpression ToColumnExpr(ILogicalExpression expr, Schema schema)
         {
             switch (expr)
             {
                 case Expressions.Column:
                     return expr;
 
-                //case Alias:
-                //case Cast
+                case Alias alias:
+                    return alias with {Expr = ToColumnExpr(alias.Expr, schema)};
+
+;               //case Cast
                 //case TryCast
                 // case ScalarSubQuery
+
                 default:
                     var name = expr.CreateName();
                     var field = schema.GetField(name);
-                    return field != null ? expr : new Expressions.Column(name);
+                    return field == null ? expr : new Expressions.Column(name);
             }
         }
 
@@ -567,9 +595,9 @@ internal static class LogicalExtensions
             return new Literal(new IntegerScalar(parsedInt));
         }
 
-        if (float.TryParse(number.Value, out var parsedFloat))
+        if (double.TryParse(number.Value, out var parsedDouble))
         {
-            return new Literal(new FloatScalar(parsedFloat));
+            return new Literal(new DoubleScalar(parsedDouble));
         }
 
         return new Literal(new StringScalar(number.Value));

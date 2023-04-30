@@ -24,7 +24,7 @@ internal record SumAccumulator : Accumulator
             {
                 int i => (int) _value + i,
                 long l => (long) _value + l,
-                decimal d => (decimal) _value + d,
+                double d => (double) _value + d,
                 _ => _value
             };
         }

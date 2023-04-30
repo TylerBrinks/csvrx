@@ -71,11 +71,11 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
     {
         return (leftDataType, rightDataType) switch
         {
-            (ColumnDataType.Decimal, ColumnDataType.Decimal)
-                or (ColumnDataType.Decimal, ColumnDataType.Integer)
-                or (ColumnDataType.Integer, ColumnDataType.Decimal)
-                or (_, ColumnDataType.Decimal)
-                or (ColumnDataType.Decimal, _) => ColumnDataType.Decimal,
+            (ColumnDataType.Double, ColumnDataType.Double)
+                or (ColumnDataType.Double, ColumnDataType.Integer)
+                or (ColumnDataType.Integer, ColumnDataType.Double)
+                or (_, ColumnDataType.Double)
+                or (ColumnDataType.Double, _) => ColumnDataType.Double,
 
             (ColumnDataType.Integer, ColumnDataType.Integer)
                 or (ColumnDataType.Integer, _)
@@ -91,8 +91,8 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
 
         return (leftDataType, rightDataType) switch
         {
-            (ColumnDataType.Decimal, _)
-                or (ColumnDataType.Decimal, _) => ColumnDataType.Decimal,
+            (ColumnDataType.Double, _)
+                or (ColumnDataType.Double, _) => ColumnDataType.Double,
 
             (ColumnDataType.Integer, _)
                 or (ColumnDataType.Integer, _) => ColumnDataType.Integer,
@@ -134,11 +134,11 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
 
         return (leftDataType, rightDataType) switch
         {
-            (ColumnDataType.Decimal, ColumnDataType.Decimal)
-                or (ColumnDataType.Integer, ColumnDataType.Decimal)
-                or (ColumnDataType.Decimal, ColumnDataType.Integer)
-                or (ColumnDataType.Decimal, _)
-                or (_, ColumnDataType.Decimal) => ColumnDataType.Decimal,
+            (ColumnDataType.Double, ColumnDataType.Double)
+                or (ColumnDataType.Integer, ColumnDataType.Double)
+                or (ColumnDataType.Double, ColumnDataType.Integer)
+                or (ColumnDataType.Double, _)
+                or (_, ColumnDataType.Double) => ColumnDataType.Double,
 
             (ColumnDataType.Integer, ColumnDataType.Integer)
                 or (ColumnDataType.Integer, _)
@@ -193,7 +193,7 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
             case ColumnDataType.Integer:
                 return CompareIntegers(left, right);
 
-            case ColumnDataType.Decimal:
+            case ColumnDataType.Double:
                 return CompareDecimals(left, right);
 
             case ColumnDataType.Boolean:

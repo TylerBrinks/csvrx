@@ -1,4 +1,5 @@
-﻿using CsvRx.Core.Data;
+﻿using CsvHelper.Configuration.Attributes;
+using CsvRx.Core.Data;
 using CsvRx.Core.Logical.Expressions;
 using CsvRx.Core.Logical.Plans;
 using SqlParser.Ast;
@@ -22,8 +23,11 @@ internal class LogicalPlanner
 
         var projectedPlan = LogicalExtensions.PlanProjection(plan, selectExpressions);
 
+        var combinedSchemas = projectedPlan.Schema;
+        combinedSchemas.MergeSchemas(plan.Schema);
+
         var aggregateExpressions = LogicalExtensions.FindAggregateExprs(selectExpressions.Select(_ => _).ToList());
-        var groupByExpressions = LogicalExtensions.FindGroupByExprs(select.GroupBy, projectedPlan.Schema);
+        var groupByExpressions = LogicalExtensions.FindGroupByExprs(select.GroupBy, combinedSchemas);// projectedPlan.Schema);
 
         var selectExpressionsPostAggregate = new List<ILogicalExpression>();
         var havingExprsionsPostAggregate = new List<ILogicalExpression>();

@@ -5,7 +5,9 @@ VisualStudioVersion = 17.4.33403.182
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CsvRx", "CsvRx\CsvRx.csproj", "{82825ADB-4480-4DA3-A235-165894F0A1B1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CsvRx.Core", "CsvRx.Core\CsvRx.Core.csproj", "{60880805-376E-42D4-BD40-80696E4EF47E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CsvRx.Core", "CsvRx.Core\CsvRx.Core.csproj", "{60880805-376E-42D4-BD40-80696E4EF47E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CsvRx.Tests", "CsvRx.Tests\CsvRx.Tests.csproj", "{FBB353B6-CD92-40E7-8CB2-37016DD7E658}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{60880805-376E-42D4-BD40-80696E4EF47E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{60880805-376E-42D4-BD40-80696E4EF47E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{60880805-376E-42D4-BD40-80696E4EF47E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FBB353B6-CD92-40E7-8CB2-37016DD7E658}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FBB353B6-CD92-40E7-8CB2-37016DD7E658}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FBB353B6-CD92-40E7-8CB2-37016DD7E658}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FBB353B6-CD92-40E7-8CB2-37016DD7E658}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

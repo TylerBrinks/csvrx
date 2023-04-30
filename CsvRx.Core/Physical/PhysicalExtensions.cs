@@ -88,7 +88,7 @@ namespace CsvRx.Core.Physical
             {
                 return dataType switch
                 {
-                    ColumnDataType.Integer or ColumnDataType.Decimal => ColumnDataType.Decimal,
+                    ColumnDataType.Integer or ColumnDataType.Double => ColumnDataType.Double,
                     _ => throw new InvalidOperationException($"AVG does not support data type {dataType}")
                 };
             }
@@ -117,6 +117,9 @@ namespace CsvRx.Core.Physical
 
                 case (AggregateFunctionType.Max, _):
                     return new MaxFunction(inputPhysicalExpressions[0], name, returnType);
+
+                case (AggregateFunctionType.Avg, _):
+                    return new AverageFunction(inputPhysicalExpressions[0], name, returnType);
 
                 default:
                     throw new NotImplementedException($"Aggregate function not yet implemented: {fn.FunctionType}");

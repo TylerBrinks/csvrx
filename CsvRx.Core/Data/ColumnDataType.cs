@@ -6,7 +6,7 @@ public enum ColumnDataType
 {
     Boolean = 1 << 0,
     Integer = 1 << 1,
-    Decimal = 1 << 2,
+    Double = 1 << 2,
     Date32 = 1 << 3,
     TimestampSecond = 1 << 4,
     TimestampMillisecond = 1 << 5,

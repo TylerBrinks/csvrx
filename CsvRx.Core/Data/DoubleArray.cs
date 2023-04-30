@@ -2,11 +2,15 @@
 
 namespace CsvRx.Core.Data;
 
-internal class DecimalArray : TypedRecordArray<decimal?>
+internal class DoubleArray : TypedRecordArray<double?>
 {
     public override void Add(object? s)
     {
-        var parsed = decimal.TryParse(s.ToString(), out var result);
+        if (s == null)
+        {
+            return;
+        }
+        var parsed = double.TryParse(s.ToString(), out var result);
         if (parsed)
         {
             List.Add(result);

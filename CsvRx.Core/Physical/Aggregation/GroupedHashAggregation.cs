@@ -92,10 +92,10 @@ internal class GroupedHashAggregation : IAsyncEnumerable<RecordBatch>
     {
         if (_aggregationMode == AggregationMode.Partial)
         {
-            return _aggregates.Select(ae => ae.InputExpression.Evaluate(batch)).ToList();
+            return _aggregates.Select(ae => ae.Expression.Evaluate(batch)).ToList();
         }
 
         var index = _groupBy.Expr.Count;
-        return _aggregates.Select(ae => ae.InputExpression.Evaluate(batch, index++)).ToList();
+        return _aggregates.Select(ae => ae.Expression.Evaluate(batch, index++)).ToList();
     }
 }

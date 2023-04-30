@@ -19,7 +19,7 @@
                 ColumnDataType.Utf8 => new StringArray(),
                 ColumnDataType.Integer => new IntegerArray(),
                 ColumnDataType.Boolean => new BooleanArray(),
-                ColumnDataType.Decimal => new DecimalArray(),
+                ColumnDataType.Double => new DoubleArray(),
                 _ => throw new NotSupportedException()
             };
         }

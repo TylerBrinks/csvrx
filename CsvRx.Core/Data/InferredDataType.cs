@@ -8,7 +8,7 @@ public partial class InferredDataType
     {
         BooleanRegex(),
         IntegerRegex(),
-        DecimalRegex(),
+        DoubleRegex(),
         Date32Regex(),
         TimestampSecond(),
         TimestampMillisecond(),
@@ -53,7 +53,7 @@ public partial class InferredDataType
     [GeneratedRegex("^-?(\\d+)$", RegexOptions.None, "en-US")]
     private static partial Regex IntegerRegex();
     [GeneratedRegex("^-?((\\d*\\.\\d+|\\d+\\.\\d*)([eE]-?\\d+)?|\\d+([eE]-?\\d+))$", RegexOptions.None, "en-US")]
-    private static partial Regex DecimalRegex();
+    private static partial Regex DoubleRegex();
     [GeneratedRegex("^\\d{4}-\\d\\d-\\d\\d$", RegexOptions.None, "en-US")]
     private static partial Regex Date32Regex();
     [GeneratedRegex("^\\d{4}-\\d\\d-\\d\\d[T ]\\d\\d:\\d\\d:\\d\\d$", RegexOptions.None, "en-US")]

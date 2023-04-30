@@ -4,10 +4,15 @@ using CsvRx.Core.Physical.Expressions;
 
 namespace CsvRx.Core.Physical.Functions;
 
-internal record MaxFunction(IPhysicalExpression InputExpression, string Name, ColumnDataType DataType) 
+internal record AverageFunction(IPhysicalExpression InputExpression, string Name, ColumnDataType DataType) 
     : Aggregate(InputExpression), IAggregation
 {
-    internal override List<Field> StateFields => new() { new($"{Name}[max]", DataType) };
+    internal override List<Field> StateFields => new()
+    {
+        //new($"{Name}[count]", DataType),
+        //new($"{Name}[sum]", DataType)
+        new($"{Name}[avg]", DataType)
+    };
 
     internal override Field Field => new(Name, DataType);
 
@@ -15,6 +20,6 @@ internal record MaxFunction(IPhysicalExpression InputExpression, string Name, Co
 
     public Accumulator CreateAccumulator()
     {
-        return new MaxAccumulator();
+        return new AverageAccumulator();
     }
 }

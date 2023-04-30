@@ -11,7 +11,7 @@ internal record MinFunction(IPhysicalExpression InputExpression, string Name, Co
     
     internal override Field Field => new(Name, DataType);
 
-    internal override List<IPhysicalExpression> Expressions => new() {InputExpression};
+    internal override List<IPhysicalExpression> Expressions => new() {Expression};
 
     public Accumulator CreateAccumulator()
     {
