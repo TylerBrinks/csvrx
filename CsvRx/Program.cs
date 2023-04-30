@@ -5,7 +5,8 @@ var context = new CsvRx.Core.ExecutionContext();
 context.RegisterCsv("aggregate_test_100", @"C:\Users\tyler\source\repos\sink\sqldatafusion\testing\data\csv\aggregate_test_100.csv");
 //var results = context.ExecuteSql("SELECT c1, MAX(c3) FROM aggregate_test_100 GROUP BY c1"); //WHERE c11 > .2 AND c11 < 0.9 
 //var results = context.ExecuteSql("SELECT * FROM aggregate_test_100");
-var results = context.ExecuteSql("SELECT  max(c3),c1, min(c3) FROM aggregate_test_100 group by c1");
+var results = context.ExecuteSql("SELECT max(c3),c1, min(c3) FROM aggregate_test_100 group by c1");
+//var results = context.ExecuteSql("SELECT max(c3) FROM aggregate_test_100");
 Console.WriteLine();
 
 Table? table = null;

@@ -1,5 +1,6 @@
 ﻿using CsvRx.Core.Data;
 using CsvRx.Core.Physical.Expressions;
+using CsvRx.Core.Values;
 
 namespace CsvRx.Core.Execution;
 
@@ -23,7 +24,22 @@ internal record ProjectionExecution(
     {
         await foreach (var batch in Plan.Execute())
         {
-            yield return batch;
+            var columns = Expressions.Select(e => e.Expression.Evaluate(batch)).ToList();
+
+            var projection = new RecordBatch(Schema);
+
+            for (var i = 0; i < columns.Count; i++)
+            {
+                var column = columns[i];
+
+                var array = (ArrayColumnValue)column;
+                foreach (var val in array.Values)
+                {
+                    projection.Results[i].Add(val);
+                }
+            }
+
+            yield return projection;
         }
     }
 }

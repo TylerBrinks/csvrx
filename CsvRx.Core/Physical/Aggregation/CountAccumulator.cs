@@ -22,7 +22,7 @@ internal record CountAccumulator : Accumulator
 
     public override void MergeBatch(List<ArrayColumnValue> values)
     {
-        UpdateBatch(values);
+        _count = Convert.ToUInt32(values[0].Values[0]);
     }
 
     public override object? Value => _count;

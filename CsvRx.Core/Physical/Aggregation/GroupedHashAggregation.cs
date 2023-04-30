@@ -11,7 +11,7 @@ internal class GroupedHashAggregation : IAsyncEnumerable<RecordBatch>
     private readonly IExecutionPlan _plan;
     private readonly GroupBy _groupBy;
     private readonly Schema _schema;
-    private List<Aggregate> _aggregates;
+    private readonly List<Aggregate> _aggregates;
     private readonly AggregationMode _aggregationMode;
 
     public GroupedHashAggregation(
@@ -27,8 +27,6 @@ internal class GroupedHashAggregation : IAsyncEnumerable<RecordBatch>
         _groupBy = groupBy;
         _schema = schema;
         _aggregates = aggregates;
-
-        //MapAggregateIndices();
     }
 
     public async IAsyncEnumerator<RecordBatch> GetAsyncEnumerator(CancellationToken cancellationToken = new ())
