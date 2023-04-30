@@ -9,8 +9,6 @@ internal record AverageFunction(IPhysicalExpression InputExpression, string Name
 {
     internal override List<Field> StateFields => new()
     {
-        //new($"{Name}[count]", DataType),
-        //new($"{Name}[sum]", DataType)
         new($"{Name}[avg]", DataType)
     };
 

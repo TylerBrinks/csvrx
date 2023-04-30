@@ -5,7 +5,7 @@ namespace CsvRx.Core.Physical.Aggregation;
 
 internal record MinAccumulator : Accumulator
 {
-    private object? _value;
+    private double? _value;
 
     public override void Accumulate(object? value)
     {
@@ -16,14 +16,14 @@ internal record MinAccumulator : Accumulator
 
         if (_value == null)
         {
-            _value = value;
+            _value = Convert.ToDouble(value);
         }
         else
         {
             _value = value switch
             {
-                int i when i < (int) _value => i,
-                long l when l < (long) _value => l,
+                int i when i < (int) _value => Convert.ToDouble(i),
+                long l when l < (long) _value => Convert.ToDouble(l),
                 double d when d < (double) _value => d,
                 _ => _value
             };
