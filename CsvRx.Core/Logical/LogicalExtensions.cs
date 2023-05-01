@@ -220,7 +220,6 @@ internal static class LogicalExtensions
         var filterExpression = SqlToExpr(selection, plan.Schema);
         var usingColumns = new HashSet<Expressions.Column>();
         ExprToColumns(filterExpression, usingColumns);
-        //filterExpression = NormalizeColumn(filterExpression, new []{ plan.Schema }, usingColumns);
         return new Filter(plan, filterExpression);
     }
     /// <summary>
@@ -266,6 +265,12 @@ internal static class LogicalExtensions
             }
         }
 
+    }
+
+    internal static List<ILogicalExpression> ExpandWildcard(Schema schema)
+    {
+        // todo usingcolumns for join
+        return schema.Fields.Select(f => (ILogicalExpression)new Expressions.Column(f.Name)).ToList();
     }
 
     #endregion

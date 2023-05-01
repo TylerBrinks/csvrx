@@ -6,7 +6,7 @@ internal class LogicalPlanOptimizer
 {
     private static readonly List<ILogicalPlanOptimizationRule> Rules = new()
     {
-        //new ReplaceDistinctWithAggregate::new()),
+        new ReplaceDistinctWithAggregateRule(),
         //new SimplifyExpressionsRule(),
         //new(MergeProjection::new()),
         //new(EliminateDuplicatedExpr::new()),

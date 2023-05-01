@@ -53,7 +53,11 @@ internal class GroupedHashAggregation : IAsyncEnumerable<RecordBatch>
                 if (accumulators == null || accumulators.Count == 0)
                 {
                     accumulators = _aggregates.Cast<IAggregation>().Select(fn => fn.CreateAccumulator()).ToList();
-                    map.Add(rowKey, accumulators);
+                    //map.Add(rowKey, accumulators);
+                    // select distinct... creates a grouping without an aggregation
+                    // so the addition of the accumulator needs to handle possible
+                    // duplicate row key values.
+                    map.TryAdd(rowKey, accumulators);
                 }
 
                 for (var i = 0; i < accumulators.Count; i++)
