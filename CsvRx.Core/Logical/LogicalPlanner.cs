@@ -27,7 +27,7 @@ internal class LogicalPlanner
         combinedSchemas.MergeSchemas(plan.Schema);
 
         var aggregateExpressions = LogicalExtensions.FindAggregateExprs(selectExpressions.Select(_ => _).ToList());
-        var groupByExpressions = LogicalExtensions.FindGroupByExprs(select.GroupBy, combinedSchemas);// projectedPlan.Schema);
+        var groupByExpressions = LogicalExtensions.FindGroupByExprs(select.GroupBy, combinedSchemas);
 
         var selectExpressionsPostAggregate = new List<ILogicalExpression>();
         var havingExprsionsPostAggregate = new List<ILogicalExpression>();

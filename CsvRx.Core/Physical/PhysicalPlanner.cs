@@ -1,9 +1,7 @@
-﻿using CsvRx.Core.Data;
-using CsvRx.Core.Execution;
+﻿using CsvRx.Core.Execution;
 using CsvRx.Core.Logical;
 using CsvRx.Core.Logical.Expressions;
 using CsvRx.Core.Logical.Plans;
-using CsvRx.Core.Physical.Expressions;
 using Aggregate = CsvRx.Core.Logical.Plans.Aggregate;
 using Column = CsvRx.Core.Logical.Expressions.Column;
 
@@ -97,20 +95,15 @@ internal class PhysicalPlanner
         var sortExpressions = sort.OrderByExpressions
             .Select(e =>
             {
-                if (e is OrderBy o)
+                if (e is OrderBy order)
                 {
-                    return CreatePhysicalSortExpression(o.Expression, sortSchema, inputSchema);
+                    return PhysicalExtensions.CreatePhysicalSortExpression(order.Expression, sortSchema, inputSchema, order.Ascending);
                 }
 
                 throw new InvalidOperationException("Sort only accepts sort expressions");
             }).ToList();
 
-        return SortExecution.TryNew(sortExpressions, physicalInput);
+        return new SortExecution(sortExpressions, physicalInput);
     }
 
-    private PhysicalSortExpression CreatePhysicalSortExpression(ILogicalExpression expression, Schema sortSchema, Schema inputSchema)
-    {
-        var physicalExpression = LogicalExtensions.CreatePhysicalExpr(expression, sortSchema, inputSchema);
-        return new PhysicalSortExpression(physicalExpression, sortSchema, inputSchema);
-    }
 }

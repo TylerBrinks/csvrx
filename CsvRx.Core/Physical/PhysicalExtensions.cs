@@ -146,5 +146,15 @@ namespace CsvRx.Core.Physical
                     throw new NotImplementedException("Aggregate function not implemented");
             }
         }
+
+        internal static PhysicalSortExpression CreatePhysicalSortExpression(
+            ILogicalExpression expression,
+            Schema sortSchema,
+            Schema inputSchema,
+            bool ascending)
+        {
+            var physicalExpression = LogicalExtensions.CreatePhysicalExpr(expression, sortSchema, inputSchema);
+            return new PhysicalSortExpression(physicalExpression, sortSchema, inputSchema, ascending);
+        }
     }
 }

@@ -58,29 +58,12 @@ namespace CsvRx.Core.Data
 
                 if (columnsToIgnore != null && columnsToIgnore.Contains(i))
                 {
-                    // Column already sorted.
+                    // Column is already sorted.
                     continue;
                 }
 
                 array.Reorder(indices);
             }
-        }
-
-        public override string ToString()
-        {
-            var builder = new StringBuilder();
-            for (var j = 0; j < RowCount; j++)
-            {
-                for (var i = 0; i < Results.Count; i++)
-                {
-                    builder.Append(Results[i].Values[j]);
-                    builder.Append("\t");
-                }
-
-                builder.Append("\r\n");
-            }
-
-            return builder.ToString();
         }
     }
 }

@@ -28,9 +28,9 @@ internal record Sort(ILogicalPlan Plan, List<ILogicalExpression> OrderByExpressi
     {
         return orderByExpressions.Select(e =>
         {
-            if (e is OrderBy o)
+            if (e is OrderBy order)
             {
-                return new OrderBy(RewriteByAggregates(o.Expression, plan), o.Ascending);
+                return order with {Expression = RewriteByAggregates(order.Expression, plan)};
             }
 
             return e;

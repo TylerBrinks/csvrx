@@ -44,7 +44,8 @@ internal interface ILogicalPlan : INode
     {
         return this switch
         {
-            Aggregate a => a.AggregateExpressions.Select(_=>_).Concat(a.GroupExpressions).ToList(),
+            //Aggregate a => a.AggregateExpressions.Select(_=>_).Concat(a.GroupExpressions).ToList(),
+            Aggregate a => a.AggregateExpressions.ToList().Concat(a.GroupExpressions).ToList(),
             Filter f => new List<ILogicalExpression> { f.Predicate },
             Projection p => p.Expr,
             Sort s => s.OrderByExpressions,

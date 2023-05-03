@@ -39,7 +39,8 @@ internal interface ILogicalExpression : INode
 
         List<ILogicalExpression> GetAggregateChildren(AggregateFunction fn)
         {
-            var args = fn.Args.Select(_ => _).ToList();
+            //var args = fn.Args.Select(_ => _).ToList();
+            var args = fn.Args.ToList();
             if (fn.Filter != null)
             {
                 args.Add(fn.Filter);
