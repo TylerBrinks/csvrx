@@ -7,7 +7,8 @@ context.RegisterCsv("aggregate_test_100", @"C:\Users\tyler\source\repos\sink\sql
 //var results = context.ExecuteSql("SELECT * FROM aggregate_test_100");
 
 //var results = context.ExecuteSql("SELECT avg(c3) FROM aggregate_test_100 group by c1");
-var results = context.ExecuteSql("SELECT distinct c1 FROM aggregate_test_100");
+var results = context.ExecuteSql("SELECT c1, c3 FROM aggregate_test_100 order by c1, c3");
+//SELECT c1, c3 FROM aggregate_test_100 order by c1, c3 desc
 Console.WriteLine();
 
 Table? table = null;

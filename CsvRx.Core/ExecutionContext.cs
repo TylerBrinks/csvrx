@@ -52,24 +52,15 @@ public class ExecutionContext
         return plan;
     }
 
-    internal static async IAsyncEnumerable<RecordBatch> ExecuteLogicalPlan(ILogicalPlan plan)
+    internal static async IAsyncEnumerable<RecordBatch> ExecuteLogicalPlan(ILogicalPlan logicalPlan)
     {
-        var physicalPlan = CreatePhysicalPlan(plan);
+        var optimized = new LogicalPlanOptimizer().Optimize(logicalPlan);
+
+        var physicalPlan = new PhysicalPlanner().CreateInitialPlan(optimized);
+
         await foreach (var batch in physicalPlan.Execute())
         {
             yield return batch;
         }
-    }
-
-    internal static IExecutionPlan CreatePhysicalPlan(ILogicalPlan logicalPlan)
-    {
-        var optimized = OptimizeLogicalPlan(logicalPlan);
-
-        return new PhysicalPlanner().CreateInitialPlan(optimized);
-    }
-
-    internal static ILogicalPlan OptimizeLogicalPlan(ILogicalPlan logicalPlan)
-    {
-        return new LogicalPlanOptimizer().Optimize(logicalPlan);
     }
 }

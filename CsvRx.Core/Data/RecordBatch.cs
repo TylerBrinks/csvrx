@@ -1,4 +1,7 @@
-﻿namespace CsvRx.Core.Data
+﻿
+using System.Text;
+
+namespace CsvRx.Core.Data
 {
     public record RecordBatch
     {
@@ -45,6 +48,39 @@
             }
 
             return batch;
+        }
+
+        public void Reorder(List<int> indices, List<int>? columnsToIgnore = null)
+        {
+            for (var i = 0; i < Results.Count; i++)
+            {
+                var array = Results[i];
+
+                if (columnsToIgnore != null && columnsToIgnore.Contains(i))
+                {
+                    // Column already sorted.
+                    continue;
+                }
+
+                array.Reorder(indices);
+            }
+        }
+
+        public override string ToString()
+        {
+            var builder = new StringBuilder();
+            for (var j = 0; j < RowCount; j++)
+            {
+                for (var i = 0; i < Results.Count; i++)
+                {
+                    builder.Append(Results[i].Values[j]);
+                    builder.Append("\t");
+                }
+
+                builder.Append("\r\n");
+            }
+
+            return builder.ToString();
         }
     }
 }

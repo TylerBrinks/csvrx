@@ -9,6 +9,6 @@ internal record Distinct(ILogicalPlan Plan) : ILogicalPlanParent
     public string ToStringIndented(Indentation? indentation)
     {
         var indent = indentation ?? new Indentation();
-        return $"Distinct {indent.Next(Plan)}";
+        return $"Distinct: {indent.Next(Plan)}";
     }
 }

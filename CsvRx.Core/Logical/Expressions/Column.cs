@@ -1,4 +1,5 @@
-﻿namespace CsvRx.Core.Logical.Expressions;
+﻿
+namespace CsvRx.Core.Logical.Expressions;
 
 internal record Column(string Name) : ILogicalExpression
 {

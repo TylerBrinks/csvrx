@@ -51,11 +51,18 @@ internal interface ILogicalExpression : INode
 
     T INode.MapChildren<T>(T instance, Func<T, T> transformation)
     {
-        throw new NotImplementedException();
+        return this switch
+        {
+            _ => (T)this,
+        };
     }
 
     T INode.Transform<T>(T instance, Func<T, T>? func)
     {
-        throw new NotImplementedException();
+        var afterOpChildren = MapChildren(this, node => node.Transform(node, func as Func<ILogicalExpression, ILogicalExpression>));
+
+        var newNode = func((T)afterOpChildren);
+
+        return newNode;
     }
 }

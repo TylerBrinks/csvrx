@@ -18,6 +18,7 @@ internal class EliminateProjectionRule : ILogicalPlanOptimizationRule
                 {
                     case Filter:
                     case TableScan:
+                    case Sort:
                         // sort
                         return CanEliminate(p, childPlan.Schema) ? childPlan : null;
 

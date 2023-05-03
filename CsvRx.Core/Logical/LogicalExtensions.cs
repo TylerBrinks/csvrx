@@ -370,7 +370,6 @@ internal static class LogicalExtensions
     #region Projection Plan
     internal static ILogicalPlan PlanProjection(ILogicalPlan plan, List<ILogicalExpression> expressions)
     {
-        var schema = plan.Schema;
         var projectedExpressions = new List<ILogicalExpression>();
 
         foreach (var expr in expressions)
@@ -426,15 +425,17 @@ internal static class LogicalExtensions
             return plan;
         }
 
-        //var orderByRex = orderByExpressions!.Select(e => OrderByToSortExpression(e, plan.Schema));
+        var orderByRelation = orderByExpressions!.Select(e => OrderByToSortExpression(e, plan.Schema)).ToList();
 
-        return plan;
+        return Sort.TryNew(plan, orderByRelation);
     }
 
-    //private ILogicalExpression OrderByToSortExpression(OrderByExpression orderByExpr, Schema planSchema)
-    //{
-    //    var expr = 
-    //}
+    private static ILogicalExpression OrderByToSortExpression(OrderByExpression orderByExpression, Schema schema)
+    {
+        var expr = SqlExprToLogicalExpr(orderByExpression.Expression, schema);
+
+        return new OrderBy(expr, orderByExpression.Asc ?? true);
+    }
 
     #endregion
 

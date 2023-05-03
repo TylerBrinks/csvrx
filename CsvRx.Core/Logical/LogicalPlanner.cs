@@ -56,11 +56,9 @@ internal class LogicalPlanner
         }
 
         // Wrap the plan in a sort
-        //todo make this a class, not a function
         plan = LogicalExtensions.OrderBy(plan, query.OrderBy);
 
         // Wrap the plan in a limit
-        //todo make this a class, not a function
         var final = LogicalExtensions.Limit(plan, query.Offset, query.Limit);
 
         return final;

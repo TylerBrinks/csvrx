@@ -2,7 +2,6 @@
 using CsvRx.Core.Physical;
 using CsvRx.Core.Physical.Aggregation;
 using CsvRx.Core.Physical.Expressions;
-using System.Threading;
 
 namespace CsvRx.Core.Execution;
 

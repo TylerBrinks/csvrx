@@ -9,13 +9,13 @@ namespace CsvRx.Core.Logical.Rules
 
         public ILogicalPlan? TryOptimize(ILogicalPlan plan)
         {
-            if (plan is Distinct d)
+            if (plan is not Distinct d)
             {
-                var groupExpression = LogicalExtensions.ExpandWildcard(plan.Schema);
-                return Aggregate.TryNew(d.Plan, groupExpression, new List<ILogicalExpression>());
+                return plan;
             }
 
-            return null;
+            var groupExpression = LogicalExtensions.ExpandWildcard(plan.Schema);
+            return Aggregate.TryNew(d.Plan, groupExpression, new List<ILogicalExpression>());
         }
     }
 }

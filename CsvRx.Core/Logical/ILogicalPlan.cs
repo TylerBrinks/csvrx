@@ -34,6 +34,7 @@ internal interface ILogicalPlan : INode
             Distinct d => new List<ILogicalPlan> { d.Plan },
             Filter f => new List<ILogicalPlan> { f.Plan },
             Projection p => new List<ILogicalPlan> { p.Plan },
+            Sort s => new List<ILogicalPlan>{ s.Plan },
 
             _ => new List<ILogicalPlan>()
         };
@@ -46,6 +47,7 @@ internal interface ILogicalPlan : INode
             Aggregate a => a.AggregateExpressions.Select(_=>_).Concat(a.GroupExpressions).ToList(),
             Filter f => new List<ILogicalExpression> { f.Predicate },
             Projection p => p.Expr,
+            Sort s => s.OrderByExpressions,
 
             _ => new List<ILogicalExpression>()
         };
@@ -65,13 +67,10 @@ internal interface ILogicalPlan : INode
         return newNode;
     }
 
-    ILogicalPlan WithNewInputs(List<ILogicalPlan> newInputs)
+    ILogicalPlan WithNewInputs(List<ILogicalPlan> inputs)
     {
-        return FromPlan(GetExpressions(), newInputs);
-    }
-
-    ILogicalPlan FromPlan(List<ILogicalExpression> expressions, List<ILogicalPlan> inputs)
-    {
+        var expressions = GetExpressions();
+        
         switch (this)
         {
             case Projection p:
@@ -88,6 +87,10 @@ internal interface ILogicalPlan : INode
             case TableScan t:
                 return t;  // Not using filters; no need to clone.
 
+            case Sort:
+                return new Sort(inputs[0], expressions);
+
+            case Distinct d:
             default:
                 throw new NotImplementedException();
         }
