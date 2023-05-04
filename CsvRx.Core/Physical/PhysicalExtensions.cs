@@ -8,14 +8,14 @@ namespace CsvRx.Core.Physical
 {
     internal static class PhysicalExtensions
     {
-        internal static GroupBy CreateGroupingPhysicalExpr(
+        internal static GroupBy CreateGroupingPhysicalExpression(
             List<ILogicalExpression> groupExpressions,
             Schema inputDfSchema,
             Schema inputSchema)
         {
             if (groupExpressions.Count == 1)
             {
-                var expr = LogicalExtensions.CreatePhysicalExpr(groupExpressions[0], inputDfSchema, inputSchema);
+                var expr = LogicalExtensions.CreatePhysicalExpression(groupExpressions[0], inputDfSchema, inputSchema);
                 var name = LogicalExtensions.CreatePhysicalName(groupExpressions[0], true);
 
                 var a = new List<(IPhysicalExpression Expression, string Name)>
@@ -28,7 +28,7 @@ namespace CsvRx.Core.Physical
 
             var group = groupExpressions.Select(e =>
                 (
-                    LogicalExtensions.CreatePhysicalExpr(e, inputDfSchema, inputSchema),
+                    LogicalExtensions.CreatePhysicalExpression(e, inputDfSchema, inputSchema),
                     LogicalExtensions.CreatePhysicalName(e, true)
                 ))
                 .ToList();
@@ -94,7 +94,7 @@ namespace CsvRx.Core.Physical
             }
         }
 
-        internal static Aggregate CreateAggregateExpr(
+        internal static Aggregate CreateAggregateExpression(
             AggregateFunction fn,
             bool distinct,
             List<IPhysicalExpression> inputPhysicalExpressions,
@@ -139,8 +139,8 @@ namespace CsvRx.Core.Physical
             switch (expression)
             {
                 case AggregateFunction fn:
-                    var args = fn.Args.Select(e => LogicalExtensions.CreatePhysicalExpr(e, logicalSchema, physicalSchema)).ToList();
-                    return CreateAggregateExpr(fn, fn.Distinct, args, physicalSchema, name);
+                    var args = fn.Args.Select(e => LogicalExtensions.CreatePhysicalExpression(e, logicalSchema, physicalSchema)).ToList();
+                    return CreateAggregateExpression(fn, fn.Distinct, args, physicalSchema, name);
 
                 default:
                     throw new NotImplementedException("Aggregate function not implemented");
@@ -153,7 +153,7 @@ namespace CsvRx.Core.Physical
             Schema inputSchema,
             bool ascending)
         {
-            var physicalExpression = LogicalExtensions.CreatePhysicalExpr(expression, sortSchema, inputSchema);
+            var physicalExpression = LogicalExtensions.CreatePhysicalExpression(expression, sortSchema, inputSchema);
             return new PhysicalSortExpression(physicalExpression, sortSchema, inputSchema, ascending);
         }
     }

@@ -6,11 +6,7 @@ internal class DoubleArray : TypedRecordArray<double?>
 {
     public override void Add(object? s)
     {
-        if (s == null)
-        {
-            return;
-        }
-        var parsed = double.TryParse(s.ToString(), out var result);
+        var parsed = double.TryParse(s?.ToString(), out var result);
         if (parsed)
         {
             List.Add(result);

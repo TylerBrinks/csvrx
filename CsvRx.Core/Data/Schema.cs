@@ -8,7 +8,7 @@ public class Schema
     {
         Fields = fields;
     }
-
+    //TODO should fields ever be null?
     public List<Field?> Fields { get; }
 
     public Field? GetField(string name)

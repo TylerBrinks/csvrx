@@ -3,7 +3,7 @@
 namespace CsvRx.Core.Physical;
 
 internal record GroupBy(
-    List<(IPhysicalExpression Expression, string Name)> Expr,
+    List<(IPhysicalExpression Expression, string Name)> Expression,
     List<(IPhysicalExpression Expression, string Name)> NullExpressions,
     List<List<bool>> Groups)
 {

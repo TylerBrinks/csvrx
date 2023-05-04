@@ -35,7 +35,7 @@ internal class GroupedHashAggregation : IAsyncEnumerable<RecordBatch>
 
         await foreach (var batch in _plan.Execute().WithCancellation(cancellationToken))
         {
-            var groupKey = _groupBy.Expr.Select(e => e.Expression.Evaluate(batch)).ToList();
+            var groupKey = _groupBy.Expression.Select(e => e.Expression.Evaluate(batch)).ToList();
 
             var aggregateInputValues = GetAggregateInputs(batch);
 
@@ -76,7 +76,7 @@ internal class GroupedHashAggregation : IAsyncEnumerable<RecordBatch>
             var groupKey = map.Keys.Skip(i).First();
             var accumulators = map[groupKey];
 
-            var groupCount = _groupBy.Expr.Count;
+            var groupCount = _groupBy.Expression.Count;
 
             for (var j = 0; j < groupCount; j++)
             {
@@ -99,7 +99,7 @@ internal class GroupedHashAggregation : IAsyncEnumerable<RecordBatch>
             return _aggregates.Select(ae => ae.Expression.Evaluate(batch)).ToList();
         }
 
-        var index = _groupBy.Expr.Count;
+        var index = _groupBy.Expression.Count;
         return _aggregates.Select(ae => ae.Expression.Evaluate(batch, index++)).ToList();
     }
 }

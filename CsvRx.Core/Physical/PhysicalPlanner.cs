@@ -31,7 +31,7 @@ internal class PhysicalPlanner
         var inputExec = CreateInitialPlan(projection.Plan);
         var inputSchema = projection.Plan.Schema;
 
-        var physicalExpressions = projection.Expr.Select(e =>
+        var physicalExpressions = projection.Expression.Select(e =>
         {
             string physicalName;
 
@@ -47,7 +47,7 @@ internal class PhysicalPlanner
                 physicalName = LogicalExtensions.GetPhysicalName(e);
             }
 
-            return (Expression: LogicalExtensions.CreatePhysicalExpr(e, inputSchema, inputExec.Schema), Name: physicalName);
+            return (Expression: LogicalExtensions.CreatePhysicalExpression(e, inputSchema, inputExec.Schema), Name: physicalName);
         }).ToList();
 
         return ProjectionExecution.TryNew(physicalExpressions, inputExec);
@@ -59,7 +59,7 @@ internal class PhysicalPlanner
         var physicalSchema = inputExec.Schema;
         var logicalSchema = aggregate.Plan.Schema;
 
-        var groups = PhysicalExtensions.CreateGroupingPhysicalExpr(aggregate.GroupExpressions, logicalSchema, physicalSchema);
+        var groups = PhysicalExtensions.CreateGroupingPhysicalExpression(aggregate.GroupExpressions, logicalSchema, physicalSchema);
 
         var aggregates = aggregate.AggregateExpressions
             .Select(e => PhysicalExtensions.CreateAggregateExpression(e, logicalSchema, physicalSchema))
@@ -68,9 +68,9 @@ internal class PhysicalPlanner
         var initialAggregate =
             AggregateExecution.TryNew(AggregationMode.Partial, groups, aggregates, inputExec, physicalSchema);
 
-        var finalGroup = initialAggregate.OutputGroupExpr();
+        var finalGroup = initialAggregate.OutputGroupExpression();
 
-        var finalGroupingSet = GroupBy.NewSingle(finalGroup.Select((e, i) => (e, groups.Expr[i].Name)).ToList());
+        var finalGroupingSet = GroupBy.NewSingle(finalGroup.Select((e, i) => (e, groups.Expression[i].Name)).ToList());
 
         return AggregateExecution.TryNew(AggregationMode.Final, finalGroupingSet, aggregates, initialAggregate,
             physicalSchema);
@@ -81,7 +81,7 @@ internal class PhysicalPlanner
         var physicalInput = CreateInitialPlan(filter.Plan);
         var inputSchema = physicalInput.Schema;
         var inputDfSchema = filter.Plan.Schema;
-        var runtimeExpr = LogicalExtensions.CreatePhysicalExpr(filter.Predicate, inputDfSchema, inputSchema);
+        var runtimeExpr = LogicalExtensions.CreatePhysicalExpression(filter.Predicate, inputDfSchema, inputSchema);
 
         return FilterExecution.TryNew(runtimeExpr, physicalInput);
     }

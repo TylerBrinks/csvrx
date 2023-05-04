@@ -14,9 +14,9 @@ namespace CsvRx.Core.Logical;
 
 internal static class LogicalExtensions
 {
-    internal static string CreateName(this ILogicalExpression expr)
+    internal static string CreateName(this ILogicalExpression expression)
     {
-        return expr switch
+        return expression switch
         {
             Alias a => a.Name, 
             Expressions.Column c => c.Name,
@@ -46,17 +46,17 @@ internal static class LogicalExtensions
     {
         foreach (var expr in expressions)
         {
-            ExprToColumns(expr, accumulator);
+            ExpressionToColumns(expr, accumulator);
         }
     }
 
-    internal static void ExprToColumns(ILogicalExpression expression, HashSet<Expressions.Column> accumulator)
+    internal static void ExpressionToColumns(ILogicalExpression expression, HashSet<Expressions.Column> accumulator)
     {
         InspectExprPre(expression, Inspect);
 
-        void Inspect(ILogicalExpression expr)
+        void Inspect(ILogicalExpression expression)
         {
-            switch (expr)
+            switch (expression)
             {
                 case Expressions.Column col:
                     accumulator.Add(col);
@@ -217,9 +217,9 @@ internal static class LogicalExtensions
             return plan;
         }
 
-        var filterExpression = SqlToExpr(selection, plan.Schema);
+        var filterExpression = SqlToExpression(selection, plan.Schema);
         var usingColumns = new HashSet<Expressions.Column>();
-        ExprToColumns(filterExpression, usingColumns);
+        ExpressionToColumns(filterExpression, usingColumns);
         return new Filter(plan, filterExpression);
     }
     /// <summary>
@@ -239,14 +239,12 @@ internal static class LogicalExtensions
             {
                 case SelectItem.UnnamedExpression u:
                     {
-                        var expr = SqlToExpr(u.Expression, plan.Schema);
-                        //var column = NormalizeColumn(expr, new []{ plan.Schema }, null);
+                        var expr = SqlToExpression(u.Expression, plan.Schema);
                         return new List<ILogicalExpression> { expr };
                     }
                 case SelectItem.ExpressionWithAlias e:
                     {
-                        var select = SqlToExpr(e.Expression, plan.Schema);
-                        //var column = NormalizeColumn(select, new[] { plan.Schema }, null);
+                        var select = SqlToExpression(e.Expression, plan.Schema);
                         return new List<ILogicalExpression> { new Alias(select, e.Alias) };
                     }
                 case SelectItem.Wildcard:
@@ -256,9 +254,6 @@ internal static class LogicalExtensions
                     }
 
                     return plan.Schema.Fields.Select(f => (ILogicalExpression)new Expressions.Column(f.Name)).ToList();
-
-                //case SelectItem.QualifiedWildcard q:
-                //    return ExpandQualifiedWildcard(qualifier, plan.Schema);
 
                 default:
                     throw new InvalidOperationException("Invalid select expression");
@@ -296,7 +291,7 @@ internal static class LogicalExtensions
         aggregateProjectionExpressions = aggregateProjectionExpressions.Select(e => ResolveColumns(e, plan)).ToList();
         aggregateProjectionExpressions = aggregateProjectionExpressions.Select(e => ResolveColumns(e, plan)).ToList();
 
-        var selectExpressionsPostAggregate = selectExpressions.Select(e => RebaseExpr(e, aggregateProjectionExpressions, plan)).ToList();
+        var selectExpressionsPostAggregate = selectExpressions.Select(e => RebaseExpression(e, aggregateProjectionExpressions, plan)).ToList();
         // rewrite having columns
 
         return (aggregatePlan, selectExpressionsPostAggregate, new List<ILogicalExpression>());
@@ -307,7 +302,7 @@ internal static class LogicalExtensions
         return groupExpressions;
     }
 
-    internal static (AggregateFunctionType, List<ILogicalExpression>) AggregateFunctionToExpr(
+    internal static (AggregateFunctionType, List<ILogicalExpression>) AggregateFunctionToExpression(
         AggregateFunctionType functionType,
         IReadOnlyCollection<FunctionArg>? args,
         Schema schema)
@@ -317,35 +312,38 @@ internal static class LogicalExtensions
         if (functionType == AggregateFunctionType.Count)
         {
             functionType = AggregateFunctionType.Count;
-            arguments = FunctionArgsToExpr();
+            arguments = FunctionArgsToExpression();
         }
         else
         {
-            arguments = FunctionArgsToExpr();
+            arguments = FunctionArgsToExpression();
         }
 
         return (functionType, arguments);
 
-        List<ILogicalExpression> FunctionArgsToExpr()
+        List<ILogicalExpression> FunctionArgsToExpression()
         {
             return args == null
                 ? new List<ILogicalExpression>()
-                : args.Select(SqlFnArgToLogicalExpr).ToList();
+                : args.Select(SqlFnArgToLogicalExpression).ToList();
 
-            ILogicalExpression SqlFnArgToLogicalExpr(FunctionArg functionArg)
+            ILogicalExpression SqlFnArgToLogicalExpression(FunctionArg functionArg)
             {
                 return functionArg switch
                 {
                     FunctionArg.Named { Arg: FunctionArgExpression.Wildcard } => new Wildcard(),
-                    FunctionArg.Named { Arg: FunctionArgExpression.FunctionExpression a } => SqlExprToLogicalExpr(a.Expression, schema),
-                    FunctionArg.Unnamed { FunctionArgExpression: FunctionArgExpression.FunctionExpression fe } => SqlExprToLogicalExpr(fe.Expression, schema),
+                    FunctionArg.Named { Arg: FunctionArgExpression.FunctionExpression a } 
+                        => SqlExprToLogicalExpression(a.Expression, schema),
+                    FunctionArg.Unnamed { FunctionArgExpression: FunctionArgExpression.FunctionExpression fe } 
+                        => SqlExprToLogicalExpression(fe.Expression, schema),
+                    
                     _ => throw new InvalidOleVariantTypeException($"Unsupported qualified wildcard argument: {functionArg.ToSql()}")
                 };
             }
         }
     }
 
-    internal static List<ILogicalExpression> FindGroupByExprs(IReadOnlyCollection<Expression>? selectGroupBy, Schema combinedSchema/*, Schema planSchema*/)
+    internal static List<ILogicalExpression> FindGroupByExpressions(IReadOnlyCollection<Expression>? selectGroupBy, Schema combinedSchema/*, Schema planSchema*/)
     {
         if (selectGroupBy == null)
         {
@@ -354,7 +352,7 @@ internal static class LogicalExtensions
 
         return selectGroupBy.Select(expr =>
         {
-            var groupByExpr = SqlExprToLogicalExpr(expr, combinedSchema);
+            var groupByExpr = SqlExprToLogicalExpression(expr, combinedSchema);
 
             // resolve aliases
 
@@ -362,7 +360,7 @@ internal static class LogicalExtensions
         }).ToList();
     }
 
-    internal static List<ILogicalExpression> FindAggregateExprs(List<ILogicalExpression> expressions)
+    internal static List<ILogicalExpression> FindAggregateExpressions(List<ILogicalExpression> expressions)
     {
         return FindNestedExpressions(expressions, nested => nested is AggregateFunction);
     }
@@ -385,34 +383,33 @@ internal static class LogicalExtensions
             }
             else
             {
-                projectedExpressions.Add(ToColumnExpr(expr, plan.Schema));
+                projectedExpressions.Add(ToColumnExpression(expr, plan.Schema));
             }
         }
 
         var fields = ExprListToFields(projectedExpressions, plan);
         return new Projection(plan, expressions, new Schema(fields));
 
-        ILogicalExpression ToColumnExpr(ILogicalExpression expr, Schema schema)
+        static ILogicalExpression ToColumnExpression(ILogicalExpression expression, Schema schema)
         {
-            switch (expr)
+            switch (expression)
             {
                 case Expressions.Column:
-                    return expr;
+                    return expression;
 
                 case Alias alias:
-                    return alias with {Expr = ToColumnExpr(alias.Expr, schema)};
+                    return alias with { Expression = ToColumnExpression(alias.Expression, schema) };
 
 ;               //case Cast
                 //case TryCast
                 // case ScalarSubQuery
 
                 default:
-                    var name = expr.CreateName();
+                    var name = expression.CreateName();
                     var field = schema.GetField(name);
-                    return field == null ? expr : new Expressions.Column(name);
+                    return field == null ? expression : new Expressions.Column(name);
             }
         }
-
     }
 
     #endregion
@@ -433,7 +430,7 @@ internal static class LogicalExtensions
 
     private static ILogicalExpression OrderByToSortExpression(OrderByExpression orderByExpression, Schema schema)
     {
-        var expr = SqlExprToLogicalExpr(orderByExpression.Expression, schema);
+        var expr = SqlExprToLogicalExpression(orderByExpression.Expression, schema);
 
         return new OrderBy(expr, orderByExpression.Asc ?? true);
     }
@@ -456,9 +453,9 @@ internal static class LogicalExtensions
     /// <summary>
     /// Relational expression from sql expression
     /// </summary>
-    internal static ILogicalExpression SqlToExpr(Expression predicate, Schema schema)
+    internal static ILogicalExpression SqlToExpression(Expression predicate, Schema schema)
     {
-        var expr = SqlExprToLogicalExpr(predicate, schema);
+        var expr = SqlExprToLogicalExpression(predicate, schema);
         // rewrite qualifier
         // validate
         // infer
@@ -466,27 +463,27 @@ internal static class LogicalExtensions
         return expr;
     }
 
-    internal static ILogicalExpression CloneWithReplacement(ILogicalExpression expr, Func<ILogicalExpression, ILogicalExpression?> replacementFunc)
+    internal static ILogicalExpression CloneWithReplacement(ILogicalExpression expression, Func<ILogicalExpression, ILogicalExpression?> replacementFunc)
     {
-        var replacementOpt = replacementFunc(expr);
+        var replacementOpt = replacementFunc(expression);
 
         if (replacementOpt != null)
         {
             return replacementOpt;
         }
 
-        return expr switch
+        return expression switch
         {
-            Expressions.Column => expr,
+            Expressions.Column => expression,
             AggregateFunction fn => fn with { Args = fn.Args.Select(_ => CloneWithReplacement(_, replacementFunc)).ToList() },
 
             _ => throw new NotImplementedException() //todo other types
         };
     }
 
-    public static ILogicalExpression ResolveColumns(ILogicalExpression expr, ILogicalPlan plan)
+    public static ILogicalExpression ResolveColumns(ILogicalExpression expression, ILogicalPlan plan)
     {
-        return CloneWithReplacement(expr, nested =>
+        return CloneWithReplacement(expression, nested =>
         {
             if (nested is Expressions.Column c)
             {
@@ -499,25 +496,25 @@ internal static class LogicalExtensions
 
     }
 
-    internal static ILogicalExpression ExprAsColumnExpr(ILogicalExpression expr, ILogicalPlan plan)
+    internal static ILogicalExpression ExpressionAsColumn(ILogicalExpression expression, ILogicalPlan plan)
     {
-        if (expr is Expressions.Column c)
+        if (expression is Expressions.Column c)
         {
             var field = plan.Schema.GetField(c.Name);
             //TODO qualified name
             return new Expressions.Column(field!.Name);
         }
 
-        return new Expressions.Column(expr.CreateName());
+        return new Expressions.Column(expression.CreateName());
     }
 
-    internal static ILogicalExpression RebaseExpr(ILogicalExpression expr, ICollection<ILogicalExpression> baseExpressions, ILogicalPlan plan)
+    internal static ILogicalExpression RebaseExpression(ILogicalExpression expression, ICollection<ILogicalExpression> baseExpressions, ILogicalPlan plan)
     {
-        return CloneWithReplacement(expr, nested => baseExpressions.Contains(nested) ? ExprAsColumnExpr(nested, plan) : null);
+        return CloneWithReplacement(expression, nested => baseExpressions.Contains(nested) ? ExpressionAsColumn(nested, plan) : null);
     }
 
 
-    internal static ILogicalExpression SqlExprToLogicalExpr(Expression predicate, Schema schema)
+    internal static ILogicalExpression SqlExprToLogicalExpression(Expression predicate, Schema schema)
     {
         if (predicate is Expression.BinaryOp b)
         {
@@ -529,28 +526,28 @@ internal static class LogicalExtensions
 
     internal static ILogicalExpression ParseSqlBinaryOp(Expression left, BinaryOperator op, Expression right, Schema schema)
     {
-        return new Expressions.Binary(SqlExprToLogicalExpr(left, schema), op, SqlExprToLogicalExpr(right, schema));
+        return new Expressions.Binary(SqlExprToLogicalExpression(left, schema), op, SqlExprToLogicalExpression(right, schema));
     }
 
-    internal static ILogicalExpression SqlExprToLogicalInternal(Expression expr, Schema schema)
+    internal static ILogicalExpression SqlExprToLogicalInternal(Expression expression, Schema schema)
     {
-        switch (expr)
+        switch (expression)
         {
             case Expression.LiteralValue v:
                 return ParseValue(v);
 
             case Expression.Identifier ident:
-                return SqlIdentifierToExpr(ident, schema);
+                return SqlIdentifierToExpression(ident, schema);
 
             case Expression.Function fn:
-                return SqlFunctionToExpr(fn, schema);
+                return SqlFunctionToExpression(fn, schema);
 
             default:
                 throw new NotImplementedException();
         }
     }
 
-    internal static ILogicalExpression SqlIdentifierToExpr(Expression.Identifier ident, Schema schema)
+    internal static ILogicalExpression SqlIdentifierToExpression(Expression.Identifier ident, Schema schema)
     {
         return new Expressions.Column(schema.GetField(ident.Ident.Value)!.Name);
     }
@@ -576,7 +573,7 @@ internal static class LogicalExtensions
         }
     }
 
-    internal static ILogicalExpression SqlFunctionToExpr(Expression.Function function, Schema schema)
+    internal static ILogicalExpression SqlFunctionToExpression(Expression.Function function, Schema schema)
     {
         // scalar functions
 
@@ -588,7 +585,7 @@ internal static class LogicalExtensions
         {
             var distinct = function.Distinct;
 
-            var (aggregateFunction, expressionArgs) = AggregateFunctionToExpr(aggregateType.Value, function.Args, schema);
+            var (aggregateFunction, expressionArgs) = AggregateFunctionToExpression(aggregateType.Value, function.Args, schema);
             return new AggregateFunction(aggregateFunction, expressionArgs, distinct);
         }
 
@@ -646,7 +643,7 @@ internal static class LogicalExtensions
     #endregion
 
     #region Physical Expression
-    internal static IPhysicalExpression CreatePhysicalExpr(ILogicalExpression expression, Schema inputDfSchema, Schema inputSchema)
+    internal static IPhysicalExpression CreatePhysicalExpression(ILogicalExpression expression, Schema inputDfSchema, Schema inputSchema)
     {
         switch (expression)
         {
@@ -656,8 +653,8 @@ internal static class LogicalExtensions
 
             case Expressions.Binary b:
                 {
-                    var left = CreatePhysicalExpr(b.Left, inputDfSchema, inputSchema);
-                    var right = CreatePhysicalExpr(b.Right, inputDfSchema, inputSchema);
+                    var left = CreatePhysicalExpression(b.Left, inputDfSchema, inputSchema);
+                    var right = CreatePhysicalExpression(b.Right, inputDfSchema, inputSchema);
 
                     return new Binary(left, b.Op, right);
                 }
@@ -669,9 +666,9 @@ internal static class LogicalExtensions
         }
     }
 
-    internal static string GetPhysicalName(ILogicalExpression expr)
+    internal static string GetPhysicalName(ILogicalExpression expression)
     {
-        return expr switch
+        return expression switch
         {
             Expressions.Column c => c.Name,
             Expressions.Binary b => $"{GetPhysicalName(b.Left)} {b.Op} {GetPhysicalName(b.Right)}",

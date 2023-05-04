@@ -3,12 +3,12 @@ using CsvRx.Core.Logical.Expressions;
 
 namespace CsvRx.Core.Logical.Plans;
 
-internal record Projection(ILogicalPlan Plan, List<ILogicalExpression> Expr, Schema Schema) : ILogicalPlanParent
+internal record Projection(ILogicalPlan Plan, List<ILogicalExpression> Expression, Schema Schema) : ILogicalPlanParent
 {
     public string ToStringIndented(Indentation? indentation)
     {
         var indent = indentation ?? new Indentation();
-        var expressions = Expr.Select(_ => _.ToString()).ToList();
+        var expressions = Expression.Select(_ => _.ToString()).ToList();
 
         var projections = string.Join(", ", expressions);
         return $"Projection: {projections} {indent.Next(Plan)}";

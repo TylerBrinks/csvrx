@@ -33,14 +33,14 @@ internal class EliminateProjectionRule : ILogicalPlanOptimizationRule
 
     private bool CanEliminate(Projection projection, Schema schema)
     {
-        if (projection.Expr.Count != schema.Fields.Count)
+        if (projection.Expression.Count != schema.Fields.Count)
         {
             return false;
         }
 
-        for (var i = 0; i < projection.Expr.Count; i++)
+        for (var i = 0; i < projection.Expression.Count; i++)
         {
-            var expr = projection.Expr[i];
+            var expr = projection.Expression[i];
             if (expr is Column c)
             {
                 var d = schema.Fields[i];

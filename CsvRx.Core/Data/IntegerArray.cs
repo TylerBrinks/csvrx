@@ -6,7 +6,7 @@ internal class IntegerArray : TypedRecordArray<long?>
 {
     public override void Add(object? s)
     {
-        var parsed = long.TryParse(s.ToString(), out var result);
+        var parsed = long.TryParse(s?.ToString(), out var result);
         if (parsed)
         {
             List.Add(result);

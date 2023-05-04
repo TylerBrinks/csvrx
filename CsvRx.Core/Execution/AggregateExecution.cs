@@ -27,7 +27,7 @@ internal record AggregateExecution(
         IExecutionPlan plan,
         Schema inputSchema)
     {
-        var schema = CreateSchema(plan.Schema, groupBy.Expr, aggregateExpressions, mode);
+        var schema = CreateSchema(plan.Schema, groupBy.Expression, aggregateExpressions, mode);
 
         return new AggregateExecution(mode, groupBy, aggregateExpressions, plan, schema, inputSchema);
     }
@@ -57,14 +57,14 @@ internal record AggregateExecution(
         return new Schema(fields);
     }
 
-    public List<IPhysicalExpression> OutputGroupExpr()
+    public List<IPhysicalExpression> OutputGroupExpression()
     {
-        return GroupBy.Expr.Select((e, i) => (IPhysicalExpression)new Column(e.Name, i)).ToList();
+        return GroupBy.Expression.Select((e, i) => (IPhysicalExpression)new Column(e.Name, i)).ToList();
     }
 
     public async IAsyncEnumerable<RecordBatch> Execute()
     {
-        if (!GroupBy.Expr.Any())
+        if (!GroupBy.Expression.Any())
         {
             await foreach (var batch in new NoGroupingAggregation(Mode, Schema, AggregateExpressions, Plan ))
             {

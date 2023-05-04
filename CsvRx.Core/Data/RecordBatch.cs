@@ -12,16 +12,21 @@ public record RecordBatch
         }
     }
 
-    private static RecordArray GetArrayType(Field field)
+    private static RecordArray GetArrayType(Field? field)
     {
-        return field.DataType switch
+        if (field != null)
         {
-            ColumnDataType.Utf8 => new StringArray(),
-            ColumnDataType.Integer => new IntegerArray(),
-            ColumnDataType.Boolean => new BooleanArray(),
-            ColumnDataType.Double => new DoubleArray(),
-            _ => throw new NotSupportedException()
-        };
+            return field.DataType switch
+            {
+                ColumnDataType.Utf8 => new StringArray(),
+                ColumnDataType.Integer => new IntegerArray(),
+                ColumnDataType.Boolean => new BooleanArray(),
+                ColumnDataType.Double => new DoubleArray(),
+                _ => new StringArray() //throw new NotSupportedException()
+            };
+        }
+
+        return new StringArray();
     }
 
     public Schema Schema { get; }
