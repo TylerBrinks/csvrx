@@ -1,10 +1,11 @@
 ﻿using CsvRx.Core.Data;
-using CsvRx.Core.Execution;
 using CsvRx.Core.Logical;
 using CsvRx.Core.Physical;
+using CsvRx.Csv;
+using SqlParser;
 using SqlParser.Ast;
 
-namespace CsvRx.Core;
+namespace CsvRx.Execution;
 
 public class ExecutionContext
 {

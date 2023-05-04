@@ -16,7 +16,7 @@ public partial class InferredDataType
         TimestampNanosecond()
     };
 
-    internal void Update(string value, Regex? datetimeRegex = null)
+    public void Update(string value, Regex? datetimeRegex = null)
     {
         if (value.StartsWith("\""))
         {

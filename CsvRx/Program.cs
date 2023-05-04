@@ -1,6 +1,6 @@
 ﻿using Spectre.Console;
 
-var context = new CsvRx.Core.ExecutionContext();
+var context = new CsvRx.Execution.ExecutionContext();
 // ReSharper disable StringLiteralTypo
 context.RegisterCsv("aggregate_test_100", @"C:\Users\tyler\source\repos\sink\sqldatafusion\testing\data\csv\aggregate_test_100.csv");
 //var results = context.ExecuteSql("SELECT c1, MAX(c3) FROM aggregate_test_100 GROUP BY c1"); //WHERE c11 > .2 AND c11 < 0.9 

@@ -41,13 +41,11 @@ public abstract class TypedRecordArray<T> : RecordArray
 
     public override void Concat(IList values)
     {
-        //ConcatValues(values);
         List.AddRange(values.Cast<T>());
     }
 
     public override void Reorder(List<int> indices)
     {
-        //ReorderValues(indices);
         // Clone the list since it will be reordered while
         // other arrays need the original list to reorder.
         var order = indices.ToList();
@@ -65,29 +63,4 @@ public abstract class TypedRecordArray<T> : RecordArray
             order[i] = i;
         }
     }
-
-    //public void ConcatValues(IList values)
-    //{
-    //    List.AddRange(values.Cast<T>());
-    //}
-
-    //public void ReorderValues(List<int> indices)
-    //{
-    //    // Clone the list since it will be reordered while
-    //    // other arrays need the original list to reorder.
-    //    var order = indices.ToList();
-
-    //    var temp = new T[List.Count];
-
-    //    for (var i = 0; i < List.Count; i++)
-    //    {
-    //        temp[order[i]] = List[i];
-    //    }
-
-    //    for (var i = 0; i < List.Count; i++)
-    //    {
-    //        List[i] = temp[i];
-    //        order[i] = i;
-    //    }
-    //}
 }

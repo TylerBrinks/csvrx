@@ -1,4 +1,6 @@
-﻿public class CsvOptions
+﻿namespace CsvRx.Csv; 
+
+public class CsvOptions
 {
     public string Delimiter { get; set; } = ",";
     public bool HasHeader { get; set; } = true;

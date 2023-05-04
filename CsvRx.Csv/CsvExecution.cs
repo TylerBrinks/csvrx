@@ -1,6 +1,7 @@
 ﻿using CsvRx.Core.Data;
+using CsvRx.Core.Execution;
 
-namespace CsvRx.Core.Execution;
+namespace CsvRx.Csv;
 
 internal class CsvExecution : IExecutionPlan
 {
