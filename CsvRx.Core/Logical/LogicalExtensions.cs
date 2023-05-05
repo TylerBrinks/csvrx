@@ -28,7 +28,7 @@ internal static class LogicalExtensions
             // cast
             // not
             // is null
-            // isnotnull
+            // is not null
             Wildcard => "*",
             _ => throw new NotImplementedException("need to implement")
         };
@@ -159,7 +159,7 @@ internal static class LogicalExtensions
         // TODO null fields?
         foreach (var field in second.Fields.Where(f => f != null))
         {
-            var duplicate = self.Fields.FirstOrDefault(f => f != null && f.Name == field.Name) != null;
+            var duplicate = self.Fields.FirstOrDefault(f => f != null && f.Name == field!.Name) != null;
 
             if (!duplicate)
             {
@@ -265,7 +265,7 @@ internal static class LogicalExtensions
 
     internal static List<ILogicalExpression> ExpandWildcard(Schema schema)
     {
-        // todo usingcolumns for join
+        // todo using columns for join
         return schema.Fields.Select(f => (ILogicalExpression)new Expressions.Column(f.Name)).ToList();
     }
 
@@ -626,17 +626,18 @@ internal static class LogicalExtensions
         var expressions = new List<ILogicalExpression>();
         expression.Apply(e =>
         {
-            if (predicate((ILogicalExpression)e))
+            if (!predicate((ILogicalExpression) e))
             {
-                if (!expressions.Contains(e))
-                {
-                    expressions.Add((ILogicalExpression)e);
-                }
-
-                return VisitRecursion.Skip;
+                return VisitRecursion.Continue;
             }
 
-            return VisitRecursion.Continue;
+            if (!expressions.Contains(e))
+            {
+                expressions.Add((ILogicalExpression)e);
+            }
+
+            return VisitRecursion.Skip;
+
         });
 
         return expressions;
@@ -644,21 +645,25 @@ internal static class LogicalExtensions
     #endregion
 
     #region Physical Expression
+
     internal static IPhysicalExpression CreatePhysicalExpression(ILogicalExpression expression, Schema inputDfSchema, Schema inputSchema)
     {
-        switch (expression)
+        while (true)
         {
-            case Expressions.Column c:
-                var index = inputDfSchema.IndexOfColumn(c);
-                return new Column(c.Name, index!.Value);
-            
-            case Literal l:
-                return new Physical.Expressions.Literal(l.Value);
+            switch (expression)
+            {
+                case Expressions.Column c:
+                    var index = inputDfSchema.IndexOfColumn(c);
+                    return new Column(c.Name, index!.Value);
 
-            case Alias a:
-                return CreatePhysicalExpression(a.Expression, inputDfSchema, inputSchema);
+                case Literal l:
+                    return new Physical.Expressions.Literal(l.Value);
 
-            case Expressions.Binary b:
+                case Alias a:
+                    expression = a.Expression;
+                    continue;
+
+                case Expressions.Binary b:
                 {
                     var left = CreatePhysicalExpression(b.Left, inputDfSchema, inputSchema);
                     var right = CreatePhysicalExpression(b.Right, inputDfSchema, inputSchema);
@@ -666,8 +671,9 @@ internal static class LogicalExtensions
                     return new Binary(left, b.Op, right);
                 }
 
-            default:
-                throw new NotImplementedException($"Expression type {expression.GetType().Name} is not yet supported.");
+                default:
+                    throw new NotImplementedException($"Expression type {expression.GetType().Name} is not yet supported.");
+            }
         }
     }
 
