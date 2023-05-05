@@ -18,6 +18,7 @@ internal class PhysicalPlanner
             Projection projection => CreateProjectionPlan(projection),
             Filter filter => CreateFilterPlan(filter),
             Sort sort => CreateSortPlan(sort),
+            Limit limit => CreateLimitPlan(limit),
            
             // Distinct should have been replaced by an 
             // aggregate plan by this point.
@@ -105,4 +106,13 @@ internal class PhysicalPlanner
         return new SortExecution(sortExpressions, physicalInput);
     }
 
+    private IExecutionPlan CreateLimitPlan(Limit limit)
+    {
+        var physicalInput = CreateInitialPlan(limit.Plan);
+
+        var skip = limit.Skip ?? 0;
+        var fetch = limit.Fetch ?? int.MaxValue;
+
+        return new LimitExecution(physicalInput, skip, fetch);
+    }
 }

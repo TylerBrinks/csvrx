@@ -35,6 +35,7 @@ internal interface ILogicalPlan : INode
             Filter f => new List<ILogicalPlan> { f.Plan },
             Projection p => new List<ILogicalPlan> { p.Plan },
             Sort s => new List<ILogicalPlan>{ s.Plan },
+            Limit l => new List<ILogicalPlan>{ l.Plan },
 
             _ => new List<ILogicalPlan>()
         };
@@ -78,7 +79,6 @@ internal interface ILogicalPlan : INode
 
             case Filter f:
                 var predicate = expressions[0];
-                // remove aliases visitor
                 return new Filter(inputs[0], predicate);
 
             case Aggregate a:
@@ -90,8 +90,11 @@ internal interface ILogicalPlan : INode
             case Sort:
                 return new Sort(inputs[0], expressions);
 
-            case Distinct d:
+            case Distinct:
                 return new Distinct(inputs[0]);
+
+            case Limit l:
+                return l with {Plan = inputs[0]};
 
             default:
                 throw new NotImplementedException();

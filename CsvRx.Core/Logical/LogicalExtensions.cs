@@ -5,6 +5,7 @@ using CsvRx.Core.Logical.Plans;
 using CsvRx.Core.Logical.Values;
 using CsvRx.Core.Physical.Expressions;
 using SqlParser.Ast;
+using static SqlParser.Ast.Expression;
 using Aggregate = CsvRx.Core.Logical.Plans.Aggregate;
 using Binary = CsvRx.Core.Physical.Expressions.Binary;
 using Column = CsvRx.Core.Physical.Expressions.Column;
@@ -286,8 +287,8 @@ internal static class LogicalExtensions
         var schema = new Schema(fields);
         var aggregatePlan = new Aggregate(plan, groupByExpressions, aggregateExpressions, schema);
 
-        //var aggregateProjectionExpressions = groupByExpressions.Select(_ => _).Concat(aggregateExpressions).ToList();
         var aggregateProjectionExpressions = groupByExpressions.ToList().Concat(aggregateExpressions).ToList();
+
         // resolve columns
         aggregateProjectionExpressions = aggregateProjectionExpressions.Select(e => ResolveColumns(e, plan)).ToList();
         aggregateProjectionExpressions = aggregateProjectionExpressions.Select(e => ResolveColumns(e, plan)).ToList();
@@ -446,7 +447,48 @@ internal static class LogicalExtensions
             return plan;
         }
 
-        return plan;
+        var skipCount = 0;
+        var fetchCount = int.MaxValue;
+
+        if (skip != null)
+        {
+            if (skip.Value is LiteralValue slv)
+            {
+                if (slv.Value is Value.Number skipNumber)
+                {
+                    _ = int.TryParse(skipNumber.Value, out skipCount);
+                }
+                else
+                {
+                    throw new InvalidOperationException("Invalid offset");
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException("Invalid offset");
+            }
+        }
+
+        if (fetch != null)
+        {
+            if (fetch is LiteralValue flv)
+            {
+                if (flv.Value is Value.Number fetchNumber)
+                {
+                    _ = int.TryParse(fetchNumber.Value, out fetchCount);
+                }
+                else
+                {
+                    throw new InvalidOperationException("Invalid offset");
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException("Invalid offset");
+            }
+        }
+       
+        return new Limit(plan, skipCount, fetchCount);
     }
     #endregion
 
@@ -517,7 +559,7 @@ internal static class LogicalExtensions
 
     internal static ILogicalExpression SqlExprToLogicalExpression(Expression predicate, Schema schema)
     {
-        if (predicate is Expression.BinaryOp b)
+        if (predicate is BinaryOp b)
         {
             return ParseSqlBinaryOp(b.Left, b.Op, b.Right, schema);
         }
@@ -534,13 +576,13 @@ internal static class LogicalExtensions
     {
         switch (expression)
         {
-            case Expression.LiteralValue v:
+            case LiteralValue v:
                 return ParseValue(v);
 
-            case Expression.Identifier ident:
+            case Identifier ident:
                 return SqlIdentifierToExpression(ident, schema);
 
-            case Expression.Function fn:
+            case Function fn:
                 return SqlFunctionToExpression(fn, schema);
 
             default:
@@ -548,13 +590,13 @@ internal static class LogicalExtensions
         }
     }
 
-    internal static ILogicalExpression SqlIdentifierToExpression(Expression.Identifier ident, Schema schema)
+    internal static ILogicalExpression SqlIdentifierToExpression(Identifier ident, Schema schema)
     {
         return new Expressions.Column(schema.GetField(ident.Ident.Value)!.Name);
     }
 
 
-    internal static ILogicalExpression ParseValue(Expression.LiteralValue literalValue)
+    internal static ILogicalExpression ParseValue(LiteralValue literalValue)
     {
         switch (literalValue.Value)
         {

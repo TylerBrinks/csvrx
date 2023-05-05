@@ -1,5 +1,6 @@
 ﻿using CsvRx.Core.Data;
 using CsvRx.Core.Physical.Expressions;
+using Microsoft.VisualBasic.CompilerServices;
 
 namespace CsvRx.Core.Execution;
 

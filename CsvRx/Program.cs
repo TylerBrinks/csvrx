@@ -11,9 +11,10 @@ context.RegisterCsv("mycsv", @"C:\Users\tyler\source\repos\sink\sqldatafusion\te
 
 //var sql = "SELECT distinct c1 as abc FROM aggregate_test_100";
 var sql = """
-    SELECT distinct c1 
-    as abc
+    SELECT c1, c3
     FROM mycsv
+    order by c1
+    limit 23 offset 20
     """;
 
 try

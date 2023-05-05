@@ -30,7 +30,7 @@ internal class LogicalPlanOptimizer
         //new(PushDownLimit::new()),
     };
 
-    public ILogicalPlan Optimize(ILogicalPlan logicalPlan)
+    public ILogicalPlan? Optimize(ILogicalPlan logicalPlan)
     {
         var newPlan = logicalPlan;
 
@@ -42,48 +42,30 @@ internal class LogicalPlanOptimizer
         return newPlan;
     }
 
-    private ILogicalPlan OptimizeRecursively(ILogicalPlanOptimizationRule rule, ILogicalPlan plan)
+    private ILogicalPlan? OptimizeRecursively(ILogicalPlanOptimizationRule rule, ILogicalPlan plan)
     {
         switch (rule.ApplyOrder)
         {
             case ApplyOrder.TopDown:
-            {
-                var optimizeSelfOpt = rule.TryOptimize(plan);
-                ILogicalPlan optimizeInputsOpt = null!;
-
-                if (optimizeSelfOpt != null)
                 {
-                    optimizeInputsOpt = OptimizeInputs(rule, optimizeSelfOpt);
-                }
-                else
-                {
-                    optimizeInputsOpt = OptimizeInputs(rule, plan);
-                }
+                    var optimizeSelfOpt = rule.TryOptimize(plan);
+                    var optimizeInputsOpt = OptimizeInputs(rule, optimizeSelfOpt ?? plan);
 
-                return optimizeInputsOpt ?? optimizeSelfOpt;
-            }
+                    return optimizeInputsOpt ?? optimizeSelfOpt;
+                }
             case ApplyOrder.BottomUp:
-            {
-                ILogicalPlan optimizeInputsOpt = OptimizeInputs(rule, plan);
-                ILogicalPlan optimizeSelfOpt = null!;
-
-                if (optimizeInputsOpt != null)
                 {
-                    optimizeSelfOpt = rule.TryOptimize(optimizeInputsOpt);
-                }
-                else
-                {
-                    optimizeSelfOpt = rule.TryOptimize(plan);
-                }
+                    var optimizeInputsOpt = OptimizeInputs(rule, plan);
+                    var optimizeSelfOpt = rule.TryOptimize(optimizeInputsOpt ?? plan);
 
-                return optimizeSelfOpt ?? optimizeInputsOpt;
-            }
+                    return optimizeSelfOpt ?? optimizeInputsOpt;
+                }
             default:
                 return rule.TryOptimize(plan);
         }
     }
 
-    private ILogicalPlan OptimizeInputs(ILogicalPlanOptimizationRule rule, ILogicalPlan plan)
+    private ILogicalPlan? OptimizeInputs(ILogicalPlanOptimizationRule rule, ILogicalPlan plan)
     {
         var inputs = plan.GetInputs();
         var result = inputs.Select(p => OptimizeRecursively(rule, p)).ToList();
@@ -93,15 +75,7 @@ internal class LogicalPlanOptimizer
             return null;
         }
 
-        var newInputs = result.Select((p, i) =>
-        {
-            if (p != null)
-            {
-                return p;
-            }
-
-            return inputs[i];
-        }).ToList();
+        var newInputs = result.Select((p, i) => p ?? inputs[i]).ToList();
 
         return plan.WithNewInputs(newInputs);
     }

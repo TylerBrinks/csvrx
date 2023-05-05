@@ -67,4 +67,17 @@ public record RecordBatch
             array.Reorder(indices);
         }
     }
+
+    public void Slice(int offset, int count)
+    {
+        if (offset + count > RowCount)
+        {
+            throw new IndexOutOfRangeException();
+        }
+
+        foreach (var array in Results)
+        {
+            array.Slice(offset, count);
+        }
+    }
 }

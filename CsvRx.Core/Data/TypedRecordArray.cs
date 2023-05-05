@@ -4,7 +4,7 @@ namespace CsvRx.Core.Data;
 
 public abstract class TypedRecordArray<T> : RecordArray
 {
-    public List<T> List { get; } = new();
+    public List<T> List { get; private set; } = new();
 
     public List<int> GetSortColumnIndices(bool ascending, int? start = null, int? take = null)
     {
@@ -62,5 +62,10 @@ public abstract class TypedRecordArray<T> : RecordArray
             List[i] = temp[i];
             order[i] = i;
         }
+    }
+
+    public override void Slice(int offset, int count)
+    {
+        List = List.Skip(offset).Take(count).ToList();
     }
 }
