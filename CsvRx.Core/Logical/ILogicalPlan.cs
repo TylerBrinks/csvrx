@@ -44,7 +44,6 @@ internal interface ILogicalPlan : INode
     {
         return this switch
         {
-            //Aggregate a => a.AggregateExpressions.Select(_=>_).Concat(a.GroupExpressions).ToList(),
             Aggregate a => a.AggregateExpressions.ToList().Concat(a.GroupExpressions).ToList(),
             Filter f => new List<ILogicalExpression> { f.Predicate },
             Projection p => p.Expression,
@@ -92,6 +91,8 @@ internal interface ILogicalPlan : INode
                 return new Sort(inputs[0], expressions);
 
             case Distinct d:
+                return new Distinct(inputs[0]);
+
             default:
                 throw new NotImplementedException();
         }

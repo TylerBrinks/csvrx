@@ -72,8 +72,7 @@ internal class PhysicalPlanner
 
         var finalGroupingSet = GroupBy.NewSingle(finalGroup.Select((e, i) => (e, groups.Expression[i].Name)).ToList());
 
-        return AggregateExecution.TryNew(AggregationMode.Final, finalGroupingSet, aggregates, initialAggregate,
-            physicalSchema);
+        return AggregateExecution.TryNew(AggregationMode.Final, finalGroupingSet, aggregates, initialAggregate, physicalSchema);
     }
    
     private IExecutionPlan CreateFilterPlan(Filter filter)

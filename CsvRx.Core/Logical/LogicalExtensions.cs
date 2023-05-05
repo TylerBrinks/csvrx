@@ -54,9 +54,9 @@ internal static class LogicalExtensions
     {
         InspectExprPre(expression, Inspect);
 
-        void Inspect(ILogicalExpression expression)
+        void Inspect(ILogicalExpression expr)
         {
-            switch (expression)
+            switch (expr)
             {
                 case Expressions.Column col:
                     accumulator.Add(col);
@@ -101,7 +101,6 @@ internal static class LogicalExtensions
 
         var field = schema.GetField(c.Name)!;
         return field;
-
     }
 
     internal static ColumnDataType GetDataType(ILogicalExpression expression, Schema schema)
@@ -109,7 +108,9 @@ internal static class LogicalExtensions
         return expression switch
         {
             Expressions.Column c => schema.GetField(c.Name)!.DataType,
+            Alias a => GetDataType(a.Expression, schema),
             AggregateFunction fn => GetAggregateDataType(fn),
+
             _ => throw new NotImplementedException(),
         };
 
@@ -375,11 +376,11 @@ internal static class LogicalExtensions
         {
             if (expr is Wildcard)
             {
-                // expand
+                // TODO: expand
             }
             else if (expr is SelectItem.QualifiedWildcard)
             {
-                // expand
+                // TODO: expand
             }
             else
             {
@@ -650,6 +651,12 @@ internal static class LogicalExtensions
             case Expressions.Column c:
                 var index = inputDfSchema.IndexOfColumn(c);
                 return new Column(c.Name, index!.Value);
+            
+            case Literal l:
+                return new Physical.Expressions.Literal(l.Value);
+
+            case Alias a:
+                return CreatePhysicalExpression(a.Expression, inputDfSchema, inputSchema);
 
             case Expressions.Binary b:
                 {
@@ -658,8 +665,6 @@ internal static class LogicalExtensions
 
                     return new Binary(left, b.Op, right);
                 }
-            case Literal l:
-                return new Physical.Expressions.Literal(l.Value);
 
             default:
                 throw new NotImplementedException($"Expression type {expression.GetType().Name} is not yet supported.");
@@ -672,6 +677,7 @@ internal static class LogicalExtensions
         {
             Expressions.Column c => c.Name,
             Expressions.Binary b => $"{GetPhysicalName(b.Left)} {b.Op} {GetPhysicalName(b.Right)}",
+            Alias a => a.Name,
             AggregateFunction fn => CreateFunctionPhysicalName(fn, fn.Distinct, fn.Args),
             _ => throw new NotImplementedException()
         };

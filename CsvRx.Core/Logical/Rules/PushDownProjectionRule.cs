@@ -13,27 +13,27 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
         switch (plan)
         {
             case Aggregate aggregate:
-            {
-                var requiredColumns = new HashSet<Column>();
-                foreach (var e in aggregate.AggregateExpressions.Concat(aggregate.GroupExpressions))
                 {
-                    LogicalExtensions.ExpressionToColumns(e, requiredColumns);
+                    var requiredColumns = new HashSet<Column>();
+                    foreach (var e in aggregate.AggregateExpressions.Concat(aggregate.GroupExpressions))
+                    {
+                        LogicalExtensions.ExpressionToColumns(e, requiredColumns);
+                    }
+
+                    var newExpression = GetExpression(requiredColumns, aggregate.Plan.Schema);
+                    var childProjection = Projection.TryNew(aggregate.Plan, newExpression);
+
+                    var optimizedChild = TryOptimize(childProjection);
+
+                    var newInputs = new List<ILogicalPlan>();
+
+                    if (optimizedChild != null)
+                    {
+                        newInputs.Add(optimizedChild);
+                    }
+
+                    return (ILogicalPlanParent)plan.WithNewInputs(newInputs);
                 }
-
-                var newExpression = GetExpression(requiredColumns, aggregate.Plan.Schema);
-                var childProjection = Projection.TryNew(aggregate.Plan, newExpression);
-
-                var optimizedChild = TryOptimize(childProjection);
-
-                var newInputs = new List<ILogicalPlan>();
-
-                if (optimizedChild != null)
-                {
-                    newInputs.Add(optimizedChild);
-                }
-
-                return (ILogicalPlanParent)plan.WithNewInputs(newInputs);
-            }
             case TableScan { Projection: null } scan:
                 return PushDownScan(new HashSet<Column>(), scan);
         }
@@ -58,7 +58,23 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
         {
             case Projection p:
                 {
-                    var newPlan = new Projection(p.Plan, projection.GetExpressions().ToList(), projection.Schema);
+                    var replaceMap = CollectProjectionExpressions(p);
+
+                    var newExpressions = projection.GetExpressions()
+                        .Select(e => ReplaceColumnsByName(e, replaceMap))
+                        .Select((e, i) =>
+                        {
+                            var parentName = projection.Schema.Fields[i].Name;
+                            if (e.CreateName() == parentName)
+                            {
+                                return e;
+                            }
+
+                            return new Alias(e, parentName);
+                        })
+                        .ToList();
+
+                    var newPlan = new Projection(p.Plan, newExpressions, projection.Schema);
                     return TryOptimize(newPlan);
                 }
             case Aggregate a:
@@ -66,8 +82,10 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
                     var requiredColumns = new HashSet<Column>();
                     LogicalExtensions.ExprListToColumns(projection.GetExpressions(), requiredColumns);
                     var newAggregate = (
-                        from agg in a.AggregateExpressions let col = new Column(agg.CreateName())
-                        where requiredColumns.Contains(col) select agg ).ToList();
+                        from agg in a.AggregateExpressions
+                        let col = new Column(agg.CreateName())
+                        where requiredColumns.Contains(col)
+                        select agg).ToList();
 
                     if (!newAggregate.Any() && a.AggregateExpressions.Count == 1)
                     {
@@ -114,9 +132,46 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
         }
     }
 
+    private static Dictionary<string, ILogicalExpression> CollectProjectionExpressions(Projection projection)
+    {
+        return projection.Schema.Fields.Select((f, i) =>
+        {
+            var expr = projection.Expression[i] switch
+            {
+                Alias a => a.Expression,
+                _ => projection.Expression[i]
+            };
+
+            return (f.Name, Expr: expr);
+        })
+        .ToDictionary(f => f.Name, f => f.Expr);
+    }
+
+    private static ILogicalExpression ReplaceColumnsByName(ILogicalExpression expression, Dictionary<string, ILogicalExpression> replaceMap)
+    {
+        return expression.Transform(expression, e =>
+        {
+            if (e is Column c)
+            {
+                return replaceMap[c.Name];
+            }
+           
+            return expression;
+        });
+    }
+
+
     private static ILogicalPlan PushDownScan(IEnumerable<Column> usedColumns, TableScan tableScan)
     {
-        var projection = usedColumns.Select(c => tableScan.Source.Schema.IndexOfColumn(c)!.Value).ToList();
+        var projection = usedColumns.Select(c =>
+        {
+            var index = tableScan.Source.Schema!.IndexOfColumn(c);
+            if (index == null)
+            {
+                return -1;
+            }
+            return index.Value;
+        }).ToList();
         var fields = projection.Select(i => tableScan.Source.Schema.Fields[i]).ToList();
         var schema = new Schema(fields);
 

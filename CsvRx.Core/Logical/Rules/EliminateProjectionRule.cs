@@ -20,7 +20,7 @@ internal class EliminateProjectionRule : ILogicalPlanOptimizationRule
                     case TableScan:
                     case Sort:
                         // sort
-                        return CanEliminate(p, childPlan.Schema) ? childPlan : null;
+                        return CanEliminate(p, childPlan.Schema) ? childPlan : plan;
 
                     default:
                         return plan.Schema.Equals(childPlan.Schema) ? childPlan : null;

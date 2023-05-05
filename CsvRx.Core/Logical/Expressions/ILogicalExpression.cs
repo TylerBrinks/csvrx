@@ -1,4 +1,6 @@
-﻿namespace CsvRx.Core.Logical.Expressions;
+﻿using System.Reflection.Metadata.Ecma335;
+
+namespace CsvRx.Core.Logical.Expressions;
 
 internal interface ILogicalExpression : INode
 {
@@ -30,6 +32,7 @@ internal interface ILogicalExpression : INode
             Column or ScalarVariable => new List<ILogicalExpression>(),
             Binary b => new List<ILogicalExpression> { b.Left, b.Right },
             AggregateFunction fn => GetAggregateChildren(fn),
+            Alias a => new List<ILogicalExpression> { a.Expression },
             //// Like
             //// between
             //// Case

@@ -3,6 +3,7 @@ using CsvRx.Core.Data;
 using CsvRx.Core.Logical.Expressions;
 using CsvRx.Core.Logical.Plans;
 using SqlParser.Ast;
+using System.Linq.Expressions;
 
 namespace CsvRx.Core.Logical;
 
@@ -26,8 +27,13 @@ internal class LogicalPlanner
         var combinedSchemas = projectedPlan.Schema;
         combinedSchemas.MergeSchemas(plan.Schema);
 
+        var aliasMap = selectExpressions.Where(e => e is Alias).Cast<Alias>().ToDictionary(a => a.Name, a => a.Expression);
+
         var aggregateExpressions = LogicalExtensions.FindAggregateExpressions(selectExpressions.Select(_ => _).ToList());
+
+        // check group by expressions inside FindGroupByExpressions, select.rs.line 130
         var groupByExpressions = LogicalExtensions.FindGroupByExpressions(select.GroupBy, combinedSchemas);
+
 
         var selectExpressionsPostAggregate = new List<ILogicalExpression>();
         var havingExprsionsPostAggregate = new List<ILogicalExpression>();
