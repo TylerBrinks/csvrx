@@ -18,9 +18,9 @@ internal class CsvExecution : IExecutionPlan
 
     public Schema Schema { get; }
 
-    public async IAsyncEnumerable<RecordBatch> Execute()
+    public async IAsyncEnumerable<RecordBatch> Execute(QueryOptions options)
     {
-        await foreach (var slice in _dataSource.Read(_projection))
+        await foreach (var slice in _dataSource.Read(_projection, options.BatchSize))
         {
             var batch = new RecordBatch(Schema);
 

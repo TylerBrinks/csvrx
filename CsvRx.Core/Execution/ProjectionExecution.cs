@@ -20,9 +20,9 @@ internal record ProjectionExecution(
         return new ProjectionExecution(physicalExpressions, schema, plan);//todo alias_map, metrics?
     }
 
-    public async IAsyncEnumerable<RecordBatch> Execute()
+    public async IAsyncEnumerable<RecordBatch> Execute(QueryOptions options)
     {
-        await foreach (var batch in Plan.Execute())
+        await foreach (var batch in Plan.Execute(options))
         {
             var columns = Expressions.Select(e => e.Expression.Evaluate(batch)).ToList();
 

@@ -12,18 +12,19 @@ internal class NoGroupingAggregation : IAsyncEnumerable<RecordBatch>
     private readonly Schema _schema;
     private readonly List<Aggregate> _aggregateExpressions;
     private readonly AggregationMode _aggregationMode;
+    private readonly QueryOptions _queryOptions;
 
-    public NoGroupingAggregation(
-        AggregationMode aggregationMode,
+    public NoGroupingAggregation(AggregationMode aggregationMode,
         Schema schema,
         List<Aggregate> aggregateExpressions,
-        IExecutionPlan plan
-    )
+        IExecutionPlan plan, 
+        QueryOptions queryOptions)
     {
         _plan = plan;
         _schema = schema;
         _aggregateExpressions = aggregateExpressions;
         _aggregationMode = aggregationMode;
+        _queryOptions = queryOptions;
     }
 
     public async IAsyncEnumerator<RecordBatch> GetAsyncEnumerator(CancellationToken cancellationToken = new ())
@@ -31,7 +32,7 @@ internal class NoGroupingAggregation : IAsyncEnumerable<RecordBatch>
         var accumulators = _aggregateExpressions.Cast<IAggregation>().Select(fn => fn.CreateAccumulator()).ToList();
         var expressions = MapAggregateExpressions(0);
 
-        await foreach (var batch in _plan.Execute().WithCancellation(cancellationToken))
+        await foreach (var batch in _plan.Execute(_queryOptions).WithCancellation(cancellationToken))
         {
             AggregateBatch(batch, accumulators, expressions);
         }

@@ -1,4 +1,5 @@
 ﻿using CsvRx.Core.Data;
+using static SqlParser.Ast.Privileges;
 
 namespace CsvRx.Core.Execution;
 
@@ -6,16 +7,16 @@ internal record LimitExecution(IExecutionPlan Plan, int Skip, int Fetch) : IExec
 {
     public Schema Schema => Plan.Schema;
 
-    public async IAsyncEnumerable<RecordBatch> Execute()
+    public async IAsyncEnumerable<RecordBatch> Execute(QueryOptions options)
     {
         var skip = Skip;
         var fetch = Fetch;
 
         var ignoreLimit = Skip == 0 && Fetch == int.MaxValue;
 
-        await foreach (var batch in Plan.Execute())
+        await foreach (var batch in Plan.Execute(options))
         {
-            if (Fetch == 0)
+            if (fetch == 0)
             {
                 continue;
             }
@@ -27,27 +28,26 @@ internal record LimitExecution(IExecutionPlan Plan, int Skip, int Fetch) : IExec
 
             var rowCount = batch.RowCount;
 
-            if (rowCount <= Skip)
+            if (rowCount <= skip)
             {
                 skip -= rowCount;
                 continue;
             }
 
-            batch.Slice(skip, rowCount - skip);
+            var take = Math.Min(rowCount - skip, fetch);
+            batch.Slice(skip, take);
             skip = 0;
 
             if (rowCount < fetch)
             {
-                fetch -= rowCount;
-                yield return batch;
+                fetch -= batch.RowCount;
             }
             else
             {
-                //batch.Slice(0, rowCount - fetch);
-                batch.Slice(0, fetch);
                 fetch = 0;
-                yield return batch;
             }
+
+            yield return batch;
         }
     }
 }

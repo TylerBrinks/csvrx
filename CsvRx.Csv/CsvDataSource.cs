@@ -64,7 +64,7 @@ public class CsvDataSource : DataSource
         return _schema;
     }
 
-    internal async IAsyncEnumerable<List<string?[]>> Read(List<int> indices)
+    internal async IAsyncEnumerable<List<string?[]>> Read(List<int> indices, int batchSize)
     {
         using var reader = new StreamReader(_filePath);
         var config = new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -77,7 +77,7 @@ public class CsvDataSource : DataSource
         await csv.ReadAsync();
         csv.ReadHeader();
 
-        var lines = new List<string?[]>();
+        var rows = new List<string?[]>();
         var count = 0;
 
         while (await csv.ReadAsync())
@@ -90,23 +90,24 @@ public class CsvDataSource : DataSource
                 line[j] = value;
             }
             
-            lines.Add(line);
+            rows.Add(line);
 
-            if (++count != _options.ReadBatchSize)
+            if (++count != batchSize)
             {
                 continue;
             }
 
             count = 0;
-            var slice = lines.Select(_=>_).ToList();
-            lines.Clear();
+            // Copy the read lines
+            var slice = rows.ToList();
+            rows.Clear();
 
             yield return slice;
         }
 
         if (count > 0)
         {
-            yield return lines;
+            yield return rows;
         }
     }
 

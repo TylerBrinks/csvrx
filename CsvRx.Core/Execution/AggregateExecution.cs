@@ -62,18 +62,18 @@ internal record AggregateExecution(
         return GroupBy.Expression.Select((e, i) => (IPhysicalExpression)new Column(e.Name, i)).ToList();
     }
 
-    public async IAsyncEnumerable<RecordBatch> Execute()
+    public async IAsyncEnumerable<RecordBatch> Execute(QueryOptions options)
     {
         if (!GroupBy.Expression.Any())
         {
-            await foreach (var batch in new NoGroupingAggregation(Mode, Schema, AggregateExpressions, Plan ))
+            await foreach (var batch in new NoGroupingAggregation(Mode, Schema, AggregateExpressions, Plan, options))
             {
                 yield return batch;
             }
         }
         else
         {
-            await foreach (var batch in new GroupedHashAggregation(Mode, Schema,  GroupBy, AggregateExpressions, Plan))
+            await foreach (var batch in new GroupedHashAggregation(Mode, Schema,  GroupBy, AggregateExpressions, Plan, options))
             {
                 yield return batch;
             }

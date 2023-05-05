@@ -5,5 +5,5 @@ namespace CsvRx.Core.Execution;
 public interface IExecutionPlan
 {
     Schema Schema { get; }
-    IAsyncEnumerable<RecordBatch> Execute();
+    IAsyncEnumerable<RecordBatch> Execute(QueryOptions options);
 }

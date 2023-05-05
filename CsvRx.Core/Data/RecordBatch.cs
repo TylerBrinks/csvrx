@@ -80,4 +80,34 @@ public record RecordBatch
             array.Slice(offset, count);
         }
     }
+
+    public IEnumerable<RecordBatch> Repartition(int batchSize)
+    {
+        var rowCount = RowCount;
+        var count = 0;
+
+        var partition = new RecordBatch(Schema);
+
+        for (var i = 0; i < rowCount; i++)
+        {
+            for (var j = 0; j < Results.Count; j++)
+            {
+                partition.Results[j].Add(Results[j].Values[i]);
+            }
+
+            count++;
+
+            if (count != batchSize){ continue; }
+
+            yield return partition;
+
+            partition = new RecordBatch(Schema);
+            count = 0;
+        }
+
+        if (count > 0)
+        {
+            yield return partition;
+        }
+    }
 }

@@ -20,9 +20,9 @@ internal record FilterExecution(IPhysicalExpression Predicate, IExecutionPlan Pl
         return new FilterExecution(predicate, plan);
     }
 
-    public async IAsyncEnumerable<RecordBatch> Execute()
+    public async IAsyncEnumerable<RecordBatch> Execute(QueryOptions options)
     {
-        await foreach (var batch in Plan.Execute())
+        await foreach (var batch in Plan.Execute(options))
         {
             var filterFlags = (BooleanColumnValue)Predicate.Evaluate(batch);
 

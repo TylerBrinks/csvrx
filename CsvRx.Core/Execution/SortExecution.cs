@@ -1,26 +1,31 @@
 ﻿using CsvRx.Core.Data;
 using CsvRx.Core.Physical.Expressions;
 using Microsoft.VisualBasic.CompilerServices;
-
 namespace CsvRx.Core.Execution;
 
 internal record SortExecution(List<PhysicalSortExpression> SortExpressions, IExecutionPlan Plan) : IExecutionPlan
 {
-    public async IAsyncEnumerable<RecordBatch> Execute()
+    public async IAsyncEnumerable<RecordBatch> Execute(QueryOptions options)
     {
+        RecordBatch sortedBatch;
         if (SortExpressions.Count == 1)
         {
-            yield return await SortSingleColumn();
+            sortedBatch = await SortSingleColumn(options);
         }
         else
         {
-            yield return await SortColumns();
+            sortedBatch = await SortColumns(options);
+        }
+
+        foreach (var batch in sortedBatch.Repartition(options.BatchSize))
+        {
+            yield return batch;
         }
     }
-
-    private async Task<RecordBatch> SortSingleColumn()
+    
+    private async Task<RecordBatch> SortSingleColumn(QueryOptions options)
     {
-        var collectedBatch = await CoalesceBatches();
+        var collectedBatch = await CoalesceBatches(options);
         var sortExpression = SortExpressions[0];
         var sortColumn = sortExpression.Expression as Column;
 
@@ -31,13 +36,13 @@ internal record SortExecution(List<PhysicalSortExpression> SortExpressions, IExe
         return collectedBatch;
     }
 
-    private async Task<RecordBatch> SortColumns()
+    private async Task<RecordBatch> SortColumns(QueryOptions options)
     {
         var sortColumns = SortExpressions.Select(sc => (Column)sc.Expression).ToList();
         // The first column will always be sorted in full.  Proactively 
         // sorting here makes it simpler to build an index list of
         // columns that can be skipped in subsequent sorting passes
-        var batch = await SortSingleColumn();
+        var batch = await SortSingleColumn(options);
 
         // Skip the first column; it has been sorted already
         var indicesToIgnore = new List<int> { sortColumns[0].Index };
@@ -96,11 +101,11 @@ internal record SortExecution(List<PhysicalSortExpression> SortExpressions, IExe
         return batch;
     }
 
-    private async Task<RecordBatch> CoalesceBatches()
+    private async Task<RecordBatch> CoalesceBatches(QueryOptions options)
     {
         var collectedBatch = new RecordBatch(Plan.Schema);
 
-        await foreach (var batch in Plan.Execute())
+        await foreach (var batch in Plan.Execute(options))
         {
             for (var i = 0; i < batch.Results.Count; i++)
             {

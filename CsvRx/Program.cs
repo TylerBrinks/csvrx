@@ -1,4 +1,5 @@
-﻿using Spectre.Console;
+﻿using CsvRx.Core.Data;
+using Spectre.Console;
 using SqlParser;
 
 var context = new CsvRx.Execution.ExecutionContext();
@@ -20,10 +21,13 @@ var sql = """
 try
 {
     Console.WriteLine();
-
+    var options = new QueryOptions
+    {
+        BatchSize = 3
+    };
     Table? table = null;
 
-    await foreach (var batch in context.ExecuteSql(sql))
+    await foreach (var batch in context.ExecuteSql(sql, options))
     {
         if (table == null)
         {

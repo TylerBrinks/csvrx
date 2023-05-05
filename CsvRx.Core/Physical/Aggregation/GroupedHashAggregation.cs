@@ -13,17 +13,17 @@ internal class GroupedHashAggregation : IAsyncEnumerable<RecordBatch>
     private readonly Schema _schema;
     private readonly List<Aggregate> _aggregates;
     private readonly AggregationMode _aggregationMode;
+    private readonly QueryOptions _queryOptions;
 
-    public GroupedHashAggregation(
-        AggregationMode aggregationMode,
+    public GroupedHashAggregation(AggregationMode aggregationMode,
         Schema schema,
         GroupBy groupBy,
         List<Aggregate> aggregates,
-        IExecutionPlan plan
-    )
+        IExecutionPlan plan, QueryOptions queryOptions)
     {
         _aggregationMode = aggregationMode;
         _plan = plan;
+        _queryOptions = queryOptions;
         _groupBy = groupBy;
         _schema = schema;
         _aggregates = aggregates;
@@ -33,7 +33,7 @@ internal class GroupedHashAggregation : IAsyncEnumerable<RecordBatch>
     {
         var map = new Dictionary<Sequence<object>, List<Accumulator>>();
 
-        await foreach (var batch in _plan.Execute().WithCancellation(cancellationToken))
+        await foreach (var batch in _plan.Execute(_queryOptions).WithCancellation(cancellationToken))
         {
             var groupKey = _groupBy.Expression.Select(e => e.Expression.Evaluate(batch)).ToList();
 
