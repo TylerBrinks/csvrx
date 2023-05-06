@@ -32,8 +32,12 @@ internal class LogicalPlanner
         var aggregateExpressions = LogicalExtensions.FindAggregateExpressions(selectExpressions.Select(_ => _).ToList());
 
         // check group by expressions inside FindGroupByExpressions, select.rs.line 130
-        var groupByExpressions = LogicalExtensions.FindGroupByExpressions(select.GroupBy, combinedSchemas);
-
+        var groupByExpressions = LogicalExtensions.FindGroupByExpressions(
+            select.GroupBy,
+            selectExpressions,
+            combinedSchemas, 
+            plan, 
+            aliasMap);
 
         var selectExpressionsPostAggregate = new List<ILogicalExpression>();
         var havingExprsionsPostAggregate = new List<ILogicalExpression>();

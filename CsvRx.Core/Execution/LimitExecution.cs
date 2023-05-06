@@ -1,5 +1,4 @@
 ﻿using CsvRx.Core.Data;
-using static SqlParser.Ast.Privileges;
 
 namespace CsvRx.Core.Execution;
 
@@ -18,7 +17,8 @@ internal record LimitExecution(IExecutionPlan Plan, int Skip, int Fetch) : IExec
         {
             if (fetch == 0)
             {
-                continue;
+                // Fetch satisfied; short circuit further iteration
+                break;
             }
 
             if (ignoreLimit)
@@ -33,9 +33,9 @@ internal record LimitExecution(IExecutionPlan Plan, int Skip, int Fetch) : IExec
                 skip -= rowCount;
                 continue;
             }
-
-            var take = Math.Min(rowCount - skip, fetch);
-            batch.Slice(skip, take);
+            
+            batch.Slice(skip, Math.Min(rowCount - skip, fetch));
+            
             skip = 0;
 
             if (rowCount < fetch)
