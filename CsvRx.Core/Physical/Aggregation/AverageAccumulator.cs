@@ -50,7 +50,6 @@ internal record AverageAccumulator : Accumulator
     }
 
     public override ScalarValue Evaluate => _count == 0 ? new DoubleScalar(0) : new DoubleScalar(_sum / _count); 
-    // new IntegerScalar(_count ?? 0);
 
     public override List<ScalarValue> State => new() { Evaluate };
 }

@@ -6,7 +6,7 @@ using CsvRx.Core.Values;
 
 namespace CsvRx.Core.Physical.Aggregation;
 
-internal class NoGroupingAggregation : IAsyncEnumerable<RecordBatch>
+internal class NoGroupingAggregation
 {
     private readonly IExecutionPlan _plan;
     private readonly Schema _schema;
@@ -27,7 +27,7 @@ internal class NoGroupingAggregation : IAsyncEnumerable<RecordBatch>
         _queryOptions = queryOptions;
     }
 
-    public async IAsyncEnumerator<RecordBatch> GetAsyncEnumerator(CancellationToken cancellationToken = new ())
+    public async Task<RecordBatch> Aggregate(CancellationToken cancellationToken = new ())
     {
         var accumulators = _aggregateExpressions.Cast<IAggregation>().Select(fn => fn.CreateAccumulator()).ToList();
         var expressions = MapAggregateExpressions(0);
@@ -38,7 +38,8 @@ internal class NoGroupingAggregation : IAsyncEnumerable<RecordBatch>
         }
             
         var columns = FinalizeAggregation(accumulators);
-        yield return RecordBatch.TryNew(_schema, columns);
+        
+        return RecordBatch.TryNew(_schema, columns);
     }
 
     public void AggregateBatch(

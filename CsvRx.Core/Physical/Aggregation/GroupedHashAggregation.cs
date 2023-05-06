@@ -6,7 +6,7 @@ using CsvRx.Core.Values;
 
 namespace CsvRx.Core.Physical.Aggregation;
 
-internal class GroupedHashAggregation : IAsyncEnumerable<RecordBatch>
+internal class GroupedHashAggregation //: IAsyncEnumerable<RecordBatch>
 {
     private readonly IExecutionPlan _plan;
     private readonly GroupBy _groupBy;
@@ -17,9 +17,10 @@ internal class GroupedHashAggregation : IAsyncEnumerable<RecordBatch>
 
     public GroupedHashAggregation(AggregationMode aggregationMode,
         Schema schema,
-        GroupBy groupBy,
         List<Aggregate> aggregates,
-        IExecutionPlan plan, QueryOptions queryOptions)
+        IExecutionPlan plan,
+        GroupBy groupBy, 
+        QueryOptions queryOptions)
     {
         _aggregationMode = aggregationMode;
         _plan = plan;
@@ -29,7 +30,22 @@ internal class GroupedHashAggregation : IAsyncEnumerable<RecordBatch>
         _aggregates = aggregates;
     }
 
-    public async IAsyncEnumerator<RecordBatch> GetAsyncEnumerator(CancellationToken cancellationToken = new ())
+    public async Task<RecordBatch> Aggregate(CancellationToken cancellationToken = new ())
+    {
+        if (_aggregationMode == AggregationMode.Partial)
+        {
+            return await Accumulate(cancellationToken);
+        }
+
+        // Final aggregation operates on a single batch
+        var final = _plan.Execute(_queryOptions)
+            .ToBlockingEnumerable()
+            .First();
+
+        return final;
+    }
+
+    private async Task<RecordBatch> Accumulate(CancellationToken cancellationToken)
     {
         var map = new Dictionary<Sequence<object>, List<Accumulator>>();
 
@@ -53,7 +69,6 @@ internal class GroupedHashAggregation : IAsyncEnumerable<RecordBatch>
                 if (accumulators == null || accumulators.Count == 0)
                 {
                     accumulators = _aggregates.Cast<IAggregation>().Select(fn => fn.CreateAccumulator()).ToList();
-                    //map.Add(rowKey, accumulators);
                     // select distinct... creates a grouping without an aggregation
                     // so the addition of the accumulator needs to handle possible
                     // duplicate row key values.
@@ -89,7 +104,7 @@ internal class GroupedHashAggregation : IAsyncEnumerable<RecordBatch>
             }
         }
 
-        yield return aggregatedBatch;
+        return aggregatedBatch;
     }
 
     private List<ColumnValue> GetAggregateInputs(RecordBatch batch)

@@ -287,13 +287,18 @@ internal static class LogicalExtensions
         var schema = new Schema(fields);
         var aggregatePlan = new Aggregate(plan, groupByExpressions, aggregateExpressions, schema);
 
-        var aggregateProjectionExpressions = groupByExpressions.ToList().Concat(aggregateExpressions).ToList();
+        var aggregateProjectionExpressions = groupByExpressions
+            .ToList()
+            .Concat(aggregateExpressions)//.ToList();
+            .Select(e => ResolveColumns(e, plan))
+            .ToList();
         // resolve columns and replace with fully qualified names
-        aggregateProjectionExpressions = aggregateProjectionExpressions.Select(e => ResolveColumns(e, plan)).ToList();
+        //aggregateProjectionExpressions = aggregateProjectionExpressions.Select(e => ResolveColumns(e, plan)).ToList();
 
         //var columnExpressionsPostAggregate = aggregateProjectionExpressions.Select(e => ExpressionAsColumn(e, plan)).ToList();
 
         var selectExpressionsPostAggregate = selectExpressions.Select(e => RebaseExpression(e, aggregateProjectionExpressions, plan)).ToList();
+        
         // rewrite having columns
 
         return (aggregatePlan, selectExpressionsPostAggregate, new List<ILogicalExpression>());

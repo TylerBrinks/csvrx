@@ -64,16 +64,28 @@ internal record AggregateExecution(
 
     public async IAsyncEnumerable<RecordBatch> Execute(QueryOptions options)
     {
+        RecordBatch aggregateBatch;
+
         if (!GroupBy.Expression.Any())
         {
-            await foreach (var batch in new NoGroupingAggregation(Mode, Schema, AggregateExpressions, Plan, options))
-            {
-                yield return batch;
-            }
+            aggregateBatch = await new NoGroupingAggregation(Mode, Schema, AggregateExpressions, Plan, options).Aggregate();
         }
         else
         {
-            await foreach (var batch in new GroupedHashAggregation(Mode, Schema,  GroupBy, AggregateExpressions, Plan, options))
+            aggregateBatch = await new GroupedHashAggregation(Mode, Schema, AggregateExpressions, Plan, GroupBy, options).Aggregate();
+        }
+
+        if (Mode == AggregationMode.Partial)
+        {
+            // Partial mode creates a single batch with aggregated values
+            // therefore the single batch is returned 
+            yield return aggregateBatch;
+        }
+        else
+        {
+            // Final mode receives a single batch which may be larger than
+            // the configured batch size and is therefore repartitioned
+            foreach (var batch in aggregateBatch.Repartition(options.BatchSize))
             {
                 yield return batch;
             }

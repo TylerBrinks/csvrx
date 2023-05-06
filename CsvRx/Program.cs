@@ -10,7 +10,8 @@ context.RegisterCsv("mycsv", @"C:\Users\tyler\source\repos\sink\sqldatafusion\te
 //var results = context.ExecuteSql("SELECT avg(c3) FROM aggregate_test_100 group by c1");
 //var results = context.ExecuteSql("SELECT c1, c3 FROM aggregate_test_100 order by c1, c3");
 
-var sql = "SELECT c1 as abc FROM mycsv group by 1";
+//var sql = "SELECT c1 as abc FROM mycsv group by 1";
+var sql = "SELECT c1, count(c3) as cnt FROM mycsv group by c1";
 //var sql = """
 //    SELECT c1 as a, c3
 //    FROM mycsv

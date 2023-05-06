@@ -22,9 +22,4 @@ internal abstract record Aggregate(IPhysicalExpression Expression) : IPhysicalEx
     internal abstract Field Field { get; }
 
     internal abstract List<IPhysicalExpression> Expressions { get; }
-
-    //internal virtual void SetAggregateFieldIndex(int index)
-    //{
-    //    InputExpression =  new Column(Field.Name, index);
-    //}
 }
