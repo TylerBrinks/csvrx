@@ -42,16 +42,22 @@ namespace CsvRx.Core.Physical
             {
                 case AggregateFunctionType.Count:
                 case AggregateFunctionType.ApproxDistinct:
-                    return inputTypes;
+                    //return inputTypes;
 
                 case AggregateFunctionType.ArrayAgg:
                 case AggregateFunctionType.Min:
                 case AggregateFunctionType.Max:
-                    return inputTypes;
+                    //return inputTypes;
 
                 case AggregateFunctionType.Sum:
                 case AggregateFunctionType.Avg:
+                case AggregateFunctionType.Median:
+                case AggregateFunctionType.StdDev:
+                case AggregateFunctionType.StdDevPop:
+                case AggregateFunctionType.Variance:
+                case AggregateFunctionType.VariancePop:
                     return inputTypes;
+
 
                 default:
                     throw new NotImplementedException($"Function coercion not yet implemented for {fn.FunctionType}");
@@ -70,9 +76,17 @@ namespace CsvRx.Core.Physical
 
                 AggregateFunctionType.Sum => SumReturnType(coercedDataTypes[0]),
 
-                AggregateFunctionType.Avg => AverageReturnType(coercedDataTypes[0]),
+                AggregateFunctionType.Avg => NumericReturnType("AVG", coercedDataTypes[0]),
 
-                _ => throw new NotImplementedException()
+                AggregateFunctionType.Median
+                    or AggregateFunctionType.StdDev
+                    or AggregateFunctionType.StdDevPop 
+                    or AggregateFunctionType.Variance
+                    or AggregateFunctionType.VariancePop
+                    => NumericReturnType(fn.FunctionType.ToString(), coercedDataTypes[0]),
+            
+
+                _ => throw new NotImplementedException("GetReturnTypes not implemented")
             };
 
             ColumnDataType SumReturnType(ColumnDataType dataType)
@@ -80,16 +94,17 @@ namespace CsvRx.Core.Physical
                 return dataType switch
                 {
                     ColumnDataType.Integer => ColumnDataType.Integer,
+                    ColumnDataType.Double => ColumnDataType.Double,
                     _ => throw new InvalidOperationException($"SUM does not support data type {dataType}")
                 };
             }
 
-            ColumnDataType AverageReturnType(ColumnDataType dataType)
+            ColumnDataType NumericReturnType(string functionName, ColumnDataType dataType)
             {
                 return dataType switch
                 {
                     ColumnDataType.Integer or ColumnDataType.Double => ColumnDataType.Double,
-                    _ => throw new InvalidOperationException($"AVG does not support data type {dataType}")
+                    _ => throw new InvalidOperationException($"{functionName} does not support data type {dataType}")
                 };
             }
         }
@@ -120,6 +135,21 @@ namespace CsvRx.Core.Physical
 
                 case (AggregateFunctionType.Avg, _):
                     return new AverageFunction(inputPhysicalExpressions[0], name, returnType);
+
+                case (AggregateFunctionType.Median, _):
+                    return new MedianFunction(inputPhysicalExpressions[0], name, returnType);
+
+                case (AggregateFunctionType.StdDev, _):
+                    return new StandardDeviationFunction(inputPhysicalExpressions[0], name, returnType, StatisticType.Sample);
+
+                case (AggregateFunctionType.StdDevPop, _):
+                    return new StandardDeviationFunction(inputPhysicalExpressions[0], name, returnType, StatisticType.Population);
+
+                case (AggregateFunctionType.Variance, _):
+                    return new VarianceFunction(inputPhysicalExpressions[0], name, returnType, StatisticType.Sample);
+
+                case (AggregateFunctionType.VariancePop, _):
+                    return new VarianceFunction(inputPhysicalExpressions[0], name, returnType, StatisticType.Population);
 
                 default:
                     throw new NotImplementedException($"Aggregate function not yet implemented: {fn.FunctionType}");

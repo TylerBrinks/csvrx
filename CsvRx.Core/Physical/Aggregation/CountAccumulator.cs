@@ -25,7 +25,7 @@ internal record CountAccumulator : Accumulator
         _count = Convert.ToUInt32(values[0].Values[0]);
     }
 
-    public override object? Value => _count;
+    public override object Value => _count;
 
     public override List<ScalarValue> State => new() { Evaluate };
 

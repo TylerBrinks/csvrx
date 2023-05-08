@@ -1,6 +1,6 @@
 ﻿namespace CsvRx.Core.Logical.Expressions;
 
-internal record OrderBy(ILogicalExpression Expression, bool Ascending /*nulls first?*/ ) : ILogicalExpression
+internal record OrderBy(ILogicalExpression Expression, bool Ascending /*todo nulls first?*/ ) : ILogicalExpression
 {
     public override string ToString()
     {

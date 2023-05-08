@@ -1,9 +1,7 @@
-﻿using CsvHelper.Configuration.Attributes;
-using CsvRx.Core.Data;
+﻿using CsvRx.Core.Data;
 using CsvRx.Core.Logical.Expressions;
 using CsvRx.Core.Logical.Plans;
 using SqlParser.Ast;
-using System.Linq.Expressions;
 
 namespace CsvRx.Core.Logical;
 
@@ -29,7 +27,15 @@ internal class LogicalPlanner
 
         var aliasMap = selectExpressions.Where(e => e is Alias).Cast<Alias>().ToDictionary(a => a.Name, a => a.Expression);
 
-        var aggregateExpressions = LogicalExtensions.FindAggregateExpressions(selectExpressions.Select(_ => _).ToList());
+        var havingExpression = LogicalExtensions.MapHaving(select.Having, combinedSchemas, aliasMap);
+
+        var aggregateHaystack = selectExpressions.ToList();
+        if (havingExpression != null)
+        {
+            aggregateHaystack.Add(havingExpression);
+        }
+
+        var aggregateExpressions = LogicalExtensions.FindAggregateExpressions(aggregateHaystack.ToList());
 
         // check group by expressions inside FindGroupByExpressions, select.rs.line 130
         var groupByExpressions = LogicalExtensions.FindGroupByExpressions(
@@ -39,26 +45,33 @@ internal class LogicalPlanner
             plan, 
             aliasMap);
 
-        var selectExpressionsPostAggregate = new List<ILogicalExpression>();
-        var havingExprsionsPostAggregate = new List<ILogicalExpression>();
+        List<ILogicalExpression>? selectPostAggregate;
+        ILogicalExpression? havingPostAggregate;
 
         if (groupByExpressions.Any() || aggregateExpressions.Any())
         {
             // Wrap the plan in an aggregation
-            (plan, selectExpressionsPostAggregate, havingExprsionsPostAggregate) =
-                LogicalExtensions.CreateAggregatePlan(plan, selectExpressions, null, groupByExpressions, aggregateExpressions);
+            (plan, selectPostAggregate, havingPostAggregate) =
+                LogicalExtensions.CreateAggregatePlan(plan, selectExpressions, havingExpression, groupByExpressions, aggregateExpressions);
         }
         else
         {
-            //todo check having expr
+            selectPostAggregate = selectExpressions;
+            if (havingExpression != null)
+            {
+                throw new InvalidOperationException("HAVING clause must appear in the GROUP BY clause or be used in an aggregate function.");
+            }
 
-            selectExpressionsPostAggregate = selectExpressions;
+            havingPostAggregate = null;
         }
 
-        //having
+        if (havingPostAggregate != null)
+        {
+            plan = new Filter(plan, havingPostAggregate);
+        }
 
         // Wrap the plan in a projection
-        plan = LogicalExtensions.PlanProjection(plan, selectExpressionsPostAggregate);
+        plan = LogicalExtensions.PlanProjection(plan, selectPostAggregate);
 
         if (select.Distinct)
         {
@@ -69,8 +82,6 @@ internal class LogicalPlanner
         plan = LogicalExtensions.OrderBy(plan, query.OrderBy);
 
         // Wrap the plan in a limit
-        var final = LogicalExtensions.Limit(plan, query.Offset, query.Limit);
-
-        return final;
+        return LogicalExtensions.Limit(plan, query.Offset, query.Limit);
     }
 }

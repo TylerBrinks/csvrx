@@ -12,9 +12,28 @@ internal record AggregateFunction(
         {
             "min" => AggregateFunctionType.Min,
             "max" => AggregateFunctionType.Max,
-            "sum" => AggregateFunctionType.Sum,
-            "avg" => AggregateFunctionType.Avg,
             "count" => AggregateFunctionType.Count,
+            "avg" or "mean" => AggregateFunctionType.Avg,
+            "sum" => AggregateFunctionType.Sum,
+            "median" => AggregateFunctionType.Median,
+            // approx_distinct
+            // array_agg
+            "var" or "var_samp" => AggregateFunctionType.Variance,
+            "var_pop" => AggregateFunctionType.VariancePop,
+            //var_pop
+            "stddev" or "stddev_samp" => AggregateFunctionType.StdDev,
+            "stddev_pop" => AggregateFunctionType.StdDevPop,
+
+            //"covar" => AggregateFunction::Covariance,
+            //"covar_samp" => AggregateFunction::Covariance,
+            //"covar_pop" => AggregateFunction::CovariancePop,
+            //"corr" => AggregateFunction::Correlation,
+            //"approx_percentile_cont" => AggregateFunction::ApproxPercentileCont,
+            //"approx_percentile_cont_with_weight" => {
+            //"approx_median" => AggregateFunction::ApproxMedian,
+            //"grouping" => AggregateFunction::Grouping,
+
+            //TODO other aggregate functions
             _ => null
         };
     }

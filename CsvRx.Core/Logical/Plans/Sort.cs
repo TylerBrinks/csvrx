@@ -57,7 +57,7 @@ internal record Sort(ILogicalPlan Plan, List<ILogicalExpression> OrderByExpressi
     {
         return expression.Transform(expression, e =>
         {
-            var found = projectionExpressions.Find(e => e == expression);
+            var found = projectionExpressions.Find(ex => ex == expression);
             if (found != null)
             {
                 var column = new Column(LogicalExtensions.ToField(found, plan.Schema).Name);

@@ -7,8 +7,7 @@ using CsvRx.Core.Physical.Expressions;
 using SqlParser.Ast;
 using static SqlParser.Ast.Expression;
 using Aggregate = CsvRx.Core.Logical.Plans.Aggregate;
-using Binary = CsvRx.Core.Physical.Expressions.Binary;
-using Column = CsvRx.Core.Physical.Expressions.Column;
+using Column = CsvRx.Core.Logical.Expressions.Column;
 using Literal = CsvRx.Core.Logical.Expressions.Literal;
 
 namespace CsvRx.Core.Logical;
@@ -34,7 +33,7 @@ internal static class LogicalExtensions
             _ => throw new NotImplementedException("need to implement")
         };
 
-        string GetFunctionName(AggregateFunction fn, bool distinct, List<ILogicalExpression> args)
+        static string GetFunctionName(AggregateFunction fn, bool distinct, List<ILogicalExpression> args)
         {
             var names = args.Select(CreateName).ToList();
             var distinctName = distinct ? "DISTINCT " : string.Empty;
@@ -112,7 +111,7 @@ internal static class LogicalExtensions
             Alias a => GetDataType(a.Expression, schema),
             AggregateFunction fn => GetAggregateDataType(fn),
 
-            _ => throw new NotImplementedException(),
+            _ => throw new NotImplementedException("GetDataType not implemented for ColumnDataType"),
         };
 
         ColumnDataType GetAggregateDataType(AggregateFunction function)
@@ -122,11 +121,16 @@ internal static class LogicalExtensions
             return function.FunctionType switch
             {
                 AggregateFunctionType.Min or AggregateFunctionType.Max => CoercedTypes(function, dataTypes),
-                AggregateFunctionType.Sum => ColumnDataType.Integer,
-                AggregateFunctionType.Count => ColumnDataType.Integer,
-                AggregateFunctionType.Avg => ColumnDataType.Double,
+                AggregateFunctionType.Sum or AggregateFunctionType.Count => ColumnDataType.Integer,
+                AggregateFunctionType.Avg
+                    or AggregateFunctionType.Median
+                    or AggregateFunctionType.StdDev
+                    or AggregateFunctionType.StdDevPop
+                    or AggregateFunctionType.Variance
+                    or AggregateFunctionType.VariancePop
+                    => ColumnDataType.Double,
 
-                _ => throw new NotImplementedException("need to implement"),
+                _ => throw new NotImplementedException("GetAggregateDataType need to implement"),
             };
         }
 
@@ -135,7 +139,7 @@ internal static class LogicalExtensions
             return function.FunctionType switch
             {
                 AggregateFunctionType.Min or AggregateFunctionType.Max => GetMinMaxType(),
-                _ => throw new NotImplementedException("need to implement"),
+                _ => throw new NotImplementedException("CoercedTypes need to implement"),
             };
 
             ColumnDataType GetMinMaxType()
@@ -158,9 +162,9 @@ internal static class LogicalExtensions
         }
 
         // TODO null fields?
-        foreach (var field in second.Fields.Where(f => f != null))
+        foreach (var field in second.Fields/*.Where(f => f != null)*/)
         {
-            var duplicate = self.Fields.FirstOrDefault(f => f != null && f.Name == field!.Name) != null;
+            var duplicate = self.Fields.FirstOrDefault(f => /*f != null && */ f.Name == field.Name) != null;//field!.Name
 
             if (!duplicate)
             {
@@ -200,7 +204,7 @@ internal static class LogicalExtensions
 
         // The root operation will scan the table for the projected values
         var table = dataSources[name];
-        return new TableScan(name, table.Schema, table);
+        return new TableScan(name, table.Schema!, table);
     }
 
     #endregion
@@ -273,10 +277,10 @@ internal static class LogicalExtensions
     #endregion
 
     #region Aggregate Plan
-    internal static (ILogicalPlan, List<ILogicalExpression>, List<ILogicalExpression>) CreateAggregatePlan(
+    internal static (ILogicalPlan, List<ILogicalExpression>, ILogicalExpression?) CreateAggregatePlan(
         ILogicalPlan plan,
         List<ILogicalExpression> selectExpressions,
-        List<ILogicalExpression> havingExpressions,
+        ILogicalExpression? havingExpressions,
         List<ILogicalExpression> groupByExpressions,
         List<ILogicalExpression> aggregateExpressions)
     {
@@ -289,9 +293,10 @@ internal static class LogicalExtensions
 
         var aggregateProjectionExpressions = groupByExpressions
             .ToList()
-            .Concat(aggregateExpressions)//.ToList();
+            .Concat(aggregateExpressions)
             .Select(e => ResolveColumns(e, plan))
             .ToList();
+
         // resolve columns and replace with fully qualified names
         //aggregateProjectionExpressions = aggregateProjectionExpressions.Select(e => ResolveColumns(e, plan)).ToList();
 
@@ -299,9 +304,14 @@ internal static class LogicalExtensions
 
         var selectExpressionsPostAggregate = selectExpressions.Select(e => RebaseExpression(e, aggregateProjectionExpressions, plan)).ToList();
         
-        // rewrite having columns
+        // rewrite having columns to use columns in by the aggregation
+        ILogicalExpression havingPostAggregation = null;
+        if (havingExpressions != null)
+        {
+            havingPostAggregation = RebaseExpression(havingExpressions, aggregateProjectionExpressions, plan);
+        }
 
-        return (aggregatePlan, selectExpressionsPostAggregate, new List<ILogicalExpression>());
+        return (aggregatePlan, selectExpressionsPostAggregate, havingPostAggregation);
     }
 
     internal static List<ILogicalExpression> GroupingSetToExprList(List<ILogicalExpression> groupExpressions)
@@ -366,9 +376,9 @@ internal static class LogicalExtensions
         {
             var groupByExpr = SqlExprToLogicalExpression(expr, combinedSchema);
 
-            foreach (var field in plan.Schema.Fields.Where(f => f != null))
+            foreach (var field in plan.Schema.Fields/*.Where(f => f != null)*/)
             {
-                aliasMap.Remove(field!.Name);
+                aliasMap.Remove(field.Name);//field!.Name
             }
 
             groupByExpr = ResolveAliasToExpressions(groupByExpr, aliasMap);
@@ -378,7 +388,24 @@ internal static class LogicalExtensions
         }).ToList();
     }
 
-    private static ILogicalExpression ResolveAliasToExpressions(
+    internal static ILogicalExpression? MapHaving(Expression? having, Schema schema, Dictionary<string, ILogicalExpression> aliasMap)
+    {
+        var havingExpression = having == null ? null : SqlExprToLogicalExpression(having, schema);
+
+        return havingExpression == null ? null :
+            // This step swaps aliases in the HAVING clause for the
+            // underlying column name.  This is how the planner supports
+            // queries with HAVING expressions that refer to aliased columns.
+            //
+            //   SELECT c1, MAX(c2) AS abc FROM tbl GROUP BY c1 HAVING abc > 10;
+            //
+            // is rewritten
+            //
+            //   SELECT c1, MAX(c2) AS abc FROM tbl GROUP BY c1 HAVING MAX(c2) > 10;
+            ResolveAliasToExpressions(havingExpression, aliasMap);
+    }
+
+    internal static ILogicalExpression ResolveAliasToExpressions(
         ILogicalExpression expression, 
         IReadOnlyDictionary<string, ILogicalExpression> aliasMap)
     {
@@ -426,15 +453,9 @@ internal static class LogicalExtensions
 
         foreach (var expr in expressions)
         {
-            if (expr is Wildcard)
-            {
-                // TODO: expand
-            }
-            else if (expr is SelectItem.QualifiedWildcard)
-            {
-                // TODO: expand
-            }
-            else
+            // wildcard?
+            // unqualified wildcard?
+            if (expr is Column)
             {
                 projectedExpressions.Add(ToColumnExpression(expr, plan.Schema));
             }
@@ -447,13 +468,13 @@ internal static class LogicalExtensions
         {
             switch (expression)
             {
-                case Expressions.Column:
+                case Column:
                     return expression;
 
                 case Alias alias:
                     return alias with { Expression = ToColumnExpression(alias.Expression, schema) };
 
-                    ;               //case Cast
+                //case Cast
                 //case TryCast
                 // case ScalarSubQuery
 
@@ -476,7 +497,7 @@ internal static class LogicalExtensions
             return plan;
         }
 
-        var orderByRelation = orderByExpressions!.Select(e => OrderByToSortExpression(e, plan.Schema)).ToList();
+        var orderByRelation = orderByExpressions.Select(e => OrderByToSortExpression(e, plan.Schema)).ToList();// orderByExpressions!.
 
         return Sort.TryNew(plan, orderByRelation);
     }
@@ -573,6 +594,10 @@ internal static class LogicalExtensions
             Expressions.Column or Literal => expression,
             AggregateFunction fn => fn with { Args = fn.Args.Select(_ => CloneWithReplacement(_, replacementFunc)).ToList() },
             Alias a => new Alias(CloneWithReplacement(a.Expression, replacementFunc), a.Name),
+            Expressions.Binary b => new Expressions.Binary(
+                    CloneWithReplacement(b.Left, replacementFunc),b.
+                    Op, CloneWithReplacement(b.Right, 
+                    replacementFunc)),
 
             _ => throw new NotImplementedException() //todo other types
         };
@@ -681,7 +706,7 @@ internal static class LogicalExtensions
         }
     }
 
-    internal static ILogicalExpression SqlFunctionToExpression(Expression.Function function, Schema schema)
+    internal static ILogicalExpression SqlFunctionToExpression(Function function, Schema schema)
     {
         // scalar functions
 
@@ -761,7 +786,7 @@ internal static class LogicalExtensions
             {
                 case Expressions.Column c:
                     var index = inputDfSchema.IndexOfColumn(c);
-                    return new Column(c.Name, index!.Value);
+                    return new CsvRx.Core.Physical.Expressions.Column(c.Name, index!.Value);
 
                 case Literal l:
                     return new Physical.Expressions.Literal(l.Value);
@@ -775,7 +800,7 @@ internal static class LogicalExtensions
                         var left = CreatePhysicalExpression(b.Left, inputDfSchema, inputSchema);
                         var right = CreatePhysicalExpression(b.Right, inputDfSchema, inputSchema);
 
-                        return new Binary(left, b.Op, right);
+                        return new CsvRx.Core.Physical.Expressions.Binary(left, b.Op, right);
                     }
 
                 default:

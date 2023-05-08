@@ -1,14 +1,15 @@
-﻿using CsvRx.Core.Logical.Values;
+﻿using CsvRx.Core.Data;
+using CsvRx.Core.Logical.Values;
 using CsvRx.Core.Values;
 
 namespace CsvRx.Core.Physical.Aggregation;
 
-internal record AverageAccumulator : Accumulator
+internal record AverageAccumulator(ColumnDataType DataType) : Accumulator
 {
     private long _count;
     private double _sum;
 
-    public override void Accumulate(object value)
+    public override void Accumulate(object? value)
     {
         if (value == null)
         {
@@ -36,20 +37,25 @@ internal record AverageAccumulator : Accumulator
         UpdateBatch(values);
     }
 
-    public override object? Value
-    {
-        get
-        {
-            if (_sum == 0)
-            {
-                return 0;
-            }
-
-            return _sum / _count;
-        }
-    }
-
-    public override ScalarValue Evaluate => _count == 0 ? new DoubleScalar(0) : new DoubleScalar(_sum / _count); 
+    public override object Value => CalculateAverage();
 
     public override List<ScalarValue> State => new() { Evaluate };
+
+    public override ScalarValue Evaluate => CalculateAverageValue();
+
+    private ScalarValue CalculateAverageValue()
+    {
+        var average = CalculateAverage();
+
+        return DataType switch
+        {
+            ColumnDataType.Integer => new IntegerScalar(Convert.ToInt64(average)),
+            _ => new DoubleScalar(average)
+        };
+    }
+
+    private double CalculateAverage()
+    {
+        return _count == 0 ? 0 : _sum / _count;
+    }
 }

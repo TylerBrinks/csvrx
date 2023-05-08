@@ -11,13 +11,10 @@ context.RegisterCsv("mycsv", @"C:\Users\tyler\source\repos\sink\sqldatafusion\te
 //var results = context.ExecuteSql("SELECT c1, c3 FROM aggregate_test_100 order by c1, c3");
 
 //var sql = "SELECT c1 as abc FROM mycsv group by 1";
-var sql = "SELECT c1, count(c3) as cnt FROM mycsv group by c1";
-//var sql = """
-//    SELECT c1 as a, c3
-//    FROM mycsv
-//    order by a
-//    limit 23 offset 20
-//    """;
+//var sql = "SELECT c1, count(c3) as cnt FROM mycsv group by c1";
+//var sql = "SELECT c1, count(c3) as cnt FROM mycsv group by c1 having cnt > 18";
+var sql = "SELECT var(c3), var_pop(c3) FROM mycsv";
+//var sql = "SELECT c1 as a, c3 FROM mycsv order by a limit 23 offset 20"
 
 try
 {
@@ -27,8 +24,10 @@ try
         BatchSize = 3
     };
     Table? table = null;
+    context.BuildLogicalPlan(sql);
+    var exec = context.BuildPhysicalPlan();
 
-    await foreach (var batch in context.ExecuteSql(sql, options))
+    await foreach (var batch in context.ExecutePlan(exec, options))
     {
         if (table == null)
         {

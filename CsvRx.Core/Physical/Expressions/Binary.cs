@@ -6,7 +6,7 @@ namespace CsvRx.Core.Physical.Expressions;
 
 internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExpression Right) : IPhysicalExpression
 {
-    public ColumnDataType GetDataType(Schema schema)
+    public ColumnDataType GetDataType(Schema schema) 
     {
         var resultType = CoerceTypes(Left.GetDataType(schema), Right.GetDataType(schema));
 
@@ -200,7 +200,7 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
                 return CompareBooleans(left, right);
 
             default:
-                throw new NotImplementedException();
+                throw new NotImplementedException("CompareValues data type not implemented");
         }
     }
 
@@ -213,20 +213,25 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
         {
             BinaryOperator.Eq => leftValue == rightValue,
             BinaryOperator.NotEq => leftValue != rightValue,
-            _ => throw new NotImplementedException()
+            _ => throw new NotImplementedException("CompareStrings not implemented for strings yet")
         };
     }
 
     private bool CompareIntegers(object left, object right)
     {
-        var leftValue = (int)left;
-        var rightValue = (int)right;
+        var leftValue = (long)left;
+        var rightValue = (long)right;
 
         return Op switch
         {
             BinaryOperator.Eq => leftValue == rightValue,
             BinaryOperator.NotEq => leftValue != rightValue,
-            _ => throw new NotImplementedException()
+            BinaryOperator.Gt => leftValue > rightValue,
+            BinaryOperator.Lt => leftValue < rightValue,
+            BinaryOperator.GtEq => leftValue >= rightValue,
+            BinaryOperator.LtEq => leftValue <= rightValue,
+
+            _ => throw new NotImplementedException("CompareIntegers not implemented for integers yet")
         };
     }
    
@@ -243,7 +248,8 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
             BinaryOperator.Lt => leftValue < rightValue,
             BinaryOperator.GtEq => leftValue >= rightValue,
             BinaryOperator.LtEq => leftValue <= rightValue,
-            _ => throw new NotImplementedException()
+
+            _ => throw new NotImplementedException("CompareDecimals not implemented for integers yet")
         };
     }
 
@@ -259,7 +265,7 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
             BinaryOperator.And => leftValue && rightValue,
             BinaryOperator.Or => leftValue || rightValue,
 
-            _ => throw new NotImplementedException()
+            _ => throw new NotImplementedException("CompareBooleans not implemented for integers yet")
         };
     }
 

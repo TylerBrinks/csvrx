@@ -14,8 +14,9 @@ internal interface ILogicalPlan : INode
     {
         var oldChildren = GetInputs();
 
+        var callback = map as Func<ILogicalPlan, ILogicalPlan>;
         var newChildren = oldChildren
-            .Select(p => p.Transform(p, map as Func<ILogicalPlan, ILogicalPlan>))
+            .Select(p => p.Transform(p, callback!))
             .ToList();
 
         if (oldChildren.Zip(newChildren).Any(index => index.First != index.Second))
@@ -77,7 +78,7 @@ internal interface ILogicalPlan : INode
             case Projection p:
                 return new Projection(inputs[0], expressions, p.Schema);
 
-            case Filter f:
+            case Filter:
                 var predicate = expressions[0];
                 return new Filter(inputs[0], predicate);
 
@@ -97,7 +98,7 @@ internal interface ILogicalPlan : INode
                 return l with {Plan = inputs[0]};
 
             default:
-                throw new NotImplementedException();
+                throw new NotImplementedException("WithNewInputs not implemented for plan type");
         }
     }
 }

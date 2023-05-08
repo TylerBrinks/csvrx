@@ -11,6 +11,7 @@ namespace CsvRx.Execution;
 public class ExecutionContext
 {
     private readonly Dictionary<string, DataSource> _tables = new();
+    private ILogicalPlan _logicalPlan = null!;
 
     public void RegisterCsv(string tableName, string path)
     {
@@ -27,25 +28,7 @@ public class ExecutionContext
         _tables.Add(tableName, df);
     }
 
-    public async IAsyncEnumerable<RecordBatch> ExecuteSql(string sql, QueryOptions options)
-    {
-        var logicalPlan = BuildLogicalPlan(sql);
-        var optimized = new LogicalPlanOptimizer().Optimize(logicalPlan);
-
-        if (optimized == null)
-        {
-            throw new InvalidOperationException();
-        }
-
-        var physicalPlan = new PhysicalPlanner().CreateInitialPlan(optimized);
-
-        await foreach (var batch in ExecuteLogicalPlan(physicalPlan, options))
-        {
-            yield return batch;
-        }
-    }
-
-    internal ILogicalPlan BuildLogicalPlan(string sql)
+    public void BuildLogicalPlan(string sql)
     {
         var ast = new Parser().ParseSql(sql);
 
@@ -60,8 +43,32 @@ public class ExecutionContext
             _ => throw new NotImplementedException()
         };
 
-        return plan;
+        _logicalPlan = new LogicalPlanOptimizer().Optimize(plan)!;
     }
+
+    public IExecutionPlan BuildPhysicalPlan()
+    {
+        if (_logicalPlan == null)
+        {
+            throw new InvalidOperationException("Must build a logical plan first");
+        }
+
+        return new PhysicalPlanner().CreateInitialPlan(_logicalPlan);
+    }
+
+    public async IAsyncEnumerable<RecordBatch> ExecutePlan(IExecutionPlan executionPlan, QueryOptions options)
+    {
+        if (executionPlan == null)
+        {
+            throw new InvalidOperationException("Must build a physical plan first");
+        }
+
+        await foreach (var batch in ExecuteLogicalPlan(executionPlan, options))
+        {
+            yield return batch;
+        }
+    }
+
 
     internal static async IAsyncEnumerable<RecordBatch> ExecuteLogicalPlan(IExecutionPlan physicalPlan, QueryOptions options)
     {

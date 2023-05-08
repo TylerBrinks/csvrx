@@ -1,21 +1,20 @@
 ﻿using CsvRx.Core.Logical.Expressions;
 using CsvRx.Core.Logical.Plans;
 
-namespace CsvRx.Core.Logical.Rules
+namespace CsvRx.Core.Logical.Rules;
+
+internal class ReplaceDistinctWithAggregateRule : ILogicalPlanOptimizationRule
 {
-    internal class ReplaceDistinctWithAggregateRule : ILogicalPlanOptimizationRule
+    public ApplyOrder ApplyOrder => ApplyOrder.BottomUp;
+
+    public ILogicalPlan TryOptimize(ILogicalPlan plan)
     {
-        public ApplyOrder ApplyOrder => ApplyOrder.BottomUp;
-
-        public ILogicalPlan? TryOptimize(ILogicalPlan plan)
+        if (plan is not Distinct d)
         {
-            if (plan is not Distinct d)
-            {
-                return plan;
-            }
-
-            var groupExpression = LogicalExtensions.ExpandWildcard(plan.Schema);
-            return Aggregate.TryNew(d.Plan, groupExpression, new List<ILogicalExpression>());
+            return plan;
         }
+
+        var groupExpression = LogicalExtensions.ExpandWildcard(plan.Schema);
+        return Aggregate.TryNew(d.Plan, groupExpression, new List<ILogicalExpression>());
     }
 }

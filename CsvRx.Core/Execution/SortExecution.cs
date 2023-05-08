@@ -1,5 +1,6 @@
 ﻿using CsvRx.Core.Data;
 using CsvRx.Core.Physical.Expressions;
+
 namespace CsvRx.Core.Execution;
 
 internal record SortExecution(List<PhysicalSortExpression> SortExpressions, IExecutionPlan Plan) : IExecutionPlan

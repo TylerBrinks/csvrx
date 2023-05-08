@@ -64,13 +64,9 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
                         .Select(e => ReplaceColumnsByName(e, replaceMap))
                         .Select((e, i) =>
                         {
-                            var parentName = projection.Schema.Fields[i].Name;
-                            if (e.CreateName() == parentName)
-                            {
-                                return e;
-                            }
+                            var parentName = projection.Schema.Fields[i].Name; // removed f!.name
 
-                            return new Alias(e, parentName);
+                            return e.CreateName() == parentName ? e : new Alias(e, parentName);
                         })
                         .ToList();
 
@@ -89,7 +85,7 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
 
                     if (!newAggregate.Any() && a.AggregateExpressions.Count == 1)
                     {
-                        throw new NotImplementedException();
+                        throw new InvalidOperationException();
                     }
 
                     var newAgg = Aggregate.TryNew(a.Plan, a.GroupExpressions, newAggregate);
@@ -128,7 +124,7 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
                     return projection.WithNewInputs(new List<ILogicalPlan> { scan });
                 }
             default:
-                throw new NotImplementedException();
+                throw new NotImplementedException("FromChildPlan plan type not implemented yet");
         }
     }
 
@@ -142,7 +138,7 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
                 _ => projection.Expression[i]
             };
 
-            return (f.Name, Expr: expr);
+            return (f.Name, Expr: expr);// removed f!.Name
         })
         .ToDictionary(f => f.Name, f => f.Expr);
     }
@@ -172,13 +168,15 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
             }
             return index.Value;
         }).ToList();
-        var fields = projection.Select(i => tableScan.Source.Schema.Fields[i]).ToList();
+
+        var fields = projection.Select(i => tableScan.Source.Schema!.Fields[i]).ToList();
+
         var schema = new Schema(fields);
 
         return tableScan with { Schema = schema, Projection = projection };
     }
 
-    static ILogicalPlan GeneratePlan(bool empty, ILogicalPlan plan, ILogicalPlan newPlan)
+    private static ILogicalPlan GeneratePlan(bool empty, ILogicalPlan plan, ILogicalPlan newPlan)
     {
         if (empty)
         {

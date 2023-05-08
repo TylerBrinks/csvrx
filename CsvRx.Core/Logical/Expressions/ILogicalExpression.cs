@@ -1,6 +1,4 @@
-﻿using System.Reflection.Metadata.Ecma335;
-
-namespace CsvRx.Core.Logical.Expressions;
+﻿namespace CsvRx.Core.Logical.Expressions;
 
 internal interface ILogicalExpression : INode
 {
@@ -8,10 +6,8 @@ internal interface ILogicalExpression : INode
     {
         var children = GetChildExpressions(this);
 
-        foreach (var child in children)
+        foreach (var result in children.Select(child => action(child)))
         {
-            var result = action(child);
-
             switch (result)
             {
                 case VisitRecursion.Skip:
@@ -42,7 +38,6 @@ internal interface ILogicalExpression : INode
 
         List<ILogicalExpression> GetAggregateChildren(AggregateFunction fn)
         {
-            //var args = fn.Args.Select(_ => _).ToList();
             var args = fn.Args.ToList();
             if (fn.Filter != null)
             {
@@ -63,9 +58,10 @@ internal interface ILogicalExpression : INode
 
     T INode.Transform<T>(T instance, Func<T, T>? func)
     {
-        var afterOpChildren = MapChildren(this, node => node.Transform(node, func as Func<ILogicalExpression, ILogicalExpression>));
+        var transformFunc = func as Func<ILogicalExpression, ILogicalExpression>;
+        var afterOpChildren = MapChildren(this, node => node.Transform(node, transformFunc!));
 
-        var newNode = func((T)afterOpChildren);
+        var newNode = func!((T)afterOpChildren);
 
         return newNode;
     }

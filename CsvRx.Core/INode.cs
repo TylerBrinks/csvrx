@@ -1,12 +1,5 @@
 ﻿namespace CsvRx.Core;
 
-public enum VisitRecursion
-{
-    Continue,
-    Skip,
-    Stop
-}
-
 internal interface INode
 {
     VisitRecursion Apply(Func<INode, VisitRecursion> action)

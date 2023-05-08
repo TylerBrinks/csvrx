@@ -7,7 +7,7 @@ internal record ScalarColumnValue(ScalarValue Value, int RecordCount, ColumnData
 {
     internal override int Size => RecordCount;
 
-    internal override object GetValue(int i)
+    internal override object? GetValue(int i)
     {
         return Value.RawValue;
     }

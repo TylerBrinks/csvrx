@@ -1,9 +1,10 @@
-﻿using CsvRx.Core.Logical.Values;
+﻿using CsvRx.Core.Data;
+using CsvRx.Core.Logical.Values;
 using CsvRx.Core.Values;
 
 namespace CsvRx.Core.Physical.Aggregation;
 
-internal record SumAccumulator : Accumulator
+internal record SumAccumulator(ColumnDataType DataType) : Accumulator
 {
     private object? _value;
 
@@ -47,5 +48,8 @@ internal record SumAccumulator : Accumulator
 
     public override List<ScalarValue> State => new() { Evaluate };
 
-    public override ScalarValue Evaluate => new IntegerScalar((long)_value);
+    public override ScalarValue Evaluate =>
+        DataType == ColumnDataType.Integer
+            ? new IntegerScalar(Convert.ToInt64(_value))
+            : new DoubleScalar(Convert.ToDouble(_value));
 }

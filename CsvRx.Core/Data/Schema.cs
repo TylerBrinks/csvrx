@@ -6,19 +6,21 @@ public class Schema
 {
     public Schema(List<Field> fields)
     {
-        Fields = fields;
+        Fields = fields!;
     }
+
     //TODO should fields ever be null?
-    public List<Field?> Fields { get; }
+    public List<Field> Fields { get; }
 
     public Field? GetField(string name)
     {
-        return Fields.FirstOrDefault(f => f != null && f.Name == name);
+        return Fields.FirstOrDefault(f => /*f != null &&*/ f.Name == name);
     }
 
     internal int? IndexOfColumn(Column col)
     {
         var field = GetField(col.Name);
+
         if (field == null)
         {
             return null;
@@ -34,11 +36,18 @@ public class Schema
 
     public bool Equals(Schema? other)
     {
-        if (other == null)
-        {
-            return false;
-        }
+        return other != null && Fields.SequenceEqual(other.Fields);
+    }
 
-        return Fields.SequenceEqual(other.Fields);
+    public override int GetHashCode()
+    {
+        HashCode hash = new();
+
+        foreach (var field in Fields/*.Where(f => f!=null)*/)
+        {
+            hash.Add(field);
+        }
+      
+        return hash.ToHashCode();
     }
 }

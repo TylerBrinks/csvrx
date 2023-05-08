@@ -9,7 +9,7 @@ internal record AverageFunction(IPhysicalExpression InputExpression, string Name
 {
     internal override List<Field> StateFields => new()
     {
-        new($"{Name}[avg]", DataType)
+        new ($"{Name}[avg]", DataType)
     };
 
     internal override Field Field => new(Name, DataType);
@@ -18,6 +18,6 @@ internal record AverageFunction(IPhysicalExpression InputExpression, string Name
 
     public Accumulator CreateAccumulator()
     {
-        return new AverageAccumulator();
+        return new AverageAccumulator(DataType);
     }
 }

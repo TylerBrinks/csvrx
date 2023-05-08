@@ -13,7 +13,7 @@ internal class PhysicalPlanner
     {
         return optimized switch
         {
-            TableScan table => table.Source.Scan(table.Projection),
+            TableScan table => table.Source.Scan(table.Projection!),
             Aggregate aggregate => CreateAggregatePlan(aggregate),
             Projection projection => CreateProjectionPlan(projection),
             Filter filter => CreateFilterPlan(filter),

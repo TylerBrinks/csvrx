@@ -31,7 +31,7 @@ internal class EliminateProjectionRule : ILogicalPlanOptimizationRule
         }
     }
 
-    private bool CanEliminate(Projection projection, Schema schema)
+    private static bool CanEliminate(Projection projection, Schema schema)
     {
         if (projection.Expression.Count != schema.Fields.Count)
         {

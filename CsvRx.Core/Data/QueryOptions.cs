@@ -1,8 +1,7 @@
 ﻿
-namespace CsvRx.Core.Data
+namespace CsvRx.Core.Data;
+
+public class QueryOptions
 {
-    public class QueryOptions
-    {
-        public int BatchSize { get; set; }
-    }
+    public int BatchSize { get; set; }
 }

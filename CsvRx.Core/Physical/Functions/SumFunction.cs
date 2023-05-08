@@ -15,6 +15,6 @@ internal record SumFunction(IPhysicalExpression InputExpression, string Name, Co
 
     public Accumulator CreateAccumulator()
     {
-        return new SumAccumulator();
+        return new SumAccumulator(DataType);
     }
 }

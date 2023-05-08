@@ -16,7 +16,7 @@ internal record Aggregate(
         var groups = string.Join(",", GroupExpressions);
         var aggregates = string.Join(",", AggregateExpressions);
 
-        return $"Aggregate: groupBy=[{groups}], aggr=[{aggregates}]{indent.Next(Plan)}";
+        return $"Aggregate: groupBy=[{groups}], aggregate=[{aggregates}]{indent.Next(Plan)}";
     }
 
     public static Aggregate TryNew(ILogicalPlan plan, List<ILogicalExpression> groupExpressions, List<ILogicalExpression> aggregateExpressions)

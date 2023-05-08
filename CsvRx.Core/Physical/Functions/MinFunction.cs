@@ -15,6 +15,6 @@ internal record MinFunction(IPhysicalExpression InputExpression, string Name, Co
 
     public Accumulator CreateAccumulator()
     {
-        return new MinAccumulator();
+        return new MinAccumulator(DataType);
     }
 }

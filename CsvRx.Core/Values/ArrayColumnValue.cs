@@ -7,7 +7,7 @@ internal record ArrayColumnValue(IList Values, ColumnDataType DataType) : Column
 {
     internal override int Size => Values.Count;
 
-    internal override object GetValue(int i)
+    internal override object? GetValue(int i)
     {
         return Values[i];
     }

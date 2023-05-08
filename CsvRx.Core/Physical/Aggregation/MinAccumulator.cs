@@ -1,9 +1,10 @@
-﻿using CsvRx.Core.Logical.Values;
+﻿using CsvRx.Core.Data;
+using CsvRx.Core.Logical.Values;
 using CsvRx.Core.Values;
 
 namespace CsvRx.Core.Physical.Aggregation;
 
-internal record MinAccumulator : Accumulator
+internal record MinAccumulator(ColumnDataType DataType) : Accumulator
 {
     private double? _value;
 
@@ -47,5 +48,8 @@ internal record MinAccumulator : Accumulator
 
     public override List<ScalarValue> State => new() { Evaluate };
 
-    public override ScalarValue Evaluate => new IntegerScalar((long)_value);
+    public override ScalarValue Evaluate =>
+        DataType == ColumnDataType.Integer
+            ? new IntegerScalar((long)(_value ?? 0))
+            : new DoubleScalar(_value ?? 0);
 }

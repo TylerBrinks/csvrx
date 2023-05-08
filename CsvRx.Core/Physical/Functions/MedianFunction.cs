@@ -4,10 +4,10 @@ using CsvRx.Core.Physical.Expressions;
 
 namespace CsvRx.Core.Physical.Functions;
 
-internal record MaxFunction(IPhysicalExpression InputExpression, string Name, ColumnDataType DataType) 
+internal record MedianFunction(IPhysicalExpression InputExpression, string Name, ColumnDataType DataType)
     : Aggregate(InputExpression), IAggregation
 {
-    internal override List<Field> StateFields => new() { new($"{Name}[max]", DataType) };
+    internal override List<Field> StateFields => new() { new($"{Name}[median]", DataType) };
 
     internal override Field Field => new(Name, DataType);
 
@@ -15,6 +15,6 @@ internal record MaxFunction(IPhysicalExpression InputExpression, string Name, Co
 
     public Accumulator CreateAccumulator()
     {
-        return new MaxAccumulator(DataType);
+        return new MedianAccumulator(DataType);
     }
 }

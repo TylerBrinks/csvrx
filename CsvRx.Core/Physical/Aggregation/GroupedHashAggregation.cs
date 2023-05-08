@@ -6,7 +6,7 @@ using CsvRx.Core.Values;
 
 namespace CsvRx.Core.Physical.Aggregation;
 
-internal class GroupedHashAggregation //: IAsyncEnumerable<RecordBatch>
+internal class GroupedHashAggregation
 {
     private readonly IExecutionPlan _plan;
     private readonly GroupBy _groupBy;
@@ -57,12 +57,9 @@ internal class GroupedHashAggregation //: IAsyncEnumerable<RecordBatch>
 
             for (var rowIndex = 0; rowIndex < batch.RowCount; rowIndex++)
             {
-                var keyList = groupKey.Select(key =>
-                {
-                    var value = key.GetValue(rowIndex);
-                    return value;
-                }).ToList();
-                var rowKey = new Sequence<object>(keyList);
+                var keyList = groupKey.Select(key => key.GetValue(rowIndex)).ToList();
+
+                var rowKey = new Sequence<object>(keyList!);
 
                 map.TryGetValue(rowKey, out var accumulators);
 
@@ -78,7 +75,7 @@ internal class GroupedHashAggregation //: IAsyncEnumerable<RecordBatch>
                 for (var i = 0; i < accumulators.Count; i++)
                 {
                     var value = aggregateInputValues[i].GetValue(rowIndex);
-                    accumulators[i].Accumulate(value);
+                    accumulators[i].Accumulate(value!);
                 }
             }
         }
