@@ -7,7 +7,7 @@ namespace CsvRx.Core.Physical.Functions;
 internal record CountFunction(IPhysicalExpression Expression, string Name, ColumnDataType DataType) 
     : Aggregate(Expression), IAggregation
 {
-    internal override List<Field> StateFields => new() { new($"{Name}[count]", DataType) };
+    internal override List<Field> StateFields => new() { new($"COUNT({Name})", DataType) };
 
     internal override Field Field => new(Name, DataType);
 

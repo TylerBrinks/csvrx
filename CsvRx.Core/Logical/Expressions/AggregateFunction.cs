@@ -20,13 +20,10 @@ internal record AggregateFunction(
             // array_agg
             "var" or "var_samp" => AggregateFunctionType.Variance,
             "var_pop" => AggregateFunctionType.VariancePop,
-            //var_pop
             "stddev" or "stddev_samp" => AggregateFunctionType.StdDev,
             "stddev_pop" => AggregateFunctionType.StdDevPop,
-
-            //"covar" => AggregateFunction::Covariance,
-            //"covar_samp" => AggregateFunction::Covariance,
-            //"covar_pop" => AggregateFunction::CovariancePop,
+            "covar" or "covar_samp" => AggregateFunctionType.Covariance,
+            "covar_pop" => AggregateFunctionType.CovariancePop,
             //"corr" => AggregateFunction::Correlation,
             //"approx_percentile_cont" => AggregateFunction::ApproxPercentileCont,
             //"approx_percentile_cont_with_weight" => {

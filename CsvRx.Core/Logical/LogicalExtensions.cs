@@ -128,6 +128,8 @@ internal static class LogicalExtensions
                     or AggregateFunctionType.StdDevPop
                     or AggregateFunctionType.Variance
                     or AggregateFunctionType.VariancePop
+                    or AggregateFunctionType.Covariance
+                    or AggregateFunctionType.CovariancePop
                     => ColumnDataType.Double,
 
                 _ => throw new NotImplementedException("GetAggregateDataType need to implement"),
@@ -784,9 +786,9 @@ internal static class LogicalExtensions
         {
             switch (expression)
             {
-                case Expressions.Column c:
+                case Column c:
                     var index = inputDfSchema.IndexOfColumn(c);
-                    return new CsvRx.Core.Physical.Expressions.Column(c.Name, index!.Value);
+                    return new Physical.Expressions.Column(c.Name, index!.Value);
 
                 case Literal l:
                     return new Physical.Expressions.Literal(l.Value);
@@ -800,7 +802,7 @@ internal static class LogicalExtensions
                         var left = CreatePhysicalExpression(b.Left, inputDfSchema, inputSchema);
                         var right = CreatePhysicalExpression(b.Right, inputDfSchema, inputSchema);
 
-                        return new CsvRx.Core.Physical.Expressions.Binary(left, b.Op, right);
+                        return new Physical.Expressions.Binary(left, b.Op, right);
                     }
 
                 default:
@@ -836,7 +838,7 @@ internal static class LogicalExtensions
     {
         switch (expression)
         {
-            case Expressions.Column c:
+            case Column c:
                 return c.Name;//todo is first?name:flatname
 
             case Expressions.Binary b:

@@ -4,9 +4,9 @@ using CsvRx.Core.Physical.Expressions;
 
 namespace CsvRx.Core.Physical.Functions;
 
-internal record StandardDeviationFunction(
-        IPhysicalExpression InputExpression, 
-        string Name, 
+internal record VarianceFunction(
+        IPhysicalExpression InputExpression,
+        string Name,
         ColumnDataType DataType,
         StatisticType StatisticType)
     : Aggregate(InputExpression), IAggregation
@@ -15,9 +15,9 @@ internal record StandardDeviationFunction(
 
     internal override List<Field> StateFields => new()
     {
-        new($"STDDEV{StatePrefix}({Name})[count]", ColumnDataType.Integer),
-        new($"STDDEV{StatePrefix}({Name})[mean]", ColumnDataType.Double),
-        new($"STDDEV{StatePrefix}({Name})[m2]",  ColumnDataType.Double),
+        new($"VAR{StatePrefix}({Name})[count]", ColumnDataType.Integer),
+        new($"VAR{StatePrefix}({Name})[mean]", ColumnDataType.Double),
+        new($"VAR{StatePrefix}({Name})[m2]",  ColumnDataType.Double),
     };
 
     private string StatePrefix => _prefix ??= StatisticType == Core.StatisticType.Population ? "_POP" : "";
@@ -28,6 +28,6 @@ internal record StandardDeviationFunction(
 
     public Accumulator CreateAccumulator()
     {
-        return new StandardDeviationAccumulator(DataType, StatisticType);
+        return new VarianceAccumulator(DataType, StatisticType);
     }
 }

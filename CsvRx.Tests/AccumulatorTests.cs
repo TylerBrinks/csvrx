@@ -8,7 +8,7 @@ public class AccumulatorTests
     [Fact]
     public void MaxAccumulator_Compares_Values()
     {
-        var accumulator = new MaxAccumulator();
+        var accumulator = new MaxAccumulator(ColumnDataType.Double);
         accumulator.Accumulate(-1);
         accumulator.Accumulate(1);
         accumulator.Accumulate(2);
@@ -22,7 +22,7 @@ public class AccumulatorTests
     [Fact]
     public void MinAccumulator_Compares_Values()
     {
-        var accumulator = new MinAccumulator();
+        var accumulator = new MinAccumulator(ColumnDataType.Double);
         accumulator.Accumulate(-1);
         accumulator.Accumulate(1);
         accumulator.Accumulate(2);

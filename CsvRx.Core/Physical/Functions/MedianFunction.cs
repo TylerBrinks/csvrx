@@ -7,7 +7,7 @@ namespace CsvRx.Core.Physical.Functions;
 internal record MedianFunction(IPhysicalExpression InputExpression, string Name, ColumnDataType DataType)
     : Aggregate(InputExpression), IAggregation
 {
-    internal override List<Field> StateFields => new() { new($"{Name}[median]", DataType) };
+    internal override List<Field> StateFields => new() { new($"MEDIAN({Name})", DataType) };
 
     internal override Field Field => new(Name, DataType);
 

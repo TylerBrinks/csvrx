@@ -56,6 +56,8 @@ namespace CsvRx.Core.Physical
                 case AggregateFunctionType.StdDevPop:
                 case AggregateFunctionType.Variance:
                 case AggregateFunctionType.VariancePop:
+                case AggregateFunctionType.Covariance:
+                case AggregateFunctionType.CovariancePop:
                     return inputTypes;
 
 
@@ -83,6 +85,8 @@ namespace CsvRx.Core.Physical
                     or AggregateFunctionType.StdDevPop 
                     or AggregateFunctionType.Variance
                     or AggregateFunctionType.VariancePop
+                    or AggregateFunctionType.Covariance
+                    or AggregateFunctionType.CovariancePop
                     => NumericReturnType(fn.FunctionType.ToString(), coercedDataTypes[0]),
             
 
@@ -150,6 +154,14 @@ namespace CsvRx.Core.Physical
 
                 case (AggregateFunctionType.VariancePop, _):
                     return new VarianceFunction(inputPhysicalExpressions[0], name, returnType, StatisticType.Population);
+
+                case (AggregateFunctionType.Covariance, _):
+                    return new CovarianceFunction(inputPhysicalExpressions[0], inputPhysicalExpressions[1],
+                        name, returnType, StatisticType.Sample);
+
+                case (AggregateFunctionType.CovariancePop, _):
+                    return new CovarianceFunction(inputPhysicalExpressions[0], inputPhysicalExpressions[1],
+                        name, returnType, StatisticType.Population);
 
                 default:
                     throw new NotImplementedException($"Aggregate function not yet implemented: {fn.FunctionType}");
