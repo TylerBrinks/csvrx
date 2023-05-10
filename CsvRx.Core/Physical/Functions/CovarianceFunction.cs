@@ -14,17 +14,17 @@ internal record CovarianceFunction(
 {
     private string? _prefix;
    
-    internal override List<Field> StateFields => new()
+    internal override List<QualifiedField> StateFields => new()
     {
-        new($"COVAR{StatePrefix}({Name})[count]", ColumnDataType.Integer),
-        new($"COVAR{StatePrefix}({Name})[mean1]", ColumnDataType.Double),
-        new($"COVAR{StatePrefix}({Name})[mean2]", ColumnDataType.Double),
-        new($"COVAR{StatePrefix}({Name})[algoConst]", ColumnDataType.Double),
+         QualifiedField.Unqualified($"COVAR{StatePrefix}({Name})[count]", ColumnDataType.Integer),
+         QualifiedField.Unqualified($"COVAR{StatePrefix}({Name})[mean1]", ColumnDataType.Double),
+         QualifiedField.Unqualified($"COVAR{StatePrefix}({Name})[mean2]", ColumnDataType.Double),
+         QualifiedField.Unqualified($"COVAR{StatePrefix}({Name})[algoConst]", ColumnDataType.Double),
     };
 
     private string StatePrefix => _prefix ??= StatisticType == StatisticType.Population ? "_POP" : "";
     
-    internal override Field Field => new(Name, DataType);
+    internal override QualifiedField NamedQualifiedField => new(Name, DataType);
 
     internal override List<IPhysicalExpression> Expressions => new() { InputExpression1, InputExpression2 };
 

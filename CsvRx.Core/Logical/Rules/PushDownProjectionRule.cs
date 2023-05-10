@@ -79,7 +79,7 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
                     LogicalExtensions.ExprListToColumns(projection.GetExpressions(), requiredColumns);
                     var newAggregate = (
                         from agg in a.AggregateExpressions
-                        let col = new Column(agg.CreateName())
+                        let col = Column.FromName(agg.CreateName())
                         where requiredColumns.Contains(col)
                         select agg).ToList();
 
@@ -218,7 +218,7 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
 
     private static List<ILogicalExpression> GetExpression(IEnumerable<Column> columns, Schema schema)
     {
-        var expr = schema.Fields.Select(f => (ILogicalExpression)new Column(f.Name))
+        var expr = schema.Fields.Select(f => (ILogicalExpression)f.QualifiedColumn())
             .Where(columns.Contains)
             .ToList();
 

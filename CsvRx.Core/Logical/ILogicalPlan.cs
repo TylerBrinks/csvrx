@@ -7,6 +7,7 @@ namespace CsvRx.Core.Logical;
 internal interface ILogicalPlan : INode
 {
     Schema Schema { get; }
+    List<HashSet<Column>> UsingColumns => new ();
 
     string ToStringIndented(Indentation? indentation);
 

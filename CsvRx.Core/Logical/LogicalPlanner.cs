@@ -5,11 +5,17 @@ using SqlParser.Ast;
 
 namespace CsvRx.Core.Logical;
 
+public record TableReference(string Name, string? Alias = null);
+
 internal class LogicalPlanner
 {
+    private List<TableReference> _tableReferences;
+
     public ILogicalPlan CreateLogicalPlan(Query query, Dictionary<string, DataSource> dataSources)
     {
         var select = query.Body.AsSelect();
+
+        CreateTableRelations(select);
 
         // Logical plans are rooted in scanning a table for values
         var plan = LogicalExtensions.PlanFromTable(select.From, dataSources);
@@ -41,8 +47,8 @@ internal class LogicalPlanner
         var groupByExpressions = LogicalExtensions.FindGroupByExpressions(
             select.GroupBy,
             selectExpressions,
-            combinedSchemas, 
-            plan, 
+            combinedSchemas,
+            plan,
             aliasMap);
 
         List<ILogicalExpression>? selectPostAggregate;
@@ -83,5 +89,12 @@ internal class LogicalPlanner
 
         // Wrap the plan in a limit
         return LogicalExtensions.Limit(plan, query.Offset, query.Limit);
+    }
+
+    private void CreateTableRelations(Select select)
+    {
+        var relationVisitor = new RelationVisitor();
+        ((IElement)select).Visit(relationVisitor);
+        _tableReferences = relationVisitor.TableReferences;
     }
 }

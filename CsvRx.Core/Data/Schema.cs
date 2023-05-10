@@ -4,17 +4,22 @@ namespace CsvRx.Core.Data;
 
 public class Schema
 {
-    public Schema(List<Field> fields)
+    //public Schema(List<Field> fields)
+    //{
+    //    Fields = fields!;
+    //}
+
+    public Schema(List<QualifiedField> fields)
     {
         Fields = fields!;
     }
 
     //TODO should fields ever be null?
-    public List<Field> Fields { get; }
+    public List<QualifiedField> Fields { get; }
 
-    public Field? GetField(string name)
+    public QualifiedField? GetField(string name)
     {
-        return Fields.FirstOrDefault(f => /*f != null &&*/ f.Name == name);
+        return Fields.Cast<QualifiedField>().FirstOrDefault(f => /*f != null &&*/ f.Name == name);
     }
 
     internal int? IndexOfColumn(Column col)
@@ -49,5 +54,10 @@ public class Schema
         }
       
         return hash.ToHashCode();
+    }
+
+    public IEnumerable<QualifiedField> FieldsWithUnqualifiedName(string columnName)
+    {
+        return Fields.Cast<QualifiedField>().Where(f => f.Name == columnName);
     }
 }

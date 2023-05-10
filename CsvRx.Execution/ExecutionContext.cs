@@ -34,7 +34,7 @@ public class ExecutionContext
 
         if (ast.Count > 1)
         {
-            throw new InvalidOperationException();
+            throw new InvalidOperationException("Only 1 SQL statement is supported");
         }
 
         var plan = ast.First() switch

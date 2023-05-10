@@ -9,7 +9,7 @@ internal abstract record Aggregate(IPhysicalExpression Expression) : IPhysicalEx
 
     public virtual ColumnDataType GetDataType(Schema schema)
     {
-        throw new NotImplementedException();
+        throw new NotImplementedException("Aggregates must implement GetDataType");
     }
 
     public ColumnValue Evaluate(RecordBatch batch, int? schemaIndex = null)
@@ -17,9 +17,9 @@ internal abstract record Aggregate(IPhysicalExpression Expression) : IPhysicalEx
         throw new NotSupportedException();
     }
 
-    internal abstract List<Field> StateFields { get; }
+    internal abstract List<QualifiedField> StateFields { get; }
 
-    internal abstract Field Field { get; }
+    internal abstract QualifiedField NamedQualifiedField { get; }
 
     internal abstract List<IPhysicalExpression> Expressions { get; }
 }

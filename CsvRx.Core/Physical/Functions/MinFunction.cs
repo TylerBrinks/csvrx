@@ -7,9 +7,9 @@ namespace CsvRx.Core.Physical.Functions;
 internal record MinFunction(IPhysicalExpression InputExpression, string Name, ColumnDataType DataType) 
     : Aggregate(InputExpression), IAggregation
 {
-    internal override List<Field> StateFields => new() { new($"MIN({Name})", DataType) };
+    internal override List<QualifiedField> StateFields => new() { QualifiedField.Unqualified($"MIN({Name})", DataType) };
     
-    internal override Field Field => new(Name, DataType);
+    internal override QualifiedField NamedQualifiedField => QualifiedField.Unqualified(Name, DataType);
 
     internal override List<IPhysicalExpression> Expressions => new() {Expression};
 

@@ -13,16 +13,16 @@ internal record VarianceFunction(
 {
     private string? _prefix;
 
-    internal override List<Field> StateFields => new()
+    internal override List<QualifiedField> StateFields => new()
     {
-        new($"VAR{StatePrefix}({Name})[count]", ColumnDataType.Integer),
-        new($"VAR{StatePrefix}({Name})[mean]", ColumnDataType.Double),
-        new($"VAR{StatePrefix}({Name})[m2]",  ColumnDataType.Double),
+        QualifiedField.Unqualified($"VAR{StatePrefix}({Name})[count]", ColumnDataType.Integer),
+        QualifiedField.Unqualified($"VAR{StatePrefix}({Name})[mean]", ColumnDataType.Double),
+        QualifiedField.Unqualified($"VAR{StatePrefix}({Name})[m2]",  ColumnDataType.Double),
     };
 
-    private string StatePrefix => _prefix ??= StatisticType == Core.StatisticType.Population ? "_POP" : "";
+    private string StatePrefix => _prefix ??= StatisticType == StatisticType.Population ? "_POP" : "";
 
-    internal override Field Field => new(Name, DataType);
+    internal override QualifiedField NamedQualifiedField => new(Name, DataType);
 
     internal override List<IPhysicalExpression> Expressions => new() { Expression };
 

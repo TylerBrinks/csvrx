@@ -39,7 +39,8 @@ internal record AggregateExecution(
         AggregationMode mode)
     {
         var fields = groupBy
-            .Select(group => new Field(group.Name, group.Expression.GetDataType(planSchema)))
+            //.Select(group => new Field(group.Name, group.Expression.GetDataType(planSchema)))
+            .Select(group => QualifiedField.Unqualified(group.Name, group.Expression.GetDataType(planSchema)))
             .ToList();
 
         if (mode == AggregationMode.Partial)
@@ -51,7 +52,7 @@ internal record AggregateExecution(
         }
         else
         {
-            fields.AddRange(aggregateExpressions.Select(expr => expr.Field));
+            fields.AddRange(aggregateExpressions.Select(expr => expr.NamedQualifiedField));
         }
 
         return new Schema(fields);

@@ -58,7 +58,7 @@ public class CsvDataSource : DataSource
             }
         }
 
-        var fields = headers.Select((h, i) => new Field(h, columnTypes[i].DataType)).ToList();
+        var fields = headers.Select((h, i) => QualifiedField.Unqualified(h, columnTypes[i].DataType)).ToList();
 
         _schema = new Schema(fields);
         return _schema;

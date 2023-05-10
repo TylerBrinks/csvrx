@@ -13,16 +13,16 @@ internal record StandardDeviationFunction(
 {
     private string? _prefix;
 
-    internal override List<Field> StateFields => new()
+    internal override List<QualifiedField> StateFields => new()
     {
-        new($"STDDEV{StatePrefix}({Name})[count]", ColumnDataType.Integer),
-        new($"STDDEV{StatePrefix}({Name})[mean]", ColumnDataType.Double),
-        new($"STDDEV{StatePrefix}({Name})[m2]",  ColumnDataType.Double),
+        QualifiedField.Unqualified($"STDDEV{StatePrefix}({Name})[count]", ColumnDataType.Integer),
+        QualifiedField.Unqualified($"STDDEV{StatePrefix}({Name})[mean]", ColumnDataType.Double),
+        QualifiedField.Unqualified($"STDDEV{StatePrefix}({Name})[m2]", ColumnDataType.Double),
     };
 
     private string StatePrefix => _prefix ??= StatisticType == Core.StatisticType.Population ? "_POP" : "";
 
-    internal override Field Field => new(Name, DataType);
+    internal override QualifiedField NamedQualifiedField => QualifiedField.Unqualified(Name, DataType);
 
     internal override List<IPhysicalExpression> Expressions => new() { Expression };
 

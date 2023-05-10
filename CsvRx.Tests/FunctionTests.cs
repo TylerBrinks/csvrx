@@ -16,8 +16,8 @@ public class FunctionTests
         Assert.Single(fn.StateFields);
         Assert.Equal("test[count]", fn.StateFields.First().Name);
         Assert.Equal(ColumnDataType.Utf8, fn.StateFields.First().DataType);
-        Assert.Equal(new Field("test", ColumnDataType.Utf8), fn.Field);
-        Assert.Equal(new Field("test", ColumnDataType.Utf8), fn.Field);
+        Assert.Equal(QualifiedField.Unqualified("test", ColumnDataType.Utf8), fn.NamedQualifiedField);
+        Assert.Equal(QualifiedField.Unqualified("test", ColumnDataType.Utf8), fn.NamedQualifiedField);
         Assert.Equal(expression, fn.Expressions.First());
     }
 
@@ -37,8 +37,8 @@ public class FunctionTests
         Assert.Single(fn.StateFields);
         Assert.Equal("test[max]", fn.StateFields.First().Name);
         Assert.Equal(ColumnDataType.Utf8, fn.StateFields.First().DataType);
-        Assert.Equal(new Field("test", ColumnDataType.Utf8), fn.Field);
-        Assert.Equal(new Field("test", ColumnDataType.Utf8), fn.Field);
+        Assert.Equal(QualifiedField.Unqualified("test", ColumnDataType.Utf8), fn.NamedQualifiedField);
+        Assert.Equal(QualifiedField.Unqualified("test", ColumnDataType.Utf8), fn.NamedQualifiedField);
         Assert.Equal(expression, fn.Expressions.First());
     }
 
@@ -58,8 +58,8 @@ public class FunctionTests
         Assert.Single(fn.StateFields);
         Assert.Equal("test[min]", fn.StateFields.First().Name);
         Assert.Equal(ColumnDataType.Utf8, fn.StateFields.First().DataType);
-        Assert.Equal(new Field("test", ColumnDataType.Utf8), fn.Field);
-        Assert.Equal(new Field("test", ColumnDataType.Utf8), fn.Field);
+        Assert.Equal(QualifiedField.Unqualified("test", ColumnDataType.Utf8), fn.NamedQualifiedField);
+        Assert.Equal(QualifiedField.Unqualified("test", ColumnDataType.Utf8), fn.NamedQualifiedField);
         Assert.Equal(expression, fn.Expressions.First());
     }
 
@@ -79,8 +79,8 @@ public class FunctionTests
         Assert.Single(fn.StateFields);
         Assert.Equal("test[sum]", fn.StateFields.First().Name);
         Assert.Equal(ColumnDataType.Utf8, fn.StateFields.First().DataType);
-        Assert.Equal(new Field("test", ColumnDataType.Utf8), fn.Field);
-        Assert.Equal(new Field("test", ColumnDataType.Utf8), fn.Field);
+        Assert.Equal(QualifiedField.Unqualified("test", ColumnDataType.Utf8), fn.NamedQualifiedField);
+        Assert.Equal(QualifiedField.Unqualified("test", ColumnDataType.Utf8), fn.NamedQualifiedField);
         Assert.Equal(expression, fn.Expressions.First());
     }
 
@@ -100,8 +100,8 @@ public class FunctionTests
         Assert.Single(fn.StateFields!);
         Assert.Equal("test[avg]", fn.StateFields.First().Name);
         Assert.Equal(ColumnDataType.Utf8, fn.StateFields.First().DataType);
-        Assert.Equal(new Field("test", ColumnDataType.Utf8), fn.Field);
-        Assert.Equal(new Field("test", ColumnDataType.Utf8), fn.Field);
+        Assert.Equal(QualifiedField.Unqualified("test", ColumnDataType.Utf8), fn.NamedQualifiedField);
+        Assert.Equal(QualifiedField.Unqualified("test", ColumnDataType.Utf8), fn.NamedQualifiedField);
         Assert.Equal(expression, fn.Expressions.First());
     }
 

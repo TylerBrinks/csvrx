@@ -17,14 +17,14 @@ internal record Sort(ILogicalPlan Plan, List<ILogicalExpression> OrderByExpressi
             return new Sort(plan, expressions);
         }
 
-        var newExpressions = plan.Schema.Fields.Select(f => (ILogicalExpression)new Column(f.Name)).ToList();
+        var newExpressions = plan.Schema.Fields.Select(f => (ILogicalExpression)f.QualifiedColumn()).ToList();
 
         var sort = new Sort(plan, newExpressions);
 
         return new Projection(sort, newExpressions, plan.Schema);
     }
 
-    private static List<ILogicalExpression> RewriteByAggregates(List<ILogicalExpression> orderByExpressions, ILogicalPlan plan)
+    private static List<ILogicalExpression> RewriteByAggregates(IEnumerable<ILogicalExpression> orderByExpressions, ILogicalPlan plan)
     {
         return orderByExpressions.Select(e =>
         {
@@ -60,12 +60,12 @@ internal record Sort(ILogicalPlan Plan, List<ILogicalExpression> OrderByExpressi
             var found = projectionExpressions.Find(ex => ex == expression);
             if (found != null)
             {
-                var column = new Column(LogicalExtensions.ToField(found, plan.Schema).Name);
+                var column = LogicalExtensions.ToField(found, plan.Schema).QualifiedColumn();
                 return column;
             }
 
             var name = expression.CreateName();
-            var searchColumn = new Column(name);
+            var searchColumn = Column.FromName(name);
 
             var foundMatch = projectionExpressions.Find(e => searchColumn == e);
             if (foundMatch != null)
