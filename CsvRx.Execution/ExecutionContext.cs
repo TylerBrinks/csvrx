@@ -23,9 +23,9 @@ public class ExecutionContext
         RegisterDataSource(tableName, new CsvDataSource(path, options));
     }
 
-    public void RegisterDataSource(string tableName, DataSource df)
+    public void RegisterDataSource(string tableName, DataSource dataSource)
     {
-        _tables.Add(tableName, df);
+        _tables.Add(tableName, dataSource);
     }
 
     public void BuildLogicalPlan(string sql)

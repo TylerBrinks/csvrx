@@ -5,20 +5,26 @@ using SqlParser.Ast;
 
 namespace CsvRx.Core.Logical;
 
-public record TableReference(string Name, string? Alias = null);
+public record TableReference(string Name, string? Alias = null)
+{
+    public override string ToString()
+    {
+        return Name + (Alias != null ? $" AS {Alias}" : "");
+    }
+}
 
 internal class LogicalPlanner
 {
-    private List<TableReference> _tableReferences;
+    private List<TableReference> _tableReferences = null!;
 
     public ILogicalPlan CreateLogicalPlan(Query query, Dictionary<string, DataSource> dataSources)
     {
         var select = query.Body.AsSelect();
 
-        CreateTableRelations(select);
+        _tableReferences = CreateTableRelations(select);
 
         // Logical plans are rooted in scanning a table for values
-        var plan = LogicalExtensions.PlanFromTable(select.From, dataSources);
+        var plan = LogicalExtensions.PlanFromTable(select.From, dataSources, _tableReferences);
 
         // Wrap the scan in a filter if a where clause exists
         plan = LogicalExtensions.PlanFromSelection(select.Selection, plan);
@@ -91,10 +97,10 @@ internal class LogicalPlanner
         return LogicalExtensions.Limit(plan, query.Offset, query.Limit);
     }
 
-    private void CreateTableRelations(Select select)
+    private static List<TableReference> CreateTableRelations(IElement select)
     {
         var relationVisitor = new RelationVisitor();
-        ((IElement)select).Visit(relationVisitor);
-        _tableReferences = relationVisitor.TableReferences;
+        select.Visit(relationVisitor);
+        return relationVisitor.TableReferences;
     }
 }

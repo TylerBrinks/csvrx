@@ -14,9 +14,9 @@ internal interface INode
         };
     }
 
-    internal T Transform<T>(T instance, Func<T, T> func) where T : INode;
+    internal T Transform<T>(T instance, Func<T, T> func) where T : class, INode;
 
     internal VisitRecursion ApplyChildren(Func<INode, VisitRecursion> action);
 
-    internal T MapChildren<T>(T instance, Func<T, T> transformation) where T : INode;
+    internal T MapChildren<T>(T instance, Func<T, T> transformation) where T : class, INode;
 }

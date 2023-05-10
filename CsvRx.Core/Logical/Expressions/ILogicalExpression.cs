@@ -50,8 +50,12 @@ internal interface ILogicalExpression : INode
 
     T INode.MapChildren<T>(T instance, Func<T, T> transformation)
     {
+        var transform = transformation as Func<ILogicalExpression, ILogicalExpression>;
+        
         return this switch
         {
+            Alias a => a with {Expression = transform(a.Expression)} as T,
+            Binary b => (ILogicalExpression)new Binary(transform!(b.Left), b.Op, transform(b.Right)) as T,
             _ => (T)this,
         };
     }

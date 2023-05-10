@@ -3,7 +3,13 @@ using CsvRx.Core.Logical.Expressions;
 
 namespace CsvRx.Core.Data;
 
-public abstract record Field(string Name, ColumnDataType DataType);
+public abstract record Field(string Name, ColumnDataType DataType)
+{
+    public override string ToString()
+    {
+        return $"{Name}:{DataType}";
+    }
+}
 
 public record QualifiedField(string Name, ColumnDataType DataType, TableReference? Qualifier = null) : Field(Name, DataType)
 {
@@ -15,5 +21,11 @@ public record QualifiedField(string Name, ColumnDataType DataType, TableReferenc
     public static QualifiedField Unqualified(string name, ColumnDataType dataType)
     {
         return new QualifiedField(name, dataType);
+    }
+
+    public override string ToString()
+    {
+        var qualifier = Qualifier != null ? $"{Qualifier}." : "";
+        return $"{qualifier}{Name}:{DataType}";
     }
 }
