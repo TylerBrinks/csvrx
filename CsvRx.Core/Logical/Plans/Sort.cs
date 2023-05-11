@@ -10,7 +10,7 @@ internal record Sort(ILogicalPlan Plan, List<ILogicalExpression> OrderByExpressi
         var expressions = RewriteByAggregates(orderByExpressions, plan);
 
         var missingColumns = new HashSet<Column>();
-        LogicalExtensions.ExprListToColumns(expressions, missingColumns);
+        LogicalExtensions.ExpressionListToColumns(expressions, missingColumns);
 
         if (!missingColumns.Any())
         {

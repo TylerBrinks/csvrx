@@ -1,4 +1,5 @@
-﻿using CsvRx.Core.Logical.Expressions;
+﻿using CsvRx.Core.Logical;
+using CsvRx.Core.Logical.Expressions;
 
 namespace CsvRx.Core.Data;
 
@@ -14,7 +15,15 @@ public class Schema
 
     public QualifiedField? GetField(string name)
     {
-        return Fields.FirstOrDefault(f => /*f != null &&*/ f.Name == name);
+        //return Fields.FirstOrDefault(f => /*f != null &&*/ f.Name == name);
+        return FieldsWithUnqualifiedName(name).FirstOrDefault();
+    }
+
+    public QualifiedField? GetQualifiedField(TableReference? qualifier, string name)
+    {
+        return qualifier != null
+            ? FieldsWithQualifiedName(qualifier, name).FirstOrDefault()
+            : GetField(name);
     }
 
     internal int? IndexOfColumn(Column col)
@@ -47,8 +56,13 @@ public class Schema
         {
             hash.Add(field);
         }
-      
+
         return hash.ToHashCode();
+    }
+
+    public IEnumerable<QualifiedField> FieldsWithQualifiedName(TableReference qualifier, string columnName)
+    {
+        return Fields.Where(f => f.Qualifier != null && f.Qualifier.Name == qualifier.Name && f.Name == columnName);
     }
 
     public IEnumerable<QualifiedField> FieldsWithUnqualifiedName(string columnName)

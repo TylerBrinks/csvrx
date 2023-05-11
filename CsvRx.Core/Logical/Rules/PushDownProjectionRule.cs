@@ -76,7 +76,7 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
             case Aggregate a:
                 {
                     var requiredColumns = new HashSet<Column>();
-                    LogicalExtensions.ExprListToColumns(projection.GetExpressions(), requiredColumns);
+                    LogicalExtensions.ExpressionListToColumns(projection.GetExpressions(), requiredColumns);
                     var newAggregate = (
                         from agg in a.AggregateExpressions
                         let col = Column.FromName(agg.CreateName())
@@ -101,8 +101,8 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
                         return childPlan.WithNewInputs(new List<ILogicalPlan> { newProj });
                     }
                     var requiredColumns = new HashSet<Column>();
-                    LogicalExtensions.ExprListToColumns(projection.GetExpressions(), requiredColumns);
-                    LogicalExtensions.ExprListToColumns(new List<ILogicalExpression> { f.Predicate }, requiredColumns);
+                    LogicalExtensions.ExpressionListToColumns(projection.GetExpressions(), requiredColumns);
+                    LogicalExtensions.ExpressionListToColumns(new List<ILogicalExpression> { f.Predicate }, requiredColumns);
 
                     var newExpression = GetExpression(requiredColumns, f.Plan.Schema);
                     var newProjection = Projection.TryNew(f.Plan, newExpression);

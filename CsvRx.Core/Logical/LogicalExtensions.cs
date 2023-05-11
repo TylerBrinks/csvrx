@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Linq;
+using System.Runtime.InteropServices;
 using CsvRx.Core.Data;
 using CsvRx.Core.Logical.Expressions;
 using CsvRx.Core.Logical.Plans;
@@ -14,6 +15,13 @@ namespace CsvRx.Core.Logical;
 
 internal static class LogicalExtensions
 {
+    /// <summary>
+    /// Creates a name for the underlying expression based on the
+    /// expression's type and (optionally) contained value
+    /// </summary>
+    /// <param name="expression">Logical expression</param>
+    /// <returns>Expression name</returns>
+    /// <exception cref="NotImplementedException"></exception>
     internal static string CreateName(this ILogicalExpression expression)
     {
         return expression switch
@@ -41,18 +49,41 @@ internal static class LogicalExtensions
             return $"{functionName}({distinctName}{string.Join(",", names)})";
         }
     }
-
-    internal static void ExprListToColumns(List<ILogicalExpression> expressions, HashSet<Column> accumulator)
+    /// <summary>
+    /// Iterates a list of expressions and appends unique found across
+    /// all expressions to a given HashSet
+    /// </summary>
+    /// <param name="expressions">Logical expressions to iterate and convert to columns</param>
+    /// <param name="accumulator">HashSet to append with unique columns</param>
+    internal static void ExpressionListToColumns(List<ILogicalExpression> expressions, HashSet<Column> accumulator)
     {
         foreach (var expr in expressions)
         {
             ExpressionToColumns(expr, accumulator);
         }
     }
-
+    /// <summary>
+    /// Converts a logical expression into one or more columns.  A single expression
+    /// may yield multiple columns.  A Binary expression, for example, may compare
+    /// one column to another and yield a pair of columns
+    /// </summary>
+    /// <param name="expression">Logical expressions to convert</param>
+    /// <param name="accumulator">HashSet to append with unique columns</param>
     internal static void ExpressionToColumns(ILogicalExpression expression, HashSet<Column> accumulator)
     {
-        InspectExprPre(expression, Inspect);
+        //InspectExprPre(expression, Inspect);
+        expression.Apply(expr =>
+        {
+            try
+            {
+                Inspect((ILogicalExpression)expr);
+                return VisitRecursion.Continue;
+            }
+            catch
+            {
+                return VisitRecursion.Stop;
+            }
+        });
 
         void Inspect(ILogicalExpression expr)
         {
@@ -68,30 +99,24 @@ internal static class LogicalExtensions
             }
         }
     }
-
-    internal static void InspectExprPre(ILogicalExpression expression, Action<ILogicalExpression> action)
-    {
-        expression.Apply(expr =>
-        {
-            try
-            {
-                action((ILogicalExpression)expr);
-                return VisitRecursion.Continue;
-            }
-            catch
-            {
-                return VisitRecursion.Stop;
-            }
-        });
-    }
-
-    internal static List<QualifiedField> ExprListToFields(IEnumerable<ILogicalExpression> expressions, ILogicalPlan plan)
+    /// <summary>
+    /// Converts a list of expressions into a list of qualified fields
+    /// </summary>
+    /// <param name="expressions">Logical expressions to iterate</param>
+    /// <param name="plan"></param>
+    /// <returns></returns>
+    internal static List<QualifiedField> ExpressionListToFields(IEnumerable<ILogicalExpression> expressions, ILogicalPlan plan)
     {
         var fields = expressions.Select(e => ToField(e, plan.Schema)).ToList();
 
         return fields;
     }
-
+    /// <summary>
+    /// Converts a logical expression into a qualified field
+    /// </summary>
+    /// <param name="expression">Logical expression to convert into a field</param>
+    /// <param name="schema">Schema containing the underlying field</param>
+    /// <returns>Qualified field</returns>
     internal static QualifiedField ToField(ILogicalExpression expression, Schema schema)
     {
         var dataType = GetDataType(expression, schema);
@@ -102,7 +127,14 @@ internal static class LogicalExtensions
 
         return QualifiedField.Unqualified(expression.CreateName(), dataType);
     }
-
+    /// <summary>
+    /// Gets the data type for a given logical expression
+    /// </summary>
+    /// <param name="expression">Logical expression to interrogate</param>
+    /// <param name="schema">Schema containing the underlying field and data type</param>
+    /// <returns>Expression's return data type</returns>
+    /// <exception cref="NotImplementedException"></exception>
+    /// <exception cref="InvalidOperationException"></exception>
     internal static ColumnDataType GetDataType(ILogicalExpression expression, Schema schema)
     {
         return expression switch
@@ -155,16 +187,20 @@ internal static class LogicalExtensions
             }
         }
     }
-
-    internal static void MergeSchemas(this Schema self, Schema second)
+    /// <summary>
+    /// Merges one schema into another by selecting distinct fields from the second schema into the first
+    /// </summary>
+    /// <param name="self">Target schema to merge fields into</param>
+    /// <param name="fromSchema">Schema containing fields to merge</param>
+    internal static void MergeSchemas(this Schema self, Schema fromSchema)
     {
-        if (!second.Fields.Any())
+        if (!fromSchema.Fields.Any())
         {
             return;
         }
 
         // TODO null fields?
-        foreach (var field in second.Fields/*.Where(f => f != null)*/)
+        foreach (var field in fromSchema.Fields/*.Where(f => f != null)*/)
         {
             var duplicate = self.Fields.FirstOrDefault(f => /*f != null && */ f.Name == field.Name) != null;//field!.Name
 
@@ -206,15 +242,23 @@ internal static class LogicalExtensions
         }
 
         // Get the table name used to query the data source
-        var name = relation.Alias != null ? relation.Alias.Name : relation.Name.Values[0];
-
-        var tableRef = tableReferences.Find(t => t.Name == relation.Name.Values[0]);
+        // var name = relation.Alias != null ? relation.Alias.Name : relation.Name.Values[0];
+        var name = relation.Name.Values[0];
+        var tableRef = tableReferences.Find(t => t.Name == name);
 
         // The root operation will scan the table for the projected values
         var table = dataSources[name];
         var qualifiedFields = table.Schema!.Fields.Select(f => new QualifiedField(f.Name, f.DataType, tableRef)).ToList();
         var schema = new Schema(qualifiedFields);
-        return new TableScan(name, schema, table);
+
+        var plan = (ILogicalPlan)new TableScan(name, schema, table);
+
+        if (tableRef?.Alias == null)
+        {
+            return plan;
+        }
+       
+        return SubqueryAlias.TryNew(plan, plan.Schema, tableRef.Alias);
     }
 
     #endregion
@@ -281,7 +325,13 @@ internal static class LogicalExtensions
             }
         }
     }
-
+    /// <summary>
+    /// See the Column-specific documentation
+    /// </summary>
+    /// <param name="expression">Expression to normalize</param>
+    /// <param name="schemas">Schema hierarchy to search for column names</param>
+    /// <param name="usingColumns">Column groups containing using columns</param>
+    /// <returns>Logical expression with a normalized name</returns>
     private static ILogicalExpression NormalizeColumnWithSchemas(
         this ILogicalExpression expression,
         List<List<Schema>> schemas,
@@ -297,7 +347,27 @@ internal static class LogicalExtensions
             return e;
         });
     }
-
+    /// <summary>
+    /// Qualify a column if it has not yet been qualified.  For unqualified
+    /// columns, schemas are searched for the relevant column.  Due to
+    /// SQL syntax behavior, columns can be ambiguous.  This will check
+    /// for a single schema match when the column is unmatched (not assigned
+    /// to a given table source).
+    ///
+    /// For example, the following SQL query
+    /// <code>SELECT name table1 JOIN table2 USING (name)</code>
+    /// 
+    /// table1.name and table2.name will match unqualified column 'name'
+    /// hence the list of HashSet column lists that maps columns
+    /// together to help check ambiguity.  Schemas are also nested in a
+    /// list of lists so they can be checked at various logical depths
+    /// </summary>
+    /// <param name="column">Column to normalize</param>
+    /// <param name="schemas">Schema hierarchy to search for column names</param>
+    /// <param name="usingColumns">Column groups containing using columns</param>
+    /// <returns>Logical expression with a normalized name</returns>
+    /// <exception cref="NotImplementedException"></exception>
+    /// <exception cref="InvalidOperationException"></exception>
     private static Column NormalizeColumnWithSchemas(
         this Column column,
         List<List<Schema>> schemas,
@@ -319,7 +389,13 @@ internal static class LogicalExtensions
 
         throw new InvalidOperationException("field not found");
     }
-
+    /// <summary>
+    /// Convert a Wildcard statement into a list of columns related to the
+    /// underlying schema data source
+    /// </summary>
+    /// <param name="schema">Schema containing all fields to be expanded</param>
+    /// <param name="plan">Logical plan</param>
+    /// <returns>List of expressions expanded from the wildcard</returns>
     internal static List<ILogicalExpression> ExpandWildcard(Schema schema, ILogicalPlan plan)
     {
         // todo using columns for join
@@ -330,6 +406,15 @@ internal static class LogicalExtensions
     #endregion
 
     #region Aggregate Plan
+    /// <summary>
+    /// Crete an aggregate plan from a list of SELECT, HAVING, GROUP BY, and Aggregate expressions
+    /// </summary>
+    /// <param name="plan">Logical plan to wrap</param>
+    /// <param name="selectExpressions">Select expression list</param>
+    /// <param name="havingExpressions">Query HAVING expression list</param>
+    /// <param name="groupByExpressions">Query GROUP BY expression list</param>
+    /// <param name="aggregateExpressions">Aggregate function expression list</param>
+    /// <returns></returns>
     internal static (ILogicalPlan, List<ILogicalExpression>, ILogicalExpression?) CreateAggregatePlan(
         ILogicalPlan plan,
         List<ILogicalExpression> selectExpressions,
@@ -340,7 +425,7 @@ internal static class LogicalExtensions
         var groupingSets = GroupingSetToExprList(groupByExpressions);
         var allExpressions = groupingSets.Concat(aggregateExpressions).ToList();
 
-        var fields = ExprListToFields(allExpressions, plan);
+        var fields = ExpressionListToFields(allExpressions, plan);
         var schema = new Schema(fields);
         var aggregatePlan = new Aggregate(plan, groupByExpressions, aggregateExpressions, schema);
 
@@ -514,7 +599,7 @@ internal static class LogicalExtensions
             }
         }
 
-        var fields = ExprListToFields(projectedExpressions, plan);
+        var fields = ExpressionListToFields(projectedExpressions, plan);
         return new Projection(plan, expressions, new Schema(fields));
 
         static ILogicalExpression ToColumnExpression(ILogicalExpression expression, Schema schema)
@@ -798,6 +883,9 @@ internal static class LogicalExtensions
             case Function fn:
                 return SqlFunctionToExpression(fn, schema);
 
+            case CompoundIdentifier ci:
+                return SqlCompoundIdentToExpression(ci, schema);
+
             default:
                 throw new NotImplementedException();
         }
@@ -846,6 +934,35 @@ internal static class LogicalExtensions
         }
 
         throw new InvalidOperationException("Invalid function");
+    }
+
+    internal static ILogicalExpression SqlCompoundIdentToExpression(CompoundIdentifier ident, Schema schema)
+    {
+        if (ident.Idents.Count > 2)
+        {
+            throw new InvalidOperationException("Not a valid compound identifier");
+        }
+
+        var terms = GenerateSearchTerms(ident.Idents.Select(i => i.Value).ToList()).ToList();
+
+        var result = terms.Select(term => new
+        {
+            Term = term,
+            Field = schema.GetQualifiedField(term.Table, term.ColumnName)
+        })
+        .Where(term => term.Field != null)
+        .Select(term => (term.Field, term.Term.NestedNames))
+        .FirstOrDefault();
+
+
+        if (result.Field != null && result.NestedNames.Length == 0)
+        {
+            return result.Field.QualifiedColumn();
+        }
+
+        throw new NotImplementedException("SqlCompoundIdentToExpression not implemented for identifier");
+        // todo case field & nested is not empty
+        // case null
     }
 
     internal static ILogicalExpression ParseSqlNumber(Value.Number number)
@@ -906,6 +1023,34 @@ internal static class LogicalExtensions
     internal static List<HashSet<Column>> AsNested(this HashSet<Column> usingColumns)
     {
         return new List<HashSet<Column>> { usingColumns };
+    }
+
+    private static List<(TableReference? Table, string ColumnName, string[] NestedNames)>
+        GenerateSearchTerms(IReadOnlyCollection<string> idents)
+    {
+        var ids = idents.ToArray();
+        // at most 4 identifiers to form a column to search with
+        // 1 for the column name
+        // 0 - 3 for the table reference
+        var bound = Math.Min(idents.Count, 4);
+
+        return Enumerable.Range(0, bound).Reverse().Select(i =>
+        {
+            var nestedNamesIndex = i + 1;
+            var qualifierWithColumn = ids[..nestedNamesIndex];
+            var (relation, columnName) = FromIdentifier(qualifierWithColumn);
+            return (relation, columnName, ids[nestedNamesIndex..]);
+        }).ToList();
+    }
+
+    private static (TableReference?, string) FromIdentifier(IReadOnlyList<string> idents)
+    {
+        return idents.Count switch
+        {
+            1 => (null, idents[0]),
+            2 => (new TableReference(idents[0]), idents[1]),
+            _ => throw new InvalidOperationException("Incorrect number of identifiers")
+        };
     }
     #endregion
 }

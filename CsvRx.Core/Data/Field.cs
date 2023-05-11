@@ -28,4 +28,9 @@ public record QualifiedField(string Name, ColumnDataType DataType, TableReferenc
         var qualifier = Qualifier != null ? $"{Qualifier}." : "";
         return $"{qualifier}{Name}:{DataType}";
     }
+
+    internal QualifiedField FromQualified(TableReference qualifier)
+    {
+        return new QualifiedField(Name, DataType, qualifier);
+    }
 }
