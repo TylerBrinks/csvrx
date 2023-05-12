@@ -123,9 +123,34 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
 
                     return projection.WithNewInputs(new List<ILogicalPlan> { scan });
                 }
+            case SubqueryAlias a:
+            {
+                var replaceMap = GenerateColumnReplaceMap(a);
+                var requiredColumns = new HashSet<Column>();
+                var expr = ((Projection)projection).Expression;
+
+                LogicalExtensions.ExpressionListToColumns(expr, requiredColumns);
+
+                var newRequiredColumns = requiredColumns.Select(c => replaceMap[c]).ToList();
+                var newExpression = GetExpression(newRequiredColumns, a.Plan.Schema);
+                var newProjection = Projection.TryNew(a.Plan, newExpression);
+                var newAlias = childPlan.WithNewInputs(new List<ILogicalPlan> {newProjection});
+
+                return GeneratePlan(empty, projection, newAlias);
+            }
             default:
                 throw new NotImplementedException("FromChildPlan plan type not implemented yet");
         }
+    }
+
+    private Dictionary<Column, Column> GenerateColumnReplaceMap(SubqueryAlias alias)
+    {
+        return alias.Plan.Schema.Fields.Select((f, i) => 
+            (
+                alias.Schema.Fields[i].QualifiedColumn(), 
+                f.QualifiedColumn())
+            )
+            .ToDictionary(d => d.Item1, d => d.Item2);
     }
 
     private static Dictionary<string, ILogicalExpression> CollectProjectionExpressions(Projection projection)

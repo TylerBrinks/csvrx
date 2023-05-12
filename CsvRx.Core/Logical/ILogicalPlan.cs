@@ -32,12 +32,7 @@ internal interface ILogicalPlan : INode
     {
         return this switch
         {
-            Aggregate a => new List<ILogicalPlan>{ a.Plan },
-            Distinct d => new List<ILogicalPlan> { d.Plan },
-            Filter f => new List<ILogicalPlan> { f.Plan },
-            Projection p => new List<ILogicalPlan> { p.Plan },
-            Sort s => new List<ILogicalPlan>{ s.Plan },
-            Limit l => new List<ILogicalPlan>{ l.Plan },
+            ILogicalPlanParent p => new List<ILogicalPlan>{ p.Plan },
 
             _ => new List<ILogicalPlan>()
         };
@@ -97,6 +92,9 @@ internal interface ILogicalPlan : INode
 
             case Limit l:
                 return l with {Plan = inputs[0]};
+
+            case SubqueryAlias s:
+                return SubqueryAlias.TryNew(inputs[0], s.Alias);
 
             default:
                 throw new NotImplementedException("WithNewInputs not implemented for plan type");

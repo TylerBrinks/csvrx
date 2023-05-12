@@ -19,7 +19,8 @@ internal class PhysicalPlanner
             Filter filter => CreateFilterPlan(filter),
             Sort sort => CreateSortPlan(sort),
             Limit limit => CreateLimitPlan(limit),
-           
+            SubqueryAlias alias => CreateInitialPlan(alias.Plan),
+
             // Distinct should have been replaced by an 
             // aggregate plan by this point.
             Distinct => throw new NotImplementedException(),

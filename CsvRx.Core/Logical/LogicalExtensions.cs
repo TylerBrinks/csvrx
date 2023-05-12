@@ -258,7 +258,7 @@ internal static class LogicalExtensions
             return plan;
         }
        
-        return SubqueryAlias.TryNew(plan, plan.Schema, tableRef.Alias);
+        return SubqueryAlias.TryNew(plan, tableRef.Alias);
     }
 
     #endregion
