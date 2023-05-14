@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using CsvRx.Core.Data;
 using CsvRx.Core.Logical.Expressions;
 using CsvRx.Core.Logical.Plans;
@@ -9,12 +8,14 @@ using SqlParser.Ast;
 using static SqlParser.Ast.Expression;
 using Aggregate = CsvRx.Core.Logical.Plans.Aggregate;
 using Column = CsvRx.Core.Logical.Expressions.Column;
+using Join = CsvRx.Core.Logical.Plans.Join;
 using Literal = CsvRx.Core.Logical.Expressions.Literal;
 
 namespace CsvRx.Core.Logical;
 
 internal static class LogicalExtensions
 {
+    #region Logical Expression
     /// <summary>
     /// Creates a name for the underlying expression based on the
     /// expression's type and (optionally) contained value
@@ -55,11 +56,11 @@ internal static class LogicalExtensions
     /// </summary>
     /// <param name="expressions">Logical expressions to iterate and convert to columns</param>
     /// <param name="accumulator">HashSet to append with unique columns</param>
-    internal static void ExpressionListToColumns(List<ILogicalExpression> expressions, HashSet<Column> accumulator)
+    internal static void ExpressionListToColumns(this List<ILogicalExpression> expressions, HashSet<Column> accumulator)
     {
         foreach (var expr in expressions)
         {
-            ExpressionToColumns(expr, accumulator);
+            expr.ExpressionToColumns(accumulator);
         }
     }
     /// <summary>
@@ -69,9 +70,8 @@ internal static class LogicalExtensions
     /// </summary>
     /// <param name="expression">Logical expressions to convert</param>
     /// <param name="accumulator">HashSet to append with unique columns</param>
-    internal static void ExpressionToColumns(ILogicalExpression expression, HashSet<Column> accumulator)
+    internal static void ExpressionToColumns(this ILogicalExpression expression, HashSet<Column> accumulator)
     {
-        //InspectExprPre(expression, Inspect);
         expression.Apply(expr =>
         {
             try
@@ -105,11 +105,9 @@ internal static class LogicalExtensions
     /// <param name="expressions">Logical expressions to iterate</param>
     /// <param name="plan"></param>
     /// <returns></returns>
-    internal static List<QualifiedField> ExpressionListToFields(IEnumerable<ILogicalExpression> expressions, ILogicalPlan plan)
+    internal static List<QualifiedField> ExpressionListToFields(this IEnumerable<ILogicalExpression> expressions, ILogicalPlan plan)
     {
-        var fields = expressions.Select(e => ToField(e, plan.Schema)).ToList();
-
-        return fields;
+        return expressions.Select(e => e.ToField(plan.Schema)).ToList();
     }
     /// <summary>
     /// Converts a logical expression into a qualified field
@@ -117,9 +115,9 @@ internal static class LogicalExtensions
     /// <param name="expression">Logical expression to convert into a field</param>
     /// <param name="schema">Schema containing the underlying field</param>
     /// <returns>Qualified field</returns>
-    internal static QualifiedField ToField(ILogicalExpression expression, Schema schema)
+    internal static QualifiedField ToField(this ILogicalExpression expression, Schema schema)
     {
-        var dataType = GetDataType(expression, schema);
+        var dataType = expression.GetDataType(schema);
         if (expression is Column c)
         {
             return new QualifiedField(c.Name, dataType, c.Relation!);
@@ -135,12 +133,12 @@ internal static class LogicalExtensions
     /// <returns>Expression's return data type</returns>
     /// <exception cref="NotImplementedException"></exception>
     /// <exception cref="InvalidOperationException"></exception>
-    internal static ColumnDataType GetDataType(ILogicalExpression expression, Schema schema)
+    internal static ColumnDataType GetDataType(this ILogicalExpression expression, Schema schema)
     {
         return expression switch
         {
             Column c => schema.GetField(c.Name)!.DataType,
-            Alias a => GetDataType(a.Expression, schema),
+            Alias a => a.Expression.GetDataType(schema),
             AggregateFunction fn => GetAggregateDataType(fn),
 
             _ => throw new NotImplementedException("GetDataType not implemented for ColumnDataType"),
@@ -148,7 +146,7 @@ internal static class LogicalExtensions
 
         ColumnDataType GetAggregateDataType(AggregateFunction function)
         {
-            var dataTypes = function.Args.Select(e => GetDataType(e, schema)).ToList();
+            var dataTypes = function.Args.Select(e => e.GetDataType(schema)).ToList();
 
             return function.FunctionType switch
             {
@@ -188,28 +186,17 @@ internal static class LogicalExtensions
         }
     }
     /// <summary>
-    /// Merges one schema into another by selecting distinct fields from the second schema into the first
+    /// Removes an alias and reverts to the underlying field name
+    ///  for an expression that has been aliased
     /// </summary>
-    /// <param name="self">Target schema to merge fields into</param>
-    /// <param name="fromSchema">Schema containing fields to merge</param>
-    internal static void MergeSchemas(this Schema self, Schema fromSchema)
+    /// <param name="expression"></param>
+    /// <returns></returns>
+    // ReSharper disable once IdentifierTypo
+    internal static ILogicalExpression Unalias(this ILogicalExpression expression)
     {
-        if (!fromSchema.Fields.Any())
-        {
-            return;
-        }
-
-        // TODO null fields?
-        foreach (var field in fromSchema.Fields/*.Where(f => f != null)*/)
-        {
-            var duplicate = self.Fields.FirstOrDefault(f => /*f != null && */ f.Name == field.Name) != null;//field!.Name
-
-            if (!duplicate)
-            {
-                self.Fields.Add(field);
-            }
-        }
+        return expression is not Alias alias ? expression : alias.Expression;
     }
+    #endregion
 
     #region Table Plan
 
@@ -220,22 +207,36 @@ internal static class LogicalExtensions
     ///  e.g. `select 123`
     /// </summary>
     /// <param name="tables">Data sources used to look up the table being scanned</param>
-    /// <param name="dataSources">Query from clause.  This should contain zero or one statements.</param>
-    /// <param name="tableReferences"></param>
+    /// <param name="context">Planner context</param>
     /// <returns>ILogicalPlan instance as the plan root</returns>
     /// <exception cref="InvalidOperationException">Thrown for unsupported from clauses</exception>
-    internal static ILogicalPlan PlanFromTable(IReadOnlyCollection<TableWithJoins>? tables,
-        IReadOnlyDictionary<string, DataSource> dataSources,
-        List<TableReference> tableReferences)
+    internal static ILogicalPlan PlanTableWithJoins(this IReadOnlyCollection<TableWithJoins>? tables, PlannerContext context)
     {
         if (tables == null || tables.Count == 0)
         {
             return new EmptyRelation(true);
         }
 
-        var from = tables.First();
-        var tableFactor = from.Relation;
+        var table = tables.First();
+        var left = table.Relation!.CreateRelation(context);
 
+        if (table.Joins == null || !table.Joins.Any())
+        {
+            return left;
+        }
+
+        //left = ParseRelationJoin(left, table.Joins);
+
+        foreach (var join in table.Joins)
+        {
+            left = left.ParseRelationJoin(join, context);
+        }
+
+        return left;
+    }
+
+    internal static ILogicalPlan CreateRelation(this TableFactor tableFactor, PlannerContext context)
+    {
         if (tableFactor is not TableFactor.Table relation)
         {
             throw new InvalidOperationException();
@@ -244,10 +245,10 @@ internal static class LogicalExtensions
         // Get the table name used to query the data source
         // var name = relation.Alias != null ? relation.Alias.Name : relation.Name.Values[0];
         var name = relation.Name.Values[0];
-        var tableRef = tableReferences.Find(t => t.Name == name);
+        var tableRef = context.TableReferences.Find(t => t.Name == name);
 
         // The root operation will scan the table for the projected values
-        var table = dataSources[name];
+        var table = context.DataSources[name];
         var qualifiedFields = table.Schema!.Fields.Select(f => new QualifiedField(f.Name, f.DataType, tableRef)).ToList();
         var schema = new Schema(qualifiedFields);
 
@@ -257,10 +258,63 @@ internal static class LogicalExtensions
         {
             return plan;
         }
-       
+
         return SubqueryAlias.TryNew(plan, tableRef.Alias);
     }
 
+    internal static ILogicalPlan ParseRelationJoin(this ILogicalPlan left, SqlParser.Ast.Join join, PlannerContext context)
+    {
+        var right = join.Relation!.CreateRelation(context);
+
+        switch (join.JoinOperator)
+        {
+            case JoinOperator.LeftOuter l:
+                return ParseJoin(left, right, l.JoinConstraint, JoinType.Left, context);
+
+            case JoinOperator.RightOuter r:
+                return ParseJoin(left, right, r.JoinConstraint, JoinType.Right, context);
+
+            case JoinOperator.Inner i:
+                return ParseJoin(left, right, i.JoinConstraint, JoinType.Inner, context);
+
+            //case JoinOperator.LeftSemi:
+            //    break;
+            //case JoinOperator.RightSemi:
+            //    break;
+            //case JoinOperator.LeftAnti:
+            //    break;
+            //case JoinOperator.RightAnti:
+            //case JoinOperator.FullOuter:
+            //case JoinOperator.CrossJoin:
+            //    break;
+            default:
+                throw new NotImplementedException("ParseRelationJoin Join type not implemented yet");
+        }
+    }
+
+    internal static ILogicalPlan ParseJoin(
+        ILogicalPlan left,
+        ILogicalPlan right,
+        JoinConstraint constraint,
+        JoinType joinType,
+        PlannerContext context)
+    {
+        if (constraint is not JoinConstraint.On on)
+        {
+            throw new NotImplementedException("ParseJoin: Join constraint not implemented");
+        }
+
+        var joinSchema = left.Schema.Join(right.Schema);
+        var expression = on.Expression.SqlToExpression(joinSchema);
+        return Join.TryNew(left, right, joinType, (new List<Column>(), new List<Column>()), constraint, expression);
+    }
+
+    internal static List<TableReference> CreateTableRelations(this IElement select)
+    {
+        var relationVisitor = new RelationVisitor();
+        select.Visit(relationVisitor);
+        return relationVisitor.TableReferences;
+    }
     #endregion
 
     #region Select Plan
@@ -270,16 +324,16 @@ internal static class LogicalExtensions
     /// <param name="selection">Filter expression</param>
     /// <param name="plan">Input plan</param>
     /// <returns>ILogicalPlan instance to filter the input plan</returns>
-    internal static ILogicalPlan PlanFromSelection(Expression? selection, ILogicalPlan plan)
+    internal static ILogicalPlan PlanFromSelection(this Expression? selection, ILogicalPlan plan)
     {
         if (selection == null)
         {
             return plan;
         }
 
-        var filterExpression = SqlToExpression(selection, plan.Schema);
+        var filterExpression = selection.SqlToExpression(plan.Schema);
         var usingColumns = new HashSet<Column>();
-        ExpressionToColumns(filterExpression, usingColumns);
+        filterExpression.ExpressionToColumns(usingColumns);
 
         filterExpression = NormalizeColumnWithSchemas(filterExpression, plan.Schema.AsNested(), usingColumns.AsNested());
         return new Filter(plan, filterExpression);
@@ -291,7 +345,8 @@ internal static class LogicalExtensions
     /// <param name="plan"></param>
     /// <param name="emptyFrom"></param>
     /// <returns></returns>
-    internal static List<ILogicalExpression> PrepareSelectExpressions(IEnumerable<SelectItem> projection, ILogicalPlan plan, bool emptyFrom)
+    internal static List<ILogicalExpression> PrepareSelectExpressions(this IEnumerable<SelectItem> projection,
+        ILogicalPlan plan, bool emptyFrom)
     {
         return projection.Select(SelectToRelationalExpression).SelectMany(_ => _).ToList();
 
@@ -301,13 +356,13 @@ internal static class LogicalExtensions
             {
                 case SelectItem.UnnamedExpression u:
                     {
-                        var expr = SqlToExpression(u.Expression, plan.Schema);
+                        var expr = u.Expression.SqlToExpression(plan.Schema);
                         var column = expr.NormalizeColumnWithSchemas(plan.Schema.AsNested(), plan.UsingColumns);
                         return new List<ILogicalExpression> { column };
                     }
                 case SelectItem.ExpressionWithAlias e:
                     {
-                        var select = SqlToExpression(e.Expression, plan.Schema);
+                        var select = e.Expression.SqlToExpression(plan.Schema);
                         var column = select.NormalizeColumnWithSchemas(plan.Schema.AsNested(), plan.UsingColumns);
                         return new List<ILogicalExpression> { new Alias(column, e.Alias) };
                     }
@@ -318,7 +373,7 @@ internal static class LogicalExtensions
                     }
 
                     //TODO expand wildcard select.rs line 320
-                    return ExpandWildcard(plan.Schema, plan);
+                    return plan.Schema.ExpandWildcard(plan);
 
                 default:
                     throw new InvalidOperationException("Invalid select expression");
@@ -332,7 +387,7 @@ internal static class LogicalExtensions
     /// <param name="schemas">Schema hierarchy to search for column names</param>
     /// <param name="usingColumns">Column groups containing using columns</param>
     /// <returns>Logical expression with a normalized name</returns>
-    private static ILogicalExpression NormalizeColumnWithSchemas(
+    internal static ILogicalExpression NormalizeColumnWithSchemas(
         this ILogicalExpression expression,
         List<List<Schema>> schemas,
         List<HashSet<Column>> usingColumns)
@@ -368,11 +423,16 @@ internal static class LogicalExtensions
     /// <returns>Logical expression with a normalized name</returns>
     /// <exception cref="NotImplementedException"></exception>
     /// <exception cref="InvalidOperationException"></exception>
-    private static Column NormalizeColumnWithSchemas(
+    internal static Column NormalizeColumnWithSchemas(
         this Column column,
         List<List<Schema>> schemas,
         List<HashSet<Column>> usingColumns)
     {
+        if (column.Relation != null)
+        {
+            return column;
+        }
+
         foreach (var schemaLevel in schemas)
         {
             var fields = schemaLevel.SelectMany(s => s.FieldsWithUnqualifiedName(column.Name)).ToList();
@@ -396,7 +456,7 @@ internal static class LogicalExtensions
     /// <param name="schema">Schema containing all fields to be expanded</param>
     /// <param name="plan">Logical plan</param>
     /// <returns>List of expressions expanded from the wildcard</returns>
-    internal static List<ILogicalExpression> ExpandWildcard(Schema schema, ILogicalPlan plan)
+    internal static List<ILogicalExpression> ExpandWildcard(this Schema schema, ILogicalPlan plan)
     {
         // todo using columns for join
         //TODO qualified columns
@@ -416,16 +476,16 @@ internal static class LogicalExtensions
     /// <param name="aggregateExpressions">Aggregate function expression list</param>
     /// <returns></returns>
     internal static (ILogicalPlan, List<ILogicalExpression>, ILogicalExpression?) CreateAggregatePlan(
-        ILogicalPlan plan,
+        this ILogicalPlan plan,
         List<ILogicalExpression> selectExpressions,
         ILogicalExpression? havingExpressions,
         List<ILogicalExpression> groupByExpressions,
         List<ILogicalExpression> aggregateExpressions)
     {
-        var groupingSets = GroupingSetToExprList(groupByExpressions);
+        var groupingSets = groupByExpressions;// GroupingSetToExprList(groupByExpressions);
         var allExpressions = groupingSets.Concat(aggregateExpressions).ToList();
 
-        var fields = ExpressionListToFields(allExpressions, plan);
+        var fields = allExpressions.ExpressionListToFields(plan);
         var schema = new Schema(fields);
         var aggregatePlan = new Aggregate(plan, groupByExpressions, aggregateExpressions, schema);
 
@@ -443,7 +503,8 @@ internal static class LogicalExtensions
         var selectExpressionsPostAggregate = selectExpressions.Select(e => RebaseExpression(e, aggregateProjectionExpressions, plan)).ToList();
 
         // rewrite having columns to use columns in by the aggregation
-        ILogicalExpression havingPostAggregation = null;
+        ILogicalExpression? havingPostAggregation = null;
+
         if (havingExpressions != null)
         {
             havingPostAggregation = RebaseExpression(havingExpressions, aggregateProjectionExpressions, plan);
@@ -452,10 +513,10 @@ internal static class LogicalExtensions
         return (aggregatePlan, selectExpressionsPostAggregate, havingPostAggregation);
     }
 
-    internal static List<ILogicalExpression> GroupingSetToExprList(List<ILogicalExpression> groupExpressions)
-    {
-        return groupExpressions;
-    }
+    //internal static List<ILogicalExpression> GroupingSetToExprList(List<ILogicalExpression> groupExpressions)
+    //{
+    //    return groupExpressions;
+    //}
 
     internal static (AggregateFunctionType, List<ILogicalExpression>) AggregateFunctionToExpression(
         AggregateFunctionType functionType,
@@ -499,7 +560,7 @@ internal static class LogicalExtensions
     }
 
     internal static List<ILogicalExpression> FindGroupByExpressions(
-        IReadOnlyCollection<Expression>? selectGroupBy,
+        this IReadOnlyCollection<Expression>? selectGroupBy,
         List<ILogicalExpression> selectExpressions,
         Schema combinedSchema,
         ILogicalPlan plan,
@@ -519,14 +580,14 @@ internal static class LogicalExtensions
                 aliasMap.Remove(field.Name);//field!.Name
             }
 
-            groupByExpr = ResolveAliasToExpressions(groupByExpr, aliasMap);
-            groupByExpr = ResolvePositionsToExpressions(groupByExpr, selectExpressions) ?? groupByExpr;
+            groupByExpr = groupByExpr.ResolveAliasToExpressions(aliasMap);
+            groupByExpr = groupByExpr.ResolvePositionsToExpressions(selectExpressions) ?? groupByExpr;
 
             return groupByExpr;
         }).ToList();
     }
 
-    internal static ILogicalExpression? MapHaving(Expression? having, Schema schema, Dictionary<string, ILogicalExpression> aliasMap)
+    internal static ILogicalExpression? MapHaving(this Expression? having, Schema schema, Dictionary<string, ILogicalExpression> aliasMap)
     {
         var havingExpression = having == null ? null : SqlExprToLogicalExpression(having, schema);
 
@@ -540,11 +601,10 @@ internal static class LogicalExtensions
             // is rewritten
             //
             //   SELECT c1, MAX(c2) AS abc FROM tbl GROUP BY c1 HAVING MAX(c2) > 10;
-            ResolveAliasToExpressions(havingExpression, aliasMap);
+            havingExpression.ResolveAliasToExpressions(aliasMap);
     }
 
-    internal static ILogicalExpression ResolveAliasToExpressions(
-        ILogicalExpression expression,
+    internal static ILogicalExpression ResolveAliasToExpressions(this ILogicalExpression expression,
         IReadOnlyDictionary<string, ILogicalExpression> aliasMap)
     {
         return CloneWithReplacement(expression, e =>
@@ -558,8 +618,7 @@ internal static class LogicalExtensions
         });
     }
 
-    private static ILogicalExpression? ResolvePositionsToExpressions(
-        ILogicalExpression expression,
+    private static ILogicalExpression? ResolvePositionsToExpressions(this ILogicalExpression expression,
         IReadOnlyList<ILogicalExpression> selectExpressions)
     {
         if (expression is not Literal { Value: IntegerScalar i })
@@ -578,14 +637,14 @@ internal static class LogicalExtensions
         return expr;
     }
 
-    internal static List<ILogicalExpression> FindAggregateExpressions(List<ILogicalExpression> expressions)
+    internal static List<ILogicalExpression> FindAggregateExpressions(this List<ILogicalExpression> expressions)
     {
         return FindNestedExpressions(expressions, nested => nested is AggregateFunction);
     }
     #endregion
 
     #region Projection Plan
-    internal static ILogicalPlan PlanProjection(ILogicalPlan plan, List<ILogicalExpression> expressions)
+    internal static ILogicalPlan PlanProjection(this ILogicalPlan plan, List<ILogicalExpression> expressions)
     {
         var projectedExpressions = new List<ILogicalExpression>();
 
@@ -599,7 +658,7 @@ internal static class LogicalExtensions
             }
         }
 
-        var fields = ExpressionListToFields(projectedExpressions, plan);
+        var fields = projectedExpressions.ExpressionListToFields(plan);
         return new Projection(plan, expressions, new Schema(fields));
 
         static ILogicalExpression ToColumnExpression(ILogicalExpression expression, Schema schema)
@@ -627,19 +686,19 @@ internal static class LogicalExtensions
     #endregion
 
     #region Order By Plan
-    internal static ILogicalPlan OrderBy(ILogicalPlan plan, Sequence<OrderByExpression>? orderByExpressions)
+    internal static ILogicalPlan OrderBy(this ILogicalPlan plan, Sequence<OrderByExpression>? orderByExpressions)
     {
         if (orderByExpressions == null || !orderByExpressions.Any())
         {
             return plan;
         }
 
-        var orderByRelation = orderByExpressions.Select(e => OrderByToSortExpression(e, plan.Schema)).ToList();
+        var orderByRelation = orderByExpressions.Select(e => e.OrderByToSortExpression(plan.Schema)).ToList();
 
         return Sort.TryNew(plan, orderByRelation);
     }
 
-    private static ILogicalExpression OrderByToSortExpression(OrderByExpression orderByExpression, Schema schema)
+    private static ILogicalExpression OrderByToSortExpression(this OrderByExpression orderByExpression, Schema schema)
     {
         var expr = SqlExprToLogicalExpression(orderByExpression.Expression, schema);
 
@@ -649,7 +708,7 @@ internal static class LogicalExtensions
     #endregion
 
     #region Limit Plan
-    internal static ILogicalPlan Limit(ILogicalPlan plan, Offset? skip, Expression? fetch)
+    internal static ILogicalPlan Limit(this ILogicalPlan plan, Offset? skip, Expression? fetch)
     {
         if (skip == null && fetch == null)
         {
@@ -701,8 +760,35 @@ internal static class LogicalExtensions
     }
     #endregion
 
+    #region Join Plan
+
+    internal static Schema BuildJoinSchema(Schema left, Schema right, JoinType joinType)
+    {
+        var leftFields = left.Fields;
+        var rightFields = right.Fields;
+
+        var fields = joinType switch
+        {
+            JoinType.Inner
+                or JoinType.Full
+                or JoinType.Right => leftFields.Concat(rightFields).ToList(),
+
+            JoinType.Left => GetLeftJoinFields(),
+            _ => throw new NotImplementedException("BuildJoinSchema join not implemented yet")
+        };
+
+        List<QualifiedField> GetLeftJoinFields()
+        {
+            //TODO get left join fields
+            throw new NotImplementedException("GetLeftJoinFields not implemented yet");
+        }
+
+        return new Schema(fields);
+    }
+    #endregion
+
     #region Physical Expression
-    internal static IPhysicalExpression CreatePhysicalExpression(ILogicalExpression expression, Schema inputDfSchema, Schema inputSchema)
+    internal static IPhysicalExpression CreatePhysicalExpression(this ILogicalExpression expression, Schema inputDfSchema, Schema inputSchema)
     {
         while (true)
         {
@@ -721,8 +807,8 @@ internal static class LogicalExtensions
 
                 case Expressions.Binary b:
                     {
-                        var left = CreatePhysicalExpression(b.Left, inputDfSchema, inputSchema);
-                        var right = CreatePhysicalExpression(b.Right, inputDfSchema, inputSchema);
+                        var left = b.Left.CreatePhysicalExpression(inputDfSchema, inputSchema);
+                        var right = b.Right.CreatePhysicalExpression(inputDfSchema, inputSchema);
 
                         return new Physical.Expressions.Binary(left, b.Op, right);
                     }
@@ -733,19 +819,19 @@ internal static class LogicalExtensions
         }
     }
 
-    internal static string GetPhysicalName(ILogicalExpression expression)
+    internal static string GetPhysicalName(this ILogicalExpression expression)
     {
         return expression switch
         {
             Column c => c.Name,
-            Expressions.Binary b => $"{GetPhysicalName(b.Left)} {b.Op} {GetPhysicalName(b.Right)}",
+            Expressions.Binary b => $"{b.Left.GetPhysicalName()} {b.Op} {b.Right.GetPhysicalName()}",
             Alias a => a.Name,
-            AggregateFunction fn => CreateFunctionPhysicalName(fn, fn.Distinct, fn.Args),
+            AggregateFunction fn => fn.CreateFunctionPhysicalName(fn.Distinct, fn.Args),
             _ => throw new NotImplementedException()
         };
     }
 
-    internal static string CreateFunctionPhysicalName(AggregateFunction fn, bool distinct, List<ILogicalExpression> args)
+    internal static string CreateFunctionPhysicalName(this AggregateFunction fn, bool distinct, List<ILogicalExpression> args)
     {
         var names = args.Select(e => CreatePhysicalName(e, false)).ToList();
 
@@ -754,7 +840,8 @@ internal static class LogicalExtensions
         return $"{fn.FunctionType}({distinctText}{string.Join(",", names)})";
     }
 
-    internal static string CreatePhysicalName(ILogicalExpression expression, bool isFirst)
+    //TODO isFirst variable unused
+    internal static string CreatePhysicalName(this ILogicalExpression expression, bool isFirst)
     {
         switch (expression)
         {
@@ -765,7 +852,7 @@ internal static class LogicalExtensions
                 return $"{CreatePhysicalName(b.Left, false)} {b.Op} {CreatePhysicalName(b.Left, false)}";
 
             case AggregateFunction fn:
-                return CreateFunctionPhysicalName(fn, fn.Distinct, fn.Args);
+                return fn.CreateFunctionPhysicalName(fn.Distinct, fn.Args);
 
             default:
                 throw new NotImplementedException();
@@ -775,10 +862,34 @@ internal static class LogicalExtensions
     #endregion
 
     #region Helpers
+
+    /// <summary>
+    /// Merges one schema into another by selecting distinct fields from the second schema into the first
+    /// </summary>
+    /// <param name="self">Target schema to merge fields into</param>
+    /// <param name="fromSchema">Schema containing fields to merge</param>
+    internal static void MergeSchemas(this Schema self, Schema fromSchema)
+    {
+        if (!fromSchema.Fields.Any())
+        {
+            return;
+        }
+
+        // TODO null fields?
+        foreach (var field in fromSchema.Fields/*.Where(f => f != null)*/)
+        {
+            var duplicate = self.Fields.FirstOrDefault(f => /*f != null && */ f.Name == field.Name) != null;//field!.Name
+
+            if (!duplicate)
+            {
+                self.Fields.Add(field);
+            }
+        }
+    }
     /// <summary>
     /// Relational expression from sql expression
     /// </summary>
-    internal static ILogicalExpression SqlToExpression(Expression predicate, Schema schema)
+    internal static ILogicalExpression SqlToExpression(this Expression predicate, Schema schema)
     {
         var expr = SqlExprToLogicalExpression(predicate, schema);
         // rewrite qualifier
@@ -803,7 +914,8 @@ internal static class LogicalExtensions
         {
             Column or Literal => expression,
             AggregateFunction fn => fn with { Args = fn.Args.Select(_ => CloneWithReplacement(_, replacementFunc)).ToList() },
-            Alias a => new Alias(CloneWithReplacement(a.Expression, replacementFunc), a.Name),
+            Alias a => a with { Expression = CloneWithReplacement(a.Expression, replacementFunc) },
+
             Expressions.Binary b => new Expressions.Binary(
                     CloneWithReplacement(b.Left, replacementFunc), b.
                     Op, CloneWithReplacement(b.Right,
@@ -828,17 +940,6 @@ internal static class LogicalExtensions
 
     }
 
-    internal static ILogicalExpression ExpressionAsColumn(ILogicalExpression expression, ILogicalPlan plan)
-    {
-        if (expression is Column c)
-        {
-            var field = plan.Schema.GetField(c.Name);
-            return field!.QualifiedColumn();
-        }
-
-        return Column.FromName(expression.CreateName());
-    }
-
     internal static ILogicalExpression RebaseExpression(
         ILogicalExpression expression,
         ICollection<ILogicalExpression> baseExpressions,
@@ -853,6 +954,17 @@ internal static class LogicalExtensions
             //return baseExpressions.Contains(nested) ? ExpressionAsColumn(nested, plan) : null;
             return null;
         });
+
+        static ILogicalExpression ExpressionAsColumn(ILogicalExpression expression, ILogicalPlan plan)
+        {
+            if (expression is not Column c)
+            {
+                return Column.FromName(expression.CreateName());
+            }
+
+            var field = plan.Schema.GetField(c.Name);
+            return field!.QualifiedColumn();
+        }
     }
 
     internal static ILogicalExpression SqlExprToLogicalExpression(Expression predicate, Schema schema)
@@ -1025,6 +1137,20 @@ internal static class LogicalExtensions
         return new List<HashSet<Column>> { usingColumns };
     }
 
+    internal static List<Schema> FallbackNormalizeSchemas(this ILogicalPlan schema)
+    {
+        return schema switch
+        {
+            Projection
+                or Aggregate
+                or Join => schema.GetInputs().Select(input => input.Schema).ToList(),
+
+            // TODO or Crossjoin
+
+            _ => new List<Schema>()
+        };
+    }
+
     private static List<(TableReference? Table, string ColumnName, string[] NestedNames)>
         GenerateSearchTerms(IReadOnlyCollection<string> idents)
     {
@@ -1052,5 +1178,6 @@ internal static class LogicalExtensions
             _ => throw new InvalidOperationException("Incorrect number of identifiers")
         };
     }
+
     #endregion
 }

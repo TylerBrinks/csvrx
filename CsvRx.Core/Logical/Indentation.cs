@@ -10,4 +10,9 @@ internal record Indentation(int Size = 0)
 
         return Environment.NewLine + new string(' ', Size * 2) + plan.ToStringIndented(this);
     }
+
+    public string Repeat(ILogicalPlan plan)
+    {
+        return Environment.NewLine + new string(' ', Size * 2) + plan.ToStringIndented(this);
+    }
 }

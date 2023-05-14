@@ -7,7 +7,7 @@ public class Schema
 {
     public Schema(List<QualifiedField> fields)
     {
-        Fields = fields!;
+        Fields = fields;
     }
 
     //TODO should fields ever be null?
@@ -33,8 +33,8 @@ public class Schema
         if (field == null)
         {
             return null;
-
         }
+
         return Fields.IndexOf(field);
     }
 
@@ -68,5 +68,11 @@ public class Schema
     public IEnumerable<QualifiedField> FieldsWithUnqualifiedName(string columnName)
     {
         return Fields.Where(f => f.Name == columnName);
+    }
+
+    public Schema Join(Schema joinSchema)
+    {
+        var fields = Fields.ToList().Concat(joinSchema.Fields.ToList()).ToList();
+        return new Schema(fields);
     }
 }

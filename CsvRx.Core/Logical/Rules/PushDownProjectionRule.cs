@@ -17,7 +17,7 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
                     var requiredColumns = new HashSet<Column>();
                     foreach (var e in aggregate.AggregateExpressions.Concat(aggregate.GroupExpressions))
                     {
-                        LogicalExtensions.ExpressionToColumns(e, requiredColumns);
+                        e.ExpressionToColumns(requiredColumns);
                     }
 
                     var newExpression = GetExpression(requiredColumns, aggregate.Plan.Schema);
@@ -76,7 +76,7 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
             case Aggregate a:
                 {
                     var requiredColumns = new HashSet<Column>();
-                    LogicalExtensions.ExpressionListToColumns(projection.GetExpressions(), requiredColumns);
+                    projection.GetExpressions().ExpressionListToColumns(requiredColumns);
                     var newAggregate = (
                         from agg in a.AggregateExpressions
                         let col = Column.FromName(agg.CreateName())
@@ -101,8 +101,8 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
                         return childPlan.WithNewInputs(new List<ILogicalPlan> { newProj });
                     }
                     var requiredColumns = new HashSet<Column>();
-                    LogicalExtensions.ExpressionListToColumns(projection.GetExpressions(), requiredColumns);
-                    LogicalExtensions.ExpressionListToColumns(new List<ILogicalExpression> { f.Predicate }, requiredColumns);
+                    projection.GetExpressions().ExpressionListToColumns(requiredColumns);
+                    new List<ILogicalExpression> { f.Predicate }.ExpressionListToColumns(requiredColumns);
 
                     var newExpression = GetExpression(requiredColumns, f.Plan.Schema);
                     var newProjection = Projection.TryNew(f.Plan, newExpression);
@@ -116,7 +116,7 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
 
                     foreach (var expr in projection.GetExpressions())
                     {
-                        LogicalExtensions.ExpressionToColumns(expr, usedColumns);
+                        expr.ExpressionToColumns(usedColumns);
                     }
 
                     var scan = PushDownScan(usedColumns, t);
@@ -124,30 +124,69 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
                     return projection.WithNewInputs(new List<ILogicalPlan> { scan });
                 }
             case SubqueryAlias a:
-            {
-                var replaceMap = GenerateColumnReplaceMap(a);
-                var requiredColumns = new HashSet<Column>();
-                var expr = ((Projection)projection).Expression;
+                {
+                    var replaceMap = GenerateColumnReplaceMap(a);
+                    var requiredColumns = new HashSet<Column>();
+                    var expr = ((Projection)projection).Expression;
 
-                LogicalExtensions.ExpressionListToColumns(expr, requiredColumns);
+                    expr.ExpressionListToColumns(requiredColumns);
 
-                var newRequiredColumns = requiredColumns.Select(c => replaceMap[c]).ToList();
-                var newExpression = GetExpression(newRequiredColumns, a.Plan.Schema);
-                var newProjection = Projection.TryNew(a.Plan, newExpression);
-                var newAlias = childPlan.WithNewInputs(new List<ILogicalPlan> {newProjection});
+                    var newRequiredColumns = requiredColumns.Select(c => replaceMap[c]).ToList();
+                    var newExpression = GetExpression(newRequiredColumns, a.Plan.Schema);
+                    var newProjection = Projection.TryNew(a.Plan, newExpression);
+                    var newAlias = childPlan.WithNewInputs(new List<ILogicalPlan> { newProjection });
 
-                return GeneratePlan(empty, projection, newAlias);
-            }
+                    return GeneratePlan(empty, projection, newAlias);
+                }
+            case Join j:
+                {
+                    var pushColumns = new HashSet<Column>();
+                    foreach (var expr in projection.GetExpressions())
+                    {
+                        expr.ExpressionToColumns(pushColumns);
+                    }
+
+                    foreach (var (left, right) in j.On)
+                    {
+                        left.ExpressionToColumns(pushColumns);
+                        right.ExpressionToColumns(pushColumns);
+                    }
+
+                    j.Filter?.ExpressionToColumns(pushColumns);
+
+                    var newLeft = GenerateProjection(pushColumns, j.Plan.Schema, j.Plan);
+                    var newRight = GenerateProjection(pushColumns, j.Right.Schema, j.Right);
+                    var newJoin = childPlan.WithNewInputs(new List<ILogicalPlan> { newLeft, newRight });
+                    return GeneratePlan(empty, projection, newJoin);
+                }
             default:
                 throw new NotImplementedException("FromChildPlan plan type not implemented yet");
         }
     }
 
-    private Dictionary<Column, Column> GenerateColumnReplaceMap(SubqueryAlias alias)
+    private static ILogicalPlan GenerateProjection(IReadOnlySet<Column> usedColumns, Schema schema, ILogicalPlan plan)
     {
-        return alias.Plan.Schema.Fields.Select((f, i) => 
+        var columns = schema.Fields.Select(f =>
+        {
+            var column = f.QualifiedColumn();
+            if (usedColumns.Contains(column))
+            {
+                return (ILogicalExpression)column;
+            }
+
+            return null;
+        })
+        .Where(c => c != null)
+        .ToList();
+
+        return Projection.TryNew(plan, columns!);
+    }
+
+    private static Dictionary<Column, Column> GenerateColumnReplaceMap(SubqueryAlias alias)
+    {
+        return alias.Plan.Schema.Fields.Select((f, i) =>
             (
-                alias.Schema.Fields[i].QualifiedColumn(), 
+                alias.Schema.Fields[i].QualifiedColumn(),
                 f.QualifiedColumn())
             )
             .ToDictionary(d => d.Item1, d => d.Item2);
@@ -176,11 +215,10 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
             {
                 return replaceMap[c.Name];
             }
-           
+
             return expression;
         });
     }
-
 
     private static ILogicalPlan PushDownScan(IEnumerable<Column> usedColumns, TableScan tableScan)
     {
@@ -203,12 +241,7 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
 
     private static ILogicalPlan GeneratePlan(bool empty, ILogicalPlan plan, ILogicalPlan newPlan)
     {
-        if (empty)
-        {
-            return newPlan;
-        }
-
-        return plan.WithNewInputs(new List<ILogicalPlan> { newPlan });
+        return empty ? newPlan : plan.WithNewInputs(new List<ILogicalPlan> { newPlan });
     }
 
     private static bool CanEliminate(ILogicalPlan projection, Schema schema)

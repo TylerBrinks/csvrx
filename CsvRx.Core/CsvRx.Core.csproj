@@ -18,4 +18,9 @@
 		<PackageReference Include="SqlParserCS" Version="0.1.3" />
 	</ItemGroup>
 
+
+	<ItemGroup>
+	  <Folder Include="Physical\Joins\" />
+	</ItemGroup>
+
 </Project>

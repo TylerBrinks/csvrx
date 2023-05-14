@@ -4,7 +4,10 @@ using SqlParser;
 
 var context = new CsvRx.Execution.ExecutionContext();
 // ReSharper disable StringLiteralTypo
-context.RegisterCsv("mycsv", @"C:\Users\tyler\source\repos\sink\sqldatafusion\testing\data\csv\aggregate_test_100.csv");
+context.RegisterCsv("mycsv", @"C:\Users\tyler\source\repos\sink\CsvRx\CsvRx\test_100.csv");
+context.RegisterCsv("test_a", @"C:\Users\tyler\source\repos\sink\CsvRx\CsvRx\join_a.csv");
+context.RegisterCsv("test_b", @"C:\Users\tyler\source\repos\sink\CsvRx\CsvRx\join_b.csv");
+
 //var results = context.ExecuteSql("SELECT c1, MAX(c3) FROM aggregate_test_100 GROUP BY c1"); //WHERE c11 > .2 AND c11 < 0.9 
 //var results = context.ExecuteSql("SELECT * FROM aggregate_test_100");
 //var results = context.ExecuteSql("SELECT avg(c3) FROM aggregate_test_100 group by c1");
@@ -14,8 +17,11 @@ context.RegisterCsv("mycsv", @"C:\Users\tyler\source\repos\sink\sqldatafusion\te
 //var sql = "SELECT c1, count(c3) as cnt FROM mycsv group by c1";
 //var sql = "SELECT c1, count(c3) as cnt FROM mycsv group by c1 having cnt > 18";
 //var sql = "SELECT c1, c2 as abc FROM mycsv where c1 = 'c'";
-var sql = "SELECT c1, c2 as abc FROM mycsv mv where mv.c1 = 'c'";
 //var sql = "SELECT c1 as a, c3 FROM mycsv order by a limit 23 offset 20"
+//var sql = "SELECT c1, c2 as abc FROM mycsv mv where mv.c1 = 'c'";
+
+
+var sql = "SELECT test_a.c2, test_a.c3 FROM test_a join test_b on test_a.c1 = test_b.c1";
 
 try
 {

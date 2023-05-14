@@ -5,41 +5,32 @@ using SqlParser.Ast;
 
 namespace CsvRx.Core.Logical;
 
-public record TableReference(string Name, string? Alias = null)
-{
-    public override string ToString()
-    {
-        return Name + (Alias != null ? $" AS {Alias}" : "");
-    }
-}
-
 internal class LogicalPlanner
 {
-    private List<TableReference> _tableReferences = null!;
-
-    public ILogicalPlan CreateLogicalPlan(Query query, Dictionary<string, DataSource> dataSources)
+    public static ILogicalPlan CreateLogicalPlan(Query query, Dictionary<string, DataSource> dataSources)
     {
         var select = query.Body.AsSelect();
 
-        _tableReferences = CreateTableRelations(select);
+        var tableReferences = select.CreateTableRelations();
+        var context = new PlannerContext(dataSources, tableReferences);
 
         // Logical plans are rooted in scanning a table for values
-        var plan = LogicalExtensions.PlanFromTable(select.From, dataSources, _tableReferences);
+        var plan = select.From.PlanTableWithJoins(context);
 
         // Wrap the scan in a filter if a where clause exists
-        plan = LogicalExtensions.PlanFromSelection(select.Selection, plan);
+        plan = select.Selection.PlanFromSelection(plan);
 
         // Build a select plan converting each select item into a logical expression
-        var selectExpressions = LogicalExtensions.PrepareSelectExpressions(select.Projection, plan, plan is EmptyRelation);
+        var selectExpressions = select.Projection.PrepareSelectExpressions(plan, plan is EmptyRelation);
 
-        var projectedPlan = LogicalExtensions.PlanProjection(plan, selectExpressions);
+        var projectedPlan = plan.PlanProjection(selectExpressions);
 
         var combinedSchemas = projectedPlan.Schema;
         combinedSchemas.MergeSchemas(plan.Schema);
 
         var aliasMap = selectExpressions.Where(e => e is Alias).Cast<Alias>().ToDictionary(a => a.Name, a => a.Expression);
 
-        var havingExpression = LogicalExtensions.MapHaving(select.Having, combinedSchemas, aliasMap);
+        var havingExpression = select.Having.MapHaving(combinedSchemas, aliasMap);
 
         var aggregateHaystack = selectExpressions.ToList();
         if (havingExpression != null)
@@ -47,11 +38,10 @@ internal class LogicalPlanner
             aggregateHaystack.Add(havingExpression);
         }
 
-        var aggregateExpressions = LogicalExtensions.FindAggregateExpressions(aggregateHaystack.ToList());
+        var aggregateExpressions = aggregateHaystack.ToList().FindAggregateExpressions();
 
         // check group by expressions inside FindGroupByExpressions, select.rs.line 130
-        var groupByExpressions = LogicalExtensions.FindGroupByExpressions(
-            select.GroupBy,
+        var groupByExpressions = select.GroupBy.FindGroupByExpressions(
             selectExpressions,
             combinedSchemas,
             plan,
@@ -64,7 +54,7 @@ internal class LogicalPlanner
         {
             // Wrap the plan in an aggregation
             (plan, selectPostAggregate, havingPostAggregate) =
-                LogicalExtensions.CreateAggregatePlan(plan, selectExpressions, havingExpression, groupByExpressions, aggregateExpressions);
+                plan.CreateAggregatePlan(selectExpressions, havingExpression, groupByExpressions, aggregateExpressions);
         }
         else
         {
@@ -83,7 +73,7 @@ internal class LogicalPlanner
         }
 
         // Wrap the plan in a projection
-        plan = LogicalExtensions.PlanProjection(plan, selectPostAggregate);
+        plan = plan.PlanProjection(selectPostAggregate);
 
         if (select.Distinct)
         {
@@ -91,16 +81,9 @@ internal class LogicalPlanner
         }
 
         // Wrap the plan in a sort
-        plan = LogicalExtensions.OrderBy(plan, query.OrderBy);
+        plan = plan.OrderBy(query.OrderBy);
 
         // Wrap the plan in a limit
-        return LogicalExtensions.Limit(plan, query.Offset, query.Limit);
-    }
-
-    private static List<TableReference> CreateTableRelations(IElement select)
-    {
-        var relationVisitor = new RelationVisitor();
-        select.Visit(relationVisitor);
-        return relationVisitor.TableReferences;
+        return plan.Limit(query.Offset, query.Limit);
     }
 }

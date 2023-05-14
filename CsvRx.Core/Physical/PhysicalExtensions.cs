@@ -9,14 +9,14 @@ namespace CsvRx.Core.Physical
     internal static class PhysicalExtensions
     {
         internal static GroupBy CreateGroupingPhysicalExpression(
-            List<ILogicalExpression> groupExpressions,
+            this List<ILogicalExpression> groupExpressions,
             Schema inputDfSchema,
             Schema inputSchema)
         {
             if (groupExpressions.Count == 1)
             {
-                var expr = LogicalExtensions.CreatePhysicalExpression(groupExpressions[0], inputDfSchema, inputSchema);
-                var name = LogicalExtensions.CreatePhysicalName(groupExpressions[0], true);
+                var expr = groupExpressions[0].CreatePhysicalExpression(inputDfSchema, inputSchema);
+                var name = groupExpressions[0].CreatePhysicalName(true);
 
                 var a = new List<(IPhysicalExpression Expression, string Name)>
                 {
@@ -28,8 +28,8 @@ namespace CsvRx.Core.Physical
 
             var group = groupExpressions.Select(e =>
                 (
-                    LogicalExtensions.CreatePhysicalExpression(e, inputDfSchema, inputSchema),
-                    LogicalExtensions.CreatePhysicalName(e, true)
+                    e.CreatePhysicalExpression(inputDfSchema, inputSchema),
+                    e.CreatePhysicalName(true)
                 ))
                 .ToList();
 
@@ -42,12 +42,12 @@ namespace CsvRx.Core.Physical
             {
                 case AggregateFunctionType.Count:
                 case AggregateFunctionType.ApproxDistinct:
-                    //return inputTypes;
+                //return inputTypes;
 
                 case AggregateFunctionType.ArrayAgg:
                 case AggregateFunctionType.Min:
                 case AggregateFunctionType.Max:
-                    //return inputTypes;
+                //return inputTypes;
 
                 case AggregateFunctionType.Sum:
                 case AggregateFunctionType.Avg:
@@ -82,13 +82,13 @@ namespace CsvRx.Core.Physical
 
                 AggregateFunctionType.Median
                     or AggregateFunctionType.StdDev
-                    or AggregateFunctionType.StdDevPop 
+                    or AggregateFunctionType.StdDevPop
                     or AggregateFunctionType.Variance
                     or AggregateFunctionType.VariancePop
                     or AggregateFunctionType.Covariance
                     or AggregateFunctionType.CovariancePop
                     => NumericReturnType(fn.FunctionType.ToString(), coercedDataTypes[0]),
-            
+
 
                 _ => throw new NotImplementedException("GetReturnTypes not implemented")
             };
@@ -167,11 +167,11 @@ namespace CsvRx.Core.Physical
                     throw new NotImplementedException($"Aggregate function not yet implemented: {fn.FunctionType}");
             }
         }
-        
-        internal static Aggregate CreateAggregateExpression(ILogicalExpression expression, Schema logicalSchema, Schema physicalSchema)
+
+        internal static Aggregate CreateAggregateExpression(this ILogicalExpression expression, Schema logicalSchema, Schema physicalSchema)
         {
             //todo handle alias
-            var name = LogicalExtensions.CreatePhysicalName(expression, true);
+            var name = expression.CreatePhysicalName(true);
 
             return CreateAggregateExprWithName(expression, name, logicalSchema, physicalSchema);
         }
@@ -181,7 +181,7 @@ namespace CsvRx.Core.Physical
             switch (expression)
             {
                 case AggregateFunction fn:
-                    var args = fn.Args.Select(e => LogicalExtensions.CreatePhysicalExpression(e, logicalSchema, physicalSchema)).ToList();
+                    var args = fn.Args.Select(e => e.CreatePhysicalExpression(logicalSchema, physicalSchema)).ToList();
                     return CreateAggregateExpression(fn, fn.Distinct, args, physicalSchema, name);
 
                 default:
@@ -190,12 +190,12 @@ namespace CsvRx.Core.Physical
         }
 
         internal static PhysicalSortExpression CreatePhysicalSortExpression(
-            ILogicalExpression expression,
+            this ILogicalExpression expression,
             Schema sortSchema,
             Schema inputSchema,
             bool ascending)
         {
-            var physicalExpression = LogicalExtensions.CreatePhysicalExpression(expression, sortSchema, inputSchema);
+            var physicalExpression = expression.CreatePhysicalExpression(sortSchema, inputSchema);
             return new PhysicalSortExpression(physicalExpression, sortSchema, inputSchema, ascending);
         }
     }

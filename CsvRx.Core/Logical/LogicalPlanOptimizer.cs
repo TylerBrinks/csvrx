@@ -20,6 +20,7 @@ internal class LogicalPlanOptimizer
             newPlan = result;
         }
 
+        var b = newPlan.ToStringIndented(new Indentation());
         return newPlan;
     }
 

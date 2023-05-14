@@ -10,7 +10,7 @@ internal record Sort(ILogicalPlan Plan, List<ILogicalExpression> OrderByExpressi
         var expressions = RewriteByAggregates(orderByExpressions, plan);
 
         var missingColumns = new HashSet<Column>();
-        LogicalExtensions.ExpressionListToColumns(expressions, missingColumns);
+        expressions.ExpressionListToColumns(missingColumns);
 
         if (!missingColumns.Any())
         {
@@ -60,7 +60,7 @@ internal record Sort(ILogicalPlan Plan, List<ILogicalExpression> OrderByExpressi
             var found = projectionExpressions.Find(ex => ex == expression);
             if (found != null)
             {
-                var column = LogicalExtensions.ToField(found, plan.Schema).QualifiedColumn();
+                var column = found.ToField(plan.Schema).QualifiedColumn();
                 return column;
             }
 

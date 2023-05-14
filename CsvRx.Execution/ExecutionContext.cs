@@ -39,7 +39,7 @@ public class ExecutionContext
 
         var plan = ast.First() switch
         {
-            Statement.Select s => new LogicalPlanner().CreateLogicalPlan(s.Query, _tables),
+            Statement.Select s => LogicalPlanner.CreateLogicalPlan(s.Query, _tables),
             _ => throw new NotImplementedException()
         };
 

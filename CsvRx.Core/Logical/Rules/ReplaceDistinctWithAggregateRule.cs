@@ -14,7 +14,7 @@ internal class ReplaceDistinctWithAggregateRule : ILogicalPlanOptimizationRule
             return plan;
         }
 
-        var groupExpression = LogicalExtensions.ExpandWildcard(plan.Schema, plan);
+        var groupExpression = plan.Schema.ExpandWildcard(plan);
         return Aggregate.TryNew(d.Plan, groupExpression, new List<ILogicalExpression>());
     }
 }
