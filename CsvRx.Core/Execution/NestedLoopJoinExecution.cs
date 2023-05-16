@@ -96,8 +96,8 @@ internal record NestedLoopJoinExecution(
             Filter!.Schema, 
             buildInputBuffer, 
             probeBatch, 
-            buildIndices, 
-            probeIndices, 
+            buildIndices.AsNullable(), 
+            probeIndices.AsNullable(),
             Filter.ColumnIndices,
             buildSide);
 
@@ -113,8 +113,8 @@ internal record NestedLoopJoinExecution(
         Schema schema,
         RecordBatch buildInputBuffer, 
         RecordBatch probeBatch,
-        long[] buildIndices,
-        long[] probeIndices,
+        long?[] buildIndices,
+        long?[] probeIndices,
         List<ColumnIndex> columnIndices,
         JoinSide buildSide)
     {
@@ -138,7 +138,7 @@ internal record NestedLoopJoinExecution(
                 }
                 else
                 {
-                    array = buildIndices.Select(i => recordArray.Values[(int)i]).ToList();
+                    array = buildIndices.Select(i => i == null ? null : recordArray.Values[(int)i]).ToList();
                 }
             }
             else
@@ -150,7 +150,7 @@ internal record NestedLoopJoinExecution(
                 }
                 else
                 {
-                    array = probeIndices.Select(i => recordArray.Values[(int)i]).ToList();
+                    array = probeIndices.Select(i => i == null ? null : recordArray.Values[(int) i]).ToList();
                 }
             }
 
@@ -160,7 +160,7 @@ internal record NestedLoopJoinExecution(
         return RecordBatch.TryNewWithLists(schema, columns);
     }
 
-    private (long[] LeftIndices, long[] RightIndices) AdjustIndicesByJoinType(
+    private (long?[] LeftIndices, long?[] RightIndices) AdjustIndicesByJoinType(
         long[] leftIndices, 
         long[] rightIndices, 
         int leftBatchRowCount, 
@@ -169,7 +169,7 @@ internal record NestedLoopJoinExecution(
         switch (JoinType)
         {
             case JoinType.Inner:
-                return (leftIndices, rightIndices);
+                return (leftIndices.AsNullable(), rightIndices.AsNullable());
 
             case JoinType.Left:
             {
@@ -179,12 +179,12 @@ internal record NestedLoopJoinExecution(
             case JoinType.LeftSemi:
             {
                 var leftSemiIndices = GetSemiLongIndices(leftBatchRowCount, leftIndices);
-                return (leftSemiIndices, rightIndices);
+                return (leftSemiIndices.AsNullable(), rightIndices.AsNullable());
             }
             case JoinType.LeftAnti:
             {
                 var leftAntiIndices = GetAntiLongIndices(leftBatchRowCount, leftIndices);
-                return (leftAntiIndices, rightIndices);
+                return (leftAntiIndices.AsNullable(), rightIndices.AsNullable());
             }
             case JoinType.Right or JoinType.Full:
             {
@@ -194,33 +194,33 @@ internal record NestedLoopJoinExecution(
             case JoinType.RightSemi:
             {
                 var rightSemiIndices = GetSemiLongIndices(rightBatchRowCount, rightIndices);
-                return (leftIndices, rightSemiIndices);
+                return (leftIndices.AsNullable(), rightSemiIndices.AsNullable());
             }
             case JoinType.RightAnti:
             {
                 var rightAntiIndices = GetAntiIndices(rightBatchRowCount, rightIndices);
-                return (leftIndices, rightAntiIndices);
+                return (leftIndices.AsNullable(), rightAntiIndices.AsNullable());
             }
             default:
                 throw new NotImplementedException("AdjustIndicesByJoinType Implement join type");
         }
     }
 
-    private static (long[] LeftIndices, long[] RightIndices) AppendLeftIndices(long[] leftIndices, long[] rightIndices, long[] leftUnmatchedIndices)
+    private static (long?[] LeftIndices, long?[] RightIndices) AppendLeftIndices(long[] leftIndices, long[] rightIndices, long[] leftUnmatchedIndices)
     {
         var unmatchedSize = leftUnmatchedIndices.Length;
         if (unmatchedSize == 0)
         {
-            return (leftIndices, rightIndices);
+            return (leftIndices.AsNullable(), rightIndices.AsNullable());
         }
 
-        var newLeftIndices = leftIndices.Concat(leftUnmatchedIndices).ToArray();
-        var newRightIndices = rightIndices.Concat(new long[unmatchedSize]).ToArray();
+        var newLeftIndices = leftIndices.Concat(leftUnmatchedIndices).AsNullable();
+        var newRightIndices = rightIndices.AsNullable().Concat(new long?[unmatchedSize]).ToArray();
 
         return (newLeftIndices, newRightIndices);
     }
 
-    private static  (long[] LeftIndices, long[] RightIndices) AppendRightIndices(long[] leftIndices, long[] rightIndices, long[] rightUnmatchedIndices)
+    private static (long?[] LeftIndices, long?[] RightIndices) AppendRightIndices(long[] leftIndices, long[] rightIndices, long[] rightUnmatchedIndices)
     {
         throw new NotImplementedException();
     }
@@ -233,7 +233,7 @@ internal record NestedLoopJoinExecution(
     /// Gets unmatched de-duplicated indices
     /// </summary>
     /// <param name="rowCount">Number of rows in the current batch</param>
-    /// <param name="inputIndices">Left side index values/param>
+    /// <param name="inputIndices">Left side index values</param>
     /// <returns>Anti-index values (inverse of matched/true values)</returns>
     private static long[] GetAntiLongIndices(int rowCount, long[] inputIndices)
     {

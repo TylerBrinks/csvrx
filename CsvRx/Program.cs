@@ -21,7 +21,7 @@ context.RegisterCsv("test_b", @"C:\Users\tyler\source\repos\sink\CsvRx\CsvRx\joi
 //var sql = "SELECT c1, c2 as abc FROM mycsv mv where mv.c1 = 'c'";
 
 
-var sql = "SELECT test_a.c2, test_a.c3 FROM test_a left join test_b on test_a.c1 = test_b.c1";
+var sql = "SELECT test_a.c2, test_a.c3, test_b.c2 FROM test_a left join test_b on test_a.c1 = test_b.c1";
 
 try
 {
