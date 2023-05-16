@@ -513,11 +513,6 @@ internal static class LogicalExtensions
         return (aggregatePlan, selectExpressionsPostAggregate, havingPostAggregation);
     }
 
-    //internal static List<ILogicalExpression> GroupingSetToExprList(List<ILogicalExpression> groupExpressions)
-    //{
-    //    return groupExpressions;
-    //}
-
     internal static (AggregateFunctionType, List<ILogicalExpression>) AggregateFunctionToExpression(
         AggregateFunctionType functionType,
         IReadOnlyCollection<FunctionArg>? args,
@@ -774,13 +769,20 @@ internal static class LogicalExtensions
                 or JoinType.Right => leftFields.Concat(rightFields).ToList(),
 
             JoinType.Left => GetLeftJoinFields(),
-            _ => throw new NotImplementedException("BuildJoinSchema join not implemented yet")
+
+            JoinType.LeftSemi or JoinType.LeftAnti => leftFields,
+            JoinType.RightSemi or JoinType.RightAnti => rightFields
+            // No default branch; all options accounted for.
         };
 
         List<QualifiedField> GetLeftJoinFields()
         {
-            //TODO get left join fields
-            throw new NotImplementedException("GetLeftJoinFields not implemented yet");
+            var rightFieldsNullable = rightFields
+                .Select(f => f.Qualifier != null 
+                    ? new QualifiedField(f.Name, f.DataType, f.Qualifier) 
+                    : new QualifiedField(f.Name, f.DataType)).ToList();
+
+            return leftFields.ToList().Concat(rightFieldsNullable).ToList();
         }
 
         return new Schema(fields);

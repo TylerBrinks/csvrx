@@ -160,15 +160,100 @@ internal record NestedLoopJoinExecution(
         return RecordBatch.TryNewWithLists(schema, columns);
     }
 
-    private (long[] LeftIndices, long[] RightIndices) AdjustIndicesByJoinType(long[] leftIndices, long[] rightIndices, int leftBatchRowCount, int rightBatchRowCount)
+    private (long[] LeftIndices, long[] RightIndices) AdjustIndicesByJoinType(
+        long[] leftIndices, 
+        long[] rightIndices, 
+        int leftBatchRowCount, 
+        int rightBatchRowCount)
     {
         switch (JoinType)
         {
             case JoinType.Inner:
                 return (leftIndices, rightIndices);
 
+            case JoinType.Left:
+            {
+                var leftUnmatchedIndices = GetAntiLongIndices(leftBatchRowCount, leftIndices);
+                return AppendLeftIndices(leftIndices, rightIndices, leftUnmatchedIndices);
+            }
+            case JoinType.LeftSemi:
+            {
+                var leftSemiIndices = GetSemiLongIndices(leftBatchRowCount, leftIndices);
+                return (leftSemiIndices, rightIndices);
+            }
+            case JoinType.LeftAnti:
+            {
+                var leftAntiIndices = GetAntiLongIndices(leftBatchRowCount, leftIndices);
+                return (leftAntiIndices, rightIndices);
+            }
+            case JoinType.Right or JoinType.Full:
+            {
+                var rightUnmatchedIndices = GetAntiIndices(rightBatchRowCount, rightIndices);
+                return AppendRightIndices(leftIndices, rightIndices, rightUnmatchedIndices);
+            }
+            case JoinType.RightSemi:
+            {
+                var rightSemiIndices = GetSemiLongIndices(rightBatchRowCount, rightIndices);
+                return (leftIndices, rightSemiIndices);
+            }
+            case JoinType.RightAnti:
+            {
+                var rightAntiIndices = GetAntiIndices(rightBatchRowCount, rightIndices);
+                return (leftIndices, rightAntiIndices);
+            }
             default:
                 throw new NotImplementedException("AdjustIndicesByJoinType Implement join type");
         }
+    }
+
+    private static (long[] LeftIndices, long[] RightIndices) AppendLeftIndices(long[] leftIndices, long[] rightIndices, long[] leftUnmatchedIndices)
+    {
+        var unmatchedSize = leftUnmatchedIndices.Length;
+        if (unmatchedSize == 0)
+        {
+            return (leftIndices, rightIndices);
+        }
+
+        var newLeftIndices = leftIndices.Concat(leftUnmatchedIndices).ToArray();
+        var newRightIndices = rightIndices.Concat(new long[unmatchedSize]).ToArray();
+
+        return (newLeftIndices, newRightIndices);
+    }
+
+    private static  (long[] LeftIndices, long[] RightIndices) AppendRightIndices(long[] leftIndices, long[] rightIndices, long[] rightUnmatchedIndices)
+    {
+        throw new NotImplementedException();
+    }
+
+    private static long[] GetAntiIndices(int rightBatchRowCount, long[] rightIndices)
+    {
+        throw new NotImplementedException();
+    }
+    /// <summary>
+    /// Gets unmatched de-duplicated indices
+    /// </summary>
+    /// <param name="rowCount">Number of rows in the current batch</param>
+    /// <param name="inputIndices">Left side index values/param>
+    /// <returns>Anti-index values (inverse of matched/true values)</returns>
+    private static long[] GetAntiLongIndices(int rowCount, long[] inputIndices)
+    {
+        var bitmap = new bool[rowCount];
+
+        foreach (var inputIndex in inputIndices)
+        {
+            bitmap[inputIndex] = true;
+        }
+
+        var antiIndices = Enumerable.Range(0, rowCount)
+            .Select(index => ((long)index, !bitmap[index]))
+            .Where(i => i.Item2)
+            .Select(i => i.Item1);
+
+        return antiIndices.ToArray();
+    }
+
+    private static long[] GetSemiLongIndices(int leftBatchRowCount, long[] leftIndices)
+    {
+        throw new NotImplementedException();
     }
 }
