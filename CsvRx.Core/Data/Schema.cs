@@ -5,9 +5,12 @@ namespace CsvRx.Core.Data;
 
 public class Schema
 {
+    private readonly bool _fullyQualified;
+
     public Schema(List<QualifiedField> fields)
     {
         Fields = fields;
+        _fullyQualified = fields.Any(f => f.Qualifier != null);
     }
 
     //TODO should fields ever be null?
@@ -15,7 +18,6 @@ public class Schema
 
     public QualifiedField? GetField(string name)
     {
-        //return Fields.FirstOrDefault(f => /*f != null &&*/ f.Name == name);
         return FieldsWithUnqualifiedName(name).FirstOrDefault();
     }
 
@@ -28,7 +30,14 @@ public class Schema
 
     internal int? IndexOfColumn(Column col)
     {
-        var field = GetField(col.Name);
+        //if (_fullyQualified && col.Relation != null)
+        //{
+        //    return IndexOfQualifiedColumn(col);
+        //}
+
+        var field = (_fullyQualified && col.Relation != null) 
+            ? GetQualifiedField(col.Relation, col.Name) 
+            :  GetField(col.Name);
 
         if (field == null)
         {
@@ -37,6 +46,18 @@ public class Schema
 
         return Fields.IndexOf(field);
     }
+
+    //internal int? IndexOfQualifiedColumn(Column col)
+    //{
+    //    var field = GetQualifiedField(col.Relation, col.Name);
+
+    //    if (field == null)
+    //    {
+    //        return null;
+    //    }
+
+    //    return Fields.IndexOf(field);
+    //}
 
     public override bool Equals(object? obj)
     {

@@ -143,13 +143,14 @@ internal class PhysicalPlanner
 
         var (schema, columnIndices) = BuildJoinSchema(leftPlan.Schema, rightPlan.Schema, join.JoinType);
 
-        if (!joinOn.Any())
+        //TODO implement hash join
+        //if (!joinOn.Any())
         {
             return new NestedLoopJoinExecution(leftPlan, rightPlan, joinFilter, join.JoinType, columnIndices, schema);
         }
 
-        return new HashJoinExecution(leftPlan, rightPlan, joinOn, joinFilter,
-            join.JoinType, PartitionMode.CollectLeft, columnIndices, false, schema);
+        //return new HashJoinExecution(leftPlan, rightPlan, joinOn, joinFilter,
+        //    join.JoinType, PartitionMode.CollectLeft, columnIndices, false, schema);
 
         JoinFilter? CreateJoinFilter()
         {
@@ -162,13 +163,13 @@ internal class PhysicalPlanner
             join.Filter.ExpressionToColumns(columns);
 
             // Collect left & right field indices, the field indices are sorted in ascending order
-            var leftFieldIndices = columns.Select(leftSchema.IndexOfColumn)
+            var leftFieldIndices = columns.Select(leftSchema.IndexOfColumn) //.IndexOfQualifiedColumn)
                 .Where(i => i != null)
                 .Select(i => i!.Value)
                 .OrderBy(i => i)
                 .ToList();
 
-            var rightFieldIndices = columns.Select(rightSchema.IndexOfColumn)
+            var rightFieldIndices = columns.Select(rightSchema.IndexOfColumn) //.IndexOfQualifiedColumn)
                 .Where(i => i != null)
                 .Select(i => i!.Value)
                 .OrderBy(i => i)

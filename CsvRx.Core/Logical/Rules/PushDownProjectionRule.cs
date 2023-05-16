@@ -232,7 +232,8 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
             return index.Value;
         }).ToList();
 
-        var fields = projection.Select(i => tableScan.Source.Schema!.Fields[i]).ToList();
+        //var fields = projection.Select(i => tableScan.Source.Schema!.Fields[i]).ToList();
+        var fields = projection.Select(i => tableScan.Schema!.Fields[i]).ToList();
 
         var schema = new Schema(fields);
 

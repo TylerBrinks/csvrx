@@ -17,4 +17,11 @@ internal class DoubleArray : TypedRecordArray<double?>
         }
     }
     public override IList Values => List;
+
+    public override RecordArray NewEmpty(int count)
+    {
+        var array = new DoubleArray();
+        FillWithNull(count);
+        return array;
+    }
 }

@@ -63,18 +63,18 @@ public class ExecutionContext
             throw new InvalidOperationException("Must build a physical plan first");
         }
 
-        await foreach (var batch in ExecuteLogicalPlan(executionPlan, options))
+        await foreach (var batch in executionPlan.Execute(options))
         {
             yield return batch;
         }
     }
 
 
-    internal static async IAsyncEnumerable<RecordBatch> ExecuteLogicalPlan(IExecutionPlan physicalPlan, QueryOptions options)
-    {
-        await foreach (var batch in physicalPlan.Execute(options))
-        {
-            yield return batch;
-        }
-    }
+    //internal static async IAsyncEnumerable<RecordBatch> ExecutePhysicalPlan(IExecutionPlan physicalPlan, QueryOptions options)
+    //{
+    //    await foreach (var batch in physicalPlan.Execute(options))
+    //    {
+    //        yield return batch;
+    //    }
+    //}
 }

@@ -1,3 +1,3 @@
 ﻿namespace CsvRx.Core.Physical.Joins;
 
-internal record ColumnIndex(int Size, JoinSide JoinSide);
+internal record ColumnIndex(int Index, JoinSide JoinSide);

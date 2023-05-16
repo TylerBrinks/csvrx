@@ -15,4 +15,14 @@ public abstract class RecordArray
     public abstract void Slice(int offset, int count);
 
     public abstract IList Values { get; }
+
+    public abstract RecordArray NewEmpty(int count);
+
+    public virtual void FillWithNull(int count)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            Add(null);
+        }
+    }
 }

@@ -18,4 +18,11 @@ internal class BooleanArray : TypedRecordArray<bool?>
     }
 
     public override IList Values => List;
+
+    public override RecordArray NewEmpty(int count)
+    {
+        var array = new BooleanArray();
+        FillWithNull(count);
+        return array;
+    }
 }
