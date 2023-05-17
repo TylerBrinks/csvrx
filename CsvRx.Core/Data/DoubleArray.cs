@@ -20,8 +20,6 @@ internal class DoubleArray : TypedRecordArray<double?>
 
     public override RecordArray NewEmpty(int count)
     {
-        var array = new DoubleArray();
-        FillWithNull(array, count);
-        return array;
+        return new DoubleArray().FillWithNull(count);
     }
 }

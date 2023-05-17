@@ -14,7 +14,7 @@ public class FunctionTests
         var expression = new Literal(new StringScalar("abc"));
         var fn = new CountFunction(expression, "test", ColumnDataType.Utf8);
         Assert.Single(fn.StateFields);
-        Assert.Equal("test[count]", fn.StateFields.First().Name);
+        Assert.Equal("COUNT(test)", fn.StateFields.First().Name);
         Assert.Equal(ColumnDataType.Utf8, fn.StateFields.First().DataType);
         Assert.Equal(QualifiedField.Unqualified("test", ColumnDataType.Utf8), fn.NamedQualifiedField);
         Assert.Equal(QualifiedField.Unqualified("test", ColumnDataType.Utf8), fn.NamedQualifiedField);
@@ -35,7 +35,7 @@ public class FunctionTests
         var expression = new Literal(new StringScalar("abc"));
         var fn = new MaxFunction(expression, "test", ColumnDataType.Utf8);
         Assert.Single(fn.StateFields);
-        Assert.Equal("test[max]", fn.StateFields.First().Name);
+        Assert.Equal("MAX(test)", fn.StateFields.First().Name);
         Assert.Equal(ColumnDataType.Utf8, fn.StateFields.First().DataType);
         Assert.Equal(QualifiedField.Unqualified("test", ColumnDataType.Utf8), fn.NamedQualifiedField);
         Assert.Equal(QualifiedField.Unqualified("test", ColumnDataType.Utf8), fn.NamedQualifiedField);
@@ -56,7 +56,7 @@ public class FunctionTests
         var expression = new Literal(new StringScalar("abc"));
         var fn = new MinFunction(expression, "test", ColumnDataType.Utf8);
         Assert.Single(fn.StateFields);
-        Assert.Equal("test[min]", fn.StateFields.First().Name);
+        Assert.Equal("MIN(test)", fn.StateFields.First().Name);
         Assert.Equal(ColumnDataType.Utf8, fn.StateFields.First().DataType);
         Assert.Equal(QualifiedField.Unqualified("test", ColumnDataType.Utf8), fn.NamedQualifiedField);
         Assert.Equal(QualifiedField.Unqualified("test", ColumnDataType.Utf8), fn.NamedQualifiedField);
@@ -77,7 +77,7 @@ public class FunctionTests
         var expression = new Literal(new StringScalar("abc"));
         var fn = new SumFunction(expression, "test", ColumnDataType.Utf8);
         Assert.Single(fn.StateFields);
-        Assert.Equal("test[sum]", fn.StateFields.First().Name);
+        Assert.Equal("SUM(test)", fn.StateFields.First().Name);
         Assert.Equal(ColumnDataType.Utf8, fn.StateFields.First().DataType);
         Assert.Equal(QualifiedField.Unqualified("test", ColumnDataType.Utf8), fn.NamedQualifiedField);
         Assert.Equal(QualifiedField.Unqualified("test", ColumnDataType.Utf8), fn.NamedQualifiedField);
@@ -98,7 +98,7 @@ public class FunctionTests
         var expression = new Literal(new StringScalar("abc"));
         var fn = new AverageFunction(expression, "test", ColumnDataType.Utf8);
         Assert.Single(fn.StateFields!);
-        Assert.Equal("test[avg]", fn.StateFields.First().Name);
+        Assert.Equal("AVG(test)", fn.StateFields.First().Name);
         Assert.Equal(ColumnDataType.Utf8, fn.StateFields.First().DataType);
         Assert.Equal(QualifiedField.Unqualified("test", ColumnDataType.Utf8), fn.NamedQualifiedField);
         Assert.Equal(QualifiedField.Unqualified("test", ColumnDataType.Utf8), fn.NamedQualifiedField);

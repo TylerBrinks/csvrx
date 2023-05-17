@@ -38,8 +38,7 @@ internal class LogicalPlanner
             aggregateExpressionList.Add(havingExpression);
         }
 
-        //TODO 2nd ToList necessary?
-        var aggregateExpressions = aggregateExpressionList.ToList().FindAggregateExpressions();
+        var aggregateExpressions = aggregateExpressionList.FindAggregateExpressions();
 
         // check group by expressions inside FindGroupByExpressions, select.rs.line 130
         var groupByExpressions = select.GroupBy.FindGroupByExpressions(

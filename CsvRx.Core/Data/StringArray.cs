@@ -20,8 +20,6 @@ internal class StringArray : TypedRecordArray<string?>
 
     public override RecordArray NewEmpty(int count)
     {
-        var array = new StringArray();
-        FillWithNull(array, count);
-        return array;
+        return new StringArray().FillWithNull(count);
     }
 }

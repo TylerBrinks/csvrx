@@ -4,10 +4,11 @@ namespace CsvRx.Core.Data;
 
 public abstract class TypedRecordArray<T> : RecordArray
 {
-    public List<T> List { get; private set; } = new();
+    protected List<T> List { get; private set; } = new();
 
-    public List<int> GetSortColumnIndices(bool ascending, int? start = null, int? take = null)
+    public override List<int> GetSortIndices(bool ascending, int? start = null, int? take = null)
     {
+        //return GetSortColumnIndices(descending, start, take);
         var skip = start ?? 0;
         var count = take ?? List.Count;
 
@@ -15,13 +16,13 @@ public abstract class TypedRecordArray<T> : RecordArray
         // sort, the entire column is the group.  For subsequent columns
         // each sort is limited to the items in each parents distinct 
         // list of sorted values.  
-        var groupSubset = List.Skip(skip).Take(count);//.ToList();
+        var groupSubset = List.Skip(skip).Take(count);
         // Get the original indexed position of the items in the list
-        var indexMap = groupSubset.Select((value, index) => new KeyValuePair<T,int>(value, index));
+        var indexMap = groupSubset.Select((value, index) => new KeyValuePair<T, int>(value, index));
         // Apply ascending or descending sort ordering
-        var sorted = (ascending ? indexMap.OrderBy(_ => _.Key) : indexMap.OrderByDescending(_ => _.Key));
+        var sorted = ascending ? indexMap.OrderBy(_ => _.Key) : indexMap.OrderByDescending(_ => _.Key);
         // Get the index values as they should appear once rearranged in the sort operation
-        var indices = sorted.Select(_ => _.Value);//.ToList();
+        var indices = sorted.Select(_ => _.Value);
         // Order the indices by their position in the sort and return the index at that position
         // e.g. as list with values
         // c, b, d, e, a has indices
@@ -31,12 +32,7 @@ public abstract class TypedRecordArray<T> : RecordArray
         // 4, 1, 0, 2, 3
         // This is the index order that needs to be applied to the array 
         // segment that will be sorted.  
-        return indices.Select((p,i) => (Index: i, Position: p)).OrderBy(_=>_.Position).Select(_ => _.Index).ToList();
-    }
-
-    public override List<int> GetSortIndices(bool descending, int? start = null, int? take = null)
-    {
-        return GetSortColumnIndices(descending, start, take);
+        return indices.Select((p, i) => (Index: i, Position: p)).OrderBy(_ => _.Position).Select(_ => _.Index).ToList();
     }
 
     public override void Concat(IList values)

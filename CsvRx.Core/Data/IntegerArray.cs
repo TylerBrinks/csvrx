@@ -21,8 +21,6 @@ internal class IntegerArray : TypedRecordArray<long?>
 
     public override RecordArray NewEmpty(int count)
     {
-        var array = new IntegerArray();
-        FillWithNull(array, count);
-        return array;
+        return new IntegerArray().FillWithNull(count);
     }
 }

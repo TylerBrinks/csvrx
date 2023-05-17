@@ -1,5 +1,4 @@
-﻿using CsvRx.Core.Logical.Plans;
-using System.Collections;
+﻿using System.Collections;
 
 namespace CsvRx.Core.Data;
 
@@ -15,7 +14,7 @@ public record RecordBatch
         }
     }
 
-    private static RecordArray GetArrayType(Field? field)
+    internal static RecordArray GetArrayType(Field? field)
     {
         if (field != null)
         {

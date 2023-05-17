@@ -7,13 +7,13 @@ namespace CsvRx.Core.Physical.Aggregation;
 internal record CovarianceAccumulator(ColumnDataType DataType, StatisticType StatisticType) : Accumulator
 {
     private long _count;
-    private double _algoConst;
+    private double _const;
     private double _mean1;
     private double _mean2;
 
     public override void Accumulate(object value)
     {
-        var a = 1;
+        throw new NotImplementedException("Covariance does not accumulate singular values.");
     }
 
     public override void UpdateBatch(List<ArrayColumnValue> values)
@@ -39,12 +39,12 @@ internal record CovarianceAccumulator(ColumnDataType DataType, StatisticType Sta
             var newMean1 = delta1/newCount + _mean1;
             var delta2 = value2 - _mean2;
             var newMean2 = delta2/newCount + _mean2;
-            var newConst = delta1 * (value2 - newMean2) + _algoConst;
+            var newConst = delta1 * (value2 - newMean2) + _const;
 
             _count += 1;
             _mean1 = newMean1;
             _mean2 = newMean2;
-            _algoConst = newConst;
+            _const = newConst;
         }
     }
 
@@ -68,23 +68,23 @@ internal record CovarianceAccumulator(ColumnDataType DataType, StatisticType Sta
             var newMean2 = _mean2 * _count / newCount + indexMean2 * c / newCount;
             var delta1 = _mean1 - indexMean1;
             var delta2 = _mean2 - indexMean2;
-            var newConst = _algoConst + indexCs + delta1 * delta2 * _count * c / newCount;
+            var newConst = _const + indexCs + delta1 * delta2 * _count * c / newCount;
 
             _count = newCount;
             _mean1 = newMean1;
             _mean2 = newMean2;
-            _algoConst = newConst;
+            _const = newConst;
         }
     }
 
-    public override object? Value => CalculateCovariance();
+    public override object Value => CalculateCovariance();
 
     public override List<ScalarValue> State => new()
     {
         new IntegerScalar(_count),
         new DoubleScalar(_mean1),
         new DoubleScalar(_mean2),
-        new DoubleScalar(_algoConst)
+        new DoubleScalar(_const)
     };
 
     public override ScalarValue Evaluate =>
@@ -101,7 +101,7 @@ internal record CovarianceAccumulator(ColumnDataType DataType, StatisticType Sta
             return 0;
         }
 
-        return _algoConst / count;
+        return _const / count;
     }
 
     private long GetCount()

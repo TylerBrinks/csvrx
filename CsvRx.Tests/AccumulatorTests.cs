@@ -1,6 +1,7 @@
 using CsvRx.Core;
 using CsvRx.Core.Data;
 using CsvRx.Core.Physical.Aggregation;
+using CsvRx.Core.Values;
 
 namespace CsvRx.Tests;
 
@@ -37,13 +38,19 @@ public class AccumulatorTests
     public void CovarianceAccumulator_Calculates_Sample_Values()
     {
         var accumulator = new CovarianceAccumulator(ColumnDataType.Integer, StatisticType.Sample);
+        Assert.Throws<NotImplementedException>(() => accumulator.Accumulate(0));
 
-        for (var i = 0; i < 100; i++)
+        var left = Enumerable.Range(0, 10);
+        var right = Enumerable.Range(5, 15);
+
+        var values = new List<ArrayColumnValue>
         {
-            accumulator.Accumulate(i);
-        }
+            new (left.ToList(), ColumnDataType.Integer),
+            new (right.ToList(), ColumnDataType.Integer),
+        };
 
-        Assert.Equal((uint)100, accumulator.Value);
+        accumulator.UpdateBatch(values);
+        Assert.Equal(9.1666666666666661, accumulator.Value);
     }
     //cov
     // groupedhash
@@ -92,7 +99,7 @@ public class AccumulatorTests
         accumulator.Accumulate(5);
 
         Assert.Equal(-1d, accumulator.Value);
-        Assert.Equal(-1l, accumulator.Evaluate.RawValue);
+        Assert.Equal(-1d, accumulator.Evaluate.RawValue);
     }
     //std
     [Fact]

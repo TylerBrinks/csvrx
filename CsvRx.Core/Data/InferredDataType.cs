@@ -50,18 +50,25 @@ public partial class InferredDataType
     #region Generated expressions
     [GeneratedRegex("(?i)^(true)$|^(false)$(?-i)", RegexOptions.None, "en-US")]
     private static partial Regex BooleanRegex();
+
     [GeneratedRegex("^-?(\\d+)$", RegexOptions.None, "en-US")]
     private static partial Regex IntegerRegex();
+
     [GeneratedRegex("^-?((\\d*\\.\\d+|\\d+\\.\\d*)([eE]-?\\d+)?|\\d+([eE]-?\\d+))$", RegexOptions.None, "en-US")]
     private static partial Regex DoubleRegex();
+
     [GeneratedRegex("^\\d{4}-\\d\\d-\\d\\d$", RegexOptions.None, "en-US")]
     private static partial Regex Date32Regex();
+
     [GeneratedRegex("^\\d{4}-\\d\\d-\\d\\d[T ]\\d\\d:\\d\\d:\\d\\d$", RegexOptions.None, "en-US")]
     private static partial Regex TimestampSecond();
+
     [GeneratedRegex("^\\d{4}-\\d\\d-\\d\\d[T ]\\d\\d:\\d\\d:\\d\\d.\\d{1,3}$", RegexOptions.None, "en-US")]
     private static partial Regex TimestampMillisecond();
+
     [GeneratedRegex("^\\d{4}-\\d\\d-\\d\\d[T ]\\d\\d:\\d\\d:\\d\\d.\\d{1,6}$", RegexOptions.None, "en-US")]
     private static partial Regex TimestampMicrosecond();
+
     [GeneratedRegex("^\\d{4}-\\d\\d-\\d\\d[T ]\\d\\d:\\d\\d:\\d\\d.\\d{1,9}$", RegexOptions.None, "en-US")]
     private static partial Regex TimestampNanosecond();
     #endregion
