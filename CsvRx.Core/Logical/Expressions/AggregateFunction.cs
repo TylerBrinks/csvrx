@@ -45,10 +45,17 @@ internal record AggregateFunction(
     {
         if (other == null) { return false; }
 
-        return FunctionType == other.FunctionType &&
+        var equal = FunctionType == other.FunctionType &&
                Distinct == other.Distinct &&
-               Filter == other.Filter &&
+              
                Args.SequenceEqual(other.Args);
+
+        if (equal && Filter != null)
+        {
+            equal &= Filter.Equals(other.Filter);
+        }
+
+        return equal;
     }
 }
 

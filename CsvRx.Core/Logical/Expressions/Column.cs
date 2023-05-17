@@ -8,10 +8,22 @@ internal record Column(string Name, TableReference? Relation = null) : ILogicalE
         return $"{relation}{Name}";
     }
 
-    internal static Column FromName(string name)
-    {
-        return new Column(name, null);
-    }
-
     public string FlatName => Relation != null ? $"{Relation.Name}.{Name}" : Name;
+
+    public virtual bool Equals(Column? other)
+    {
+        if (other == null)
+        {
+            return false;
+        }
+
+        var equal = Name == other.Name;
+
+        if(equal && Relation != null)
+        {
+            equal &= Relation == other.Relation;
+        }
+
+        return equal;
+    }
 }

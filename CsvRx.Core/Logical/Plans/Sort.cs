@@ -65,7 +65,7 @@ internal record Sort(ILogicalPlan Plan, List<ILogicalExpression> OrderByExpressi
             }
 
             var name = expression.CreateName();
-            var searchColumn = Column.FromName(name);
+            var searchColumn = new Column(name);
 
             var foundMatch = projectionExpressions.Find(e => searchColumn == e);
             if (foundMatch != null)

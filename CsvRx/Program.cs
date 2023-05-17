@@ -11,6 +11,7 @@ context.RegisterCsv("test_b", @"C:\Users\tyler\source\repos\sink\CsvRx\CsvRx\joi
 var queries = new List<string>
 {
     "SELECT c1, MAX(c3) FROM mycsv GROUP BY c1", //WHERE c11 > .2 AND c11 < 0.9 
+    "SELECT distinct c1 FROM mycsv",
     "SELECT * FROM mycsv",
     "SELECT avg(c3) FROM mycsv group by c1",
     "SELECT c1, c3 FROM mycsv order by c1, c3",

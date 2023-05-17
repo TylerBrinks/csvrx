@@ -79,7 +79,7 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
                     projection.GetExpressions().ExpressionListToColumns(requiredColumns);
                     var newAggregate = (
                         from agg in a.AggregateExpressions
-                        let col = Column.FromName(agg.CreateName())
+                        let col = new Column(agg.CreateName())
                         where requiredColumns.Contains(col)
                         select agg).ToList();
 

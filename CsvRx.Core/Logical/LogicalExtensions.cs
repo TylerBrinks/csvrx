@@ -25,13 +25,13 @@ internal static class LogicalExtensions
     /// <exception cref="NotImplementedException"></exception>
     internal static string CreateName(this ILogicalExpression expression)
     {
-        return expression switch
+        return (expression switch
         {
             Alias a => a.Name,
             Column c => c.FlatName,
             Expressions.Binary b => $"{b.Left.CreateName()} {b.Op} {b.Right.CreateName()}",
-            AggregateFunction fn => GetFunctionName(fn, false, fn.Args),
-            Literal l => l.Value.RawValue.ToString(),
+            AggregateFunction fn => GetFunctionName(fn, fn.Distinct, fn.Args),
+            Literal {Value.RawValue: { }} l => l.Value.RawValue.ToString(),
             //Like
             // Case
             // cast
@@ -40,9 +40,9 @@ internal static class LogicalExtensions
             // is not null
             Wildcard => "*",
             _ => throw new NotImplementedException("need to implement")
-        };
+        })!;
 
-        static string GetFunctionName(AggregateFunction fn, bool distinct, List<ILogicalExpression> args)
+        static string GetFunctionName(AggregateFunction fn, bool distinct, IEnumerable<ILogicalExpression> args)
         {
             var names = args.Select(CreateName).ToList();
             var distinctName = distinct ? "DISTINCT " : string.Empty;
@@ -94,7 +94,7 @@ internal static class LogicalExtensions
                     break;
 
                 case ScalarVariable sv:
-                    accumulator.Add(Column.FromName(string.Join(".", sv.Names)));
+                    accumulator.Add(new Column(string.Join(".", sv.Names)));
                     break;
             }
         }
@@ -304,7 +304,7 @@ internal static class LogicalExtensions
         ILogicalPlan right,
         JoinConstraint constraint,
         JoinType joinType,
-        PlannerContext context)
+        PlannerContext context)//TODO unused planner context?
     {
         if (constraint is not JoinConstraint.On on)
         {
@@ -618,17 +618,16 @@ internal static class LogicalExtensions
     {
         var havingExpression = having == null ? null : SqlExprToLogicalExpression(having, schema);
 
-        return havingExpression == null ? null :
-            // This step swaps aliases in the HAVING clause for the
-            // underlying column name.  This is how the planner supports
-            // queries with HAVING expressions that refer to aliased columns.
-            //
-            //   SELECT c1, MAX(c2) AS abc FROM tbl GROUP BY c1 HAVING abc > 10;
-            //
-            // is rewritten
-            //
-            //   SELECT c1, MAX(c2) AS abc FROM tbl GROUP BY c1 HAVING MAX(c2) > 10;
-            havingExpression.ResolveAliasToExpressions(aliasMap);
+        // This step swaps aliases in the HAVING clause for the
+        // underlying column name.  This is how the planner supports
+        // queries with HAVING expressions that refer to aliased columns.
+        //
+        //   SELECT c1, MAX(c2) AS abc FROM tbl GROUP BY c1 HAVING abc > 10;
+        //
+        // is rewritten
+        //
+        //   SELECT c1, MAX(c2) AS abc FROM tbl GROUP BY c1 HAVING MAX(c2) > 10;
+        return havingExpression?.ResolveAliasToExpressions(aliasMap);
     }
 
     internal static ILogicalExpression ResolveAliasToExpressions(this ILogicalExpression expression,
@@ -797,7 +796,10 @@ internal static class LogicalExtensions
         var leftFields = left.Fields;
         var rightFields = right.Fields;
 
+        // No default branch; all options accounted for.
+#pragma warning disable CS8524
         var fields = joinType switch
+#pragma warning restore CS8524
         {
             JoinType.Inner
                 or JoinType.Full
@@ -807,7 +809,6 @@ internal static class LogicalExtensions
 
             JoinType.LeftSemi or JoinType.LeftAnti => leftFields,
             JoinType.RightSemi or JoinType.RightAnti => rightFields
-            // No default branch; all options accounted for.
         };
 
         List<QualifiedField> GetLeftJoinFields()
@@ -996,7 +997,7 @@ internal static class LogicalExtensions
         {
             if (expression is not Column c)
             {
-                return Column.FromName(expression.CreateName());
+                return new Column(expression.CreateName());
             }
 
             var field = plan.Schema.GetField(c.Name);
@@ -1021,29 +1022,21 @@ internal static class LogicalExtensions
 
     internal static ILogicalExpression SqlExprToLogicalInternal(Expression expression, Schema schema)
     {
-        switch (expression)
+        return expression switch
         {
-            case LiteralValue v:
-                return ParseValue(v);
+            LiteralValue v => ParseValue(v),
+            Identifier ident => SqlIdentifierToExpression(ident, schema),
+            Function fn => SqlFunctionToExpression(fn, schema),
+            CompoundIdentifier ci => SqlCompoundIdentToExpression(ci, schema),
 
-            case Identifier ident:
-                return SqlIdentifierToExpression(ident, schema);
-
-            case Function fn:
-                return SqlFunctionToExpression(fn, schema);
-
-            case CompoundIdentifier ci:
-                return SqlCompoundIdentToExpression(ci, schema);
-
-            default:
-                throw new NotImplementedException();
-        }
+            _ => throw new NotImplementedException()
+        };
     }
 
     internal static ILogicalExpression SqlIdentifierToExpression(Identifier ident, Schema schema)
     {
         // Found a match without a qualified name, this is a inner table column
-        return new Column(schema.GetField(ident.Ident.Value)!.Name, null);
+        return new Column(schema.GetField(ident.Ident.Value)!.Name);
     }
 
     internal static ILogicalExpression ParseValue(LiteralValue literalValue)
