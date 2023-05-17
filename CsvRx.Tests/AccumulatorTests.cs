@@ -18,7 +18,7 @@ public class AccumulatorTests
         accumulator.Accumulate(5);
 
         Assert.Equal(3d, accumulator.Value);
-        Assert.Equal(3l, accumulator.Evaluate.RawValue);
+        Assert.Equal(3L, accumulator.Evaluate.RawValue);
     }
 
     [Fact]
@@ -83,8 +83,8 @@ public class AccumulatorTests
         accumulator.Accumulate(9);
         accumulator.Accumulate(4);
 
-        Assert.Equal(5l, accumulator.Value);
-        Assert.Equal(5l, accumulator.Evaluate.RawValue);
+        Assert.Equal(5L, accumulator.Value);
+        Assert.Equal(5L, accumulator.Evaluate.RawValue);
     }
 
     [Fact]

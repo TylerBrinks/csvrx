@@ -1,4 +1,5 @@
-﻿using CsvRx.Core.Data;
+﻿using System.Collections;
+using CsvRx.Core.Data;
 
 namespace CsvRx.Tests.Data;
 
@@ -94,12 +95,12 @@ public class RecordBatchTests
 
         batch.Slice(1, 3);
 
-        Assert.Equal(2l, batch.Results[0].Values[0]);
-        Assert.Equal(3l, batch.Results[0].Values[1]);
-        Assert.Equal(4l, batch.Results[0].Values[2]);
-        Assert.Equal(2l, batch.Results[1].Values[0]);
-        Assert.Equal(3l, batch.Results[1].Values[1]);
-        Assert.Equal(4l, batch.Results[1].Values[2]);
+        Assert.Equal(2L, batch.Results[0].Values[0]);
+        Assert.Equal(3L, batch.Results[0].Values[1]);
+        Assert.Equal(4L, batch.Results[0].Values[2]);
+        Assert.Equal(2L, batch.Results[1].Values[0]);
+        Assert.Equal(3L, batch.Results[1].Values[1]);
+        Assert.Equal(4L, batch.Results[1].Values[2]);
     }
 
     [Fact]
@@ -127,5 +128,73 @@ public class RecordBatchTests
         Assert.Equal(1, partitions[3].RowCount);
     }
 
+    [Fact]
+    public void RecordBatch_Creates_Instances_With_Data()
+    {
+        var schema = new Schema(new List<QualifiedField>
+        {
+            new("first", ColumnDataType.Integer),
+            new("second", ColumnDataType.Integer)
+        });
 
+        var columns = new List<object> { 1, 2 };
+
+        var batch = RecordBatch.TryNew(schema, columns!);
+
+        Assert.Equal(2, batch.Results.Count);
+        Assert.Equal(1, batch.RowCount);
+        Assert.Equal(1L, batch.Results[0].Values[0]);
+        Assert.Equal(2L, batch.Results[1].Values[0]);
+    }
+
+    [Fact]
+    public void RecordBatch_Creates_Instances_With_List_Data()
+    {
+        var schema = new Schema(new List<QualifiedField>
+        {
+            new("first", ColumnDataType.Integer),
+            new("second", ColumnDataType.Integer)
+        });
+
+        var lists = new List<IList>
+        {
+            new List<int> {1, 2, 3},
+            new List<int> {4, 5, 6},
+        };
+
+        var batch = RecordBatch.TryNewWithLists(schema, lists);
+
+        Assert.Equal(2, batch.Results.Count);
+        Assert.Equal(3, batch.RowCount);
+        Assert.Equal(1L, batch.Results[0].Values[0]);
+        Assert.Equal(2L, batch.Results[0].Values[1]);
+        Assert.Equal(3L, batch.Results[0].Values[2]);
+        Assert.Equal(4L, batch.Results[1].Values[0]);
+        Assert.Equal(5L, batch.Results[1].Values[1]);
+        Assert.Equal(6L, batch.Results[1].Values[2]);
+    }
+
+    [Fact]
+    public void RecordBatch_Concatenates_Batches()
+    {
+        var schema = new Schema(new List<QualifiedField>
+        {
+            new("first", ColumnDataType.Integer),
+            new("second", ColumnDataType.Integer)
+        });
+
+        var columns1 = new List<object> { 1, 2 };
+        var columns2 = new List<object> { 3, 4 };
+
+        var batch1 = RecordBatch.TryNew(schema, columns1!);
+        var batch2 = RecordBatch.TryNew(schema, columns2!);
+        batch1.Concat(batch2);
+
+        Assert.Equal(2, batch1.Results.Count);
+        Assert.Equal(2, batch1.RowCount);
+        Assert.Equal(1L, batch1.Results[0].Values[0]);
+        Assert.Equal(3L, batch1.Results[0].Values[1]);
+        Assert.Equal(2L, batch1.Results[1].Values[0]);
+        Assert.Equal(4L, batch1.Results[1].Values[1]);
+    }
 }

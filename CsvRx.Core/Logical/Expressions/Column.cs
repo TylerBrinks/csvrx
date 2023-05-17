@@ -1,6 +1,6 @@
 ﻿namespace CsvRx.Core.Logical.Expressions;
 
-internal record Column(string Name, TableReference? Relation) : ILogicalExpression
+internal record Column(string Name, TableReference? Relation = null) : ILogicalExpression
 {
     public override string ToString()
     {

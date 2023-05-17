@@ -13,7 +13,6 @@ public class Schema
         _fullyQualified = fields.Any(f => f.Qualifier != null);
     }
 
-    //TODO should fields ever be null?
     public List<QualifiedField> Fields { get; }
 
     public QualifiedField? GetField(string name)
@@ -30,14 +29,9 @@ public class Schema
 
     internal int? IndexOfColumn(Column col)
     {
-        //if (_fullyQualified && col.Relation != null)
-        //{
-        //    return IndexOfQualifiedColumn(col);
-        //}
-
-        var field = (_fullyQualified && col.Relation != null) 
+        var field = _fullyQualified && col.Relation != null 
             ? GetQualifiedField(col.Relation, col.Name) 
-            :  GetField(col.Name);
+            : GetField(col.Name);
 
         if (field == null)
         {
@@ -46,18 +40,6 @@ public class Schema
 
         return Fields.IndexOf(field);
     }
-
-    //internal int? IndexOfQualifiedColumn(Column col)
-    //{
-    //    var field = GetQualifiedField(col.Relation, col.Name);
-
-    //    if (field == null)
-    //    {
-    //        return null;
-    //    }
-
-    //    return Fields.IndexOf(field);
-    //}
 
     public override bool Equals(object? obj)
     {
