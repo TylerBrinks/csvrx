@@ -12,4 +12,6 @@ internal record Column(string Name, TableReference? Relation) : ILogicalExpressi
     {
         return new Column(name, null);
     }
+
+    public string FlatName => Relation != null ? $"{Relation.Name}.{Name}" : Name;
 }

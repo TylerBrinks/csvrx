@@ -28,7 +28,7 @@ internal static class LogicalExtensions
         return expression switch
         {
             Alias a => a.Name,
-            Column c => c.Name,
+            Column c => c.FlatName,
             Expressions.Binary b => $"{b.Left.CreateName()} {b.Op} {b.Right.CreateName()}",
             AggregateFunction fn => GetFunctionName(fn, false, fn.Args),
             Literal l => l.Value.RawValue.ToString(),
@@ -277,14 +277,21 @@ internal static class LogicalExtensions
             case JoinOperator.Inner i:
                 return ParseJoin(left, right, i.JoinConstraint, JoinType.Inner, context);
 
-            //case JoinOperator.LeftSemi:
-            //    break;
-            //case JoinOperator.RightSemi:
-            //    break;
-            //case JoinOperator.LeftAnti:
-            //    break;
-            //case JoinOperator.RightAnti:
-            //case JoinOperator.FullOuter:
+            case JoinOperator.LeftSemi ls:
+                return ParseJoin(left, right, ls.JoinConstraint, JoinType.LeftSemi, context);
+            
+            case JoinOperator.RightSemi rs:
+                return ParseJoin(left, right, rs.JoinConstraint, JoinType.RightSemi, context);
+
+            case JoinOperator.LeftAnti la:
+                return ParseJoin(left, right, la.JoinConstraint, JoinType.LeftAnti, context);
+
+            case JoinOperator.RightAnti ra:
+                return ParseJoin(left, right, ra.JoinConstraint, JoinType.RightAnti, context);
+
+            case JoinOperator.FullOuter f:
+                return ParseJoin(left, right, f.JoinConstraint, JoinType.Full, context);
+
             //case JoinOperator.CrossJoin:
             //    break;
             default:
@@ -647,9 +654,10 @@ internal static class LogicalExtensions
         {
             // wildcard?
             // unqualified wildcard?
-            if (expr is Column)
+            if (expr is Column c)
             {
-                projectedExpressions.Add(ToColumnExpression(expr, plan.Schema));
+                var normalized = NormalizeColumnWithSchemas(c, plan.Schema.AsNested(), new List<HashSet<Column>>());
+                projectedExpressions.Add(ToColumnExpression(normalized, plan.Schema));
             }
         }
 
@@ -666,8 +674,8 @@ internal static class LogicalExtensions
                 case Alias alias:
                     return alias with { Expression = ToColumnExpression(alias.Expression, schema) };
 
-                //case Cast
-                //case TryCast
+                // case Cast
+                // case TryCast
                 // case ScalarSubQuery
 
                 default:

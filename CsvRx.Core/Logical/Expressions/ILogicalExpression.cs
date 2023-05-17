@@ -50,14 +50,21 @@ internal interface ILogicalExpression : INode
 
     T INode.MapChildren<T>(T instance, Func<T, T> transformation)
     {
-        var transform = transformation as Func<ILogicalExpression, ILogicalExpression>;
+        var transform = (Func<ILogicalExpression, ILogicalExpression>)transformation ;
         
-        return this switch
+        return (this switch
         {
             Alias a => a with {Expression = transform(a.Expression)} as T,
-            Binary b => (ILogicalExpression)new Binary(transform!(b.Left), b.Op, transform(b.Right)) as T,
+            Binary b => new Binary(transform(b.Left), b.Op, transform(b.Right)) as T,
+            AggregateFunction fn => (fn with {Args = TransformList(fn.Args, transform)}) as T,
             _ => (T)this,
-        };
+        })!;
+
+
+        List<ILogicalExpression> TransformList(IEnumerable<ILogicalExpression> list, Func<ILogicalExpression, ILogicalExpression> func)
+        {
+            return list.Select(_ => _.Transform(_, func)).ToList();
+        }
     }
 
     T INode.Transform<T>(T instance, Func<T, T>? func)

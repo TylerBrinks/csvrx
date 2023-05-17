@@ -18,11 +18,11 @@ public abstract class RecordArray
 
     public abstract RecordArray NewEmpty(int count);
 
-    public virtual void FillWithNull(int count)
+    public virtual void FillWithNull(RecordArray array, int count)
     {
         for (var i = 0; i < count; i++)
         {
-            Add(null);
+            array.Add(null);
         }
     }
 }

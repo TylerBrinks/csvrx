@@ -21,7 +21,7 @@ internal class DoubleArray : TypedRecordArray<double?>
     public override RecordArray NewEmpty(int count)
     {
         var array = new DoubleArray();
-        FillWithNull(count);
+        FillWithNull(array, count);
         return array;
     }
 }

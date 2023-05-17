@@ -222,18 +222,24 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
 
     private static ILogicalPlan PushDownScan(IEnumerable<Column> usedColumns, TableScan tableScan)
     {
-        var projection = usedColumns.Select(c =>
-        {
-            var index = tableScan.Source.Schema!.IndexOfColumn(c);
-            if (index == null)
-            {
-                return -1;
-            }
-            return index.Value;
-        }).ToList();
+        var projection = usedColumns
+            .Where(c => c.Relation == null || c.Relation.Name == tableScan.Name)
+            .Select(c =>
+                {
+                    var index = tableScan.Source.Schema!.IndexOfColumn(c);
+                    if (index == null)
+                    {
+                        return -1;
+                    }
+                    return index.Value;
+                })
+            .Where(i => i > -1)
+            .ToList();
 
-        //var fields = projection.Select(i => tableScan.Source.Schema!.Fields[i]).ToList();
-        var fields = projection.Select(i => tableScan.Schema!.Fields[i]).ToList();
+        var fields = projection
+            .Select(i => tableScan.Source.Schema!.Fields[i].FromQualified(new TableReference(tableScan.Name)))
+            .ToList();
+        //var fields = projection.Select(i => tableScan.Schema.Fields[i]).ToList();
 
         var schema = new Schema(fields);
 

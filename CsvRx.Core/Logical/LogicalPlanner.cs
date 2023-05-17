@@ -32,13 +32,14 @@ internal class LogicalPlanner
 
         var havingExpression = select.Having.MapHaving(combinedSchemas, aliasMap);
 
-        var aggregateHaystack = selectExpressions.ToList();
+        var aggregateExpressionList = selectExpressions.ToList();
         if (havingExpression != null)
         {
-            aggregateHaystack.Add(havingExpression);
+            aggregateExpressionList.Add(havingExpression);
         }
 
-        var aggregateExpressions = aggregateHaystack.ToList().FindAggregateExpressions();
+        //TODO 2nd ToList necessary?
+        var aggregateExpressions = aggregateExpressionList.ToList().FindAggregateExpressions();
 
         // check group by expressions inside FindGroupByExpressions, select.rs.line 130
         var groupByExpressions = select.GroupBy.FindGroupByExpressions(
@@ -53,8 +54,8 @@ internal class LogicalPlanner
         if (groupByExpressions.Any() || aggregateExpressions.Any())
         {
             // Wrap the plan in an aggregation
-            (plan, selectPostAggregate, havingPostAggregate) =
-                plan.CreateAggregatePlan(selectExpressions, havingExpression, groupByExpressions, aggregateExpressions);
+            (plan, selectPostAggregate, havingPostAggregate) = plan.CreateAggregatePlan(
+                selectExpressions, havingExpression, groupByExpressions, aggregateExpressions);
         }
         else
         {

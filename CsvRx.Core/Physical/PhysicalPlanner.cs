@@ -210,6 +210,7 @@ internal class PhysicalPlanner
             case JoinType.Left:
             case JoinType.Full:
             case JoinType.Right:
+            {
                 var leftFields = left.Fields
                     .Select(f => OutputJoinField(f, joinType, true))
                     .Select((f, i) => (Field: f, ColumnIndex: new ColumnIndex(i, JoinSide.Left)))
@@ -228,14 +229,29 @@ internal class PhysicalPlanner
                     .Select(f => f.ColumnIndex).Concat(rightFields.Select(f => f.ColumnIndex))
                     .ToList();
                 break;
+            }
+            case JoinType.LeftSemi:
+            case JoinType.LeftAnti:
+            {
+                var allFields = left.Fields
+                    .Select((f, i) => (Field: f, ColumnIndex: new ColumnIndex(i, JoinSide.Left)))
+                    .ToList();
 
-            //case JoinType.LeftSemi:
-            //case JoinType.LeftAnti:
-            //    break;
+                fields = allFields.Select(f => f.Field).ToList();
+                columnIndices = allFields.Select(f => f.ColumnIndex).ToList();
+                break;
+            }
+            case JoinType.RightSemi:
+            case JoinType.RightAnti:
+            {
+                var allFields = left.Fields
+                    .Select((f, i) => (Field: f, ColumnIndex: new ColumnIndex(i, JoinSide.Right)))
+                    .ToList();
 
-            //case JoinType.RightSemi:
-            //case JoinType.RightAnti:
-            //    break;
+                fields = allFields.Select(f => f.Field).ToList();
+                columnIndices = allFields.Select(f => f.ColumnIndex).ToList();
+                break;
+            }
 
             default:
                 throw new NotImplementedException("BuildJoinSchema join type not implemented yet");

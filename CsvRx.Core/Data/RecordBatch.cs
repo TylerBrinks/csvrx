@@ -38,7 +38,6 @@ public record RecordBatch
 
     public int RowCount => Results.Count > 0 ? Results.First().Values.Count : 0;
 
-
     public void Reorder(List<int> indices, List<int>? columnsToIgnore = null)
     {
         for (var i = 0; i < Results.Count; i++)
@@ -128,5 +127,13 @@ public record RecordBatch
         }
 
         return batch;
+    }
+
+    public void Concat(RecordBatch leftBatch)
+    {
+        for (var i = 0; i < Results.Count; i++)
+        {
+            Results[i].Concat(leftBatch.Results[i].Values);
+        }
     }
 }

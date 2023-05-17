@@ -1,3 +1,4 @@
+using CsvRx.Core;
 using CsvRx.Core.Data;
 using CsvRx.Core.Physical.Aggregation;
 
@@ -5,35 +6,6 @@ namespace CsvRx.Tests;
 
 public class AccumulatorTests
 {
-    [Fact]
-    public void MaxAccumulator_Compares_Values()
-    {
-        var accumulator = new MaxAccumulator(ColumnDataType.Double);
-        accumulator.Accumulate(-1);
-        accumulator.Accumulate(1);
-        accumulator.Accumulate(2);
-        accumulator.Accumulate(3);
-        accumulator.Accumulate(4.5);
-        accumulator.Accumulate(5);
-
-        Assert.Equal(5d, accumulator.Value);
-    }
-
-    [Fact]
-    public void MinAccumulator_Compares_Values()
-    {
-        var accumulator = new MinAccumulator(ColumnDataType.Double);
-        accumulator.Accumulate(-1);
-        accumulator.Accumulate(1);
-        accumulator.Accumulate(2);
-        accumulator.Accumulate(3);
-        accumulator.Accumulate(4.5);
-        accumulator.Accumulate(5);
-
-        Assert.Equal(-1d, accumulator.Value);
-        Assert.Equal(-1l, accumulator.Evaluate.RawValue);
-    }
-
     [Fact]
     public void AverageAccumulator_Averages_Values()
     {
@@ -62,17 +34,31 @@ public class AccumulatorTests
     }
 
     [Fact]
-    public void SumAccumulator_Averages_Values()
+    public void CovarianceAccumulator_Calculates_Sample_Values()
     {
-        var accumulator = new SumAccumulator(ColumnDataType.Integer);
+        var accumulator = new CovarianceAccumulator(ColumnDataType.Integer, StatisticType.Sample);
 
+        for (var i = 0; i < 100; i++)
+        {
+            accumulator.Accumulate(i);
+        }
+
+        Assert.Equal((uint)100, accumulator.Value);
+    }
+    //cov
+    // groupedhash
+    [Fact]
+    public void MaxAccumulator_Compares_Values()
+    {
+        var accumulator = new MaxAccumulator(ColumnDataType.Double);
+        accumulator.Accumulate(-1);
         accumulator.Accumulate(1);
         accumulator.Accumulate(2);
         accumulator.Accumulate(3);
-        accumulator.Accumulate(4);
+        accumulator.Accumulate(4.5);
         accumulator.Accumulate(5);
 
-        Assert.Equal(15, accumulator.Value);
+        Assert.Equal(5d, accumulator.Value);
     }
 
     [Fact]
@@ -93,4 +79,34 @@ public class AccumulatorTests
         Assert.Equal(5l, accumulator.Value);
         Assert.Equal(5l, accumulator.Evaluate.RawValue);
     }
+
+    [Fact]
+    public void MinAccumulator_Compares_Values()
+    {
+        var accumulator = new MinAccumulator(ColumnDataType.Double);
+        accumulator.Accumulate(-1);
+        accumulator.Accumulate(1);
+        accumulator.Accumulate(2);
+        accumulator.Accumulate(3);
+        accumulator.Accumulate(4.5);
+        accumulator.Accumulate(5);
+
+        Assert.Equal(-1d, accumulator.Value);
+        Assert.Equal(-1l, accumulator.Evaluate.RawValue);
+    }
+    //std
+    [Fact]
+    public void SumAccumulator_Averages_Values()
+    {
+        var accumulator = new SumAccumulator(ColumnDataType.Integer);
+
+        accumulator.Accumulate(1);
+        accumulator.Accumulate(2);
+        accumulator.Accumulate(3);
+        accumulator.Accumulate(4);
+        accumulator.Accumulate(5);
+
+        Assert.Equal(15, accumulator.Value);
+    }
+    //var
 }

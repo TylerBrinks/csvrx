@@ -15,13 +15,21 @@ context.RegisterCsv("test_b", @"C:\Users\tyler\source\repos\sink\CsvRx\CsvRx\joi
 
 //var sql = "SELECT c1 as abc FROM mycsv group by 1";
 //var sql = "SELECT c1, count(c3) as cnt FROM mycsv group by c1";
-//var sql = "SELECT c1, count(c3) as cnt FROM mycsv group by c1 having cnt > 18";
+
+var sql = "SELECT covar(c2, c12) aa FROM mycsv";
+
 //var sql = "SELECT c1, c2 as abc FROM mycsv where c1 = 'c'";
 //var sql = "SELECT c1 as a, c3 FROM mycsv order by a limit 23 offset 20"
 //var sql = "SELECT c1, c2 as abc FROM mycsv mv where mv.c1 = 'c'";
 
 
-var sql = "SELECT test_a.c2, test_a.c3, test_b.c2 FROM test_a left join test_b on test_a.c1 = test_b.c1";
+//****var sql = "SELECT test_a.c2, test_a.c3, test_b.c2 FROM test_a join test_b USING(c1)";
+//select t1.* from t t1 CROSS JOIN t t2"
+//let sql = "SELECT test.col_int32 FROM test JOIN ( SELECT col_int32 FROM test WHERE false ) AS ta1 ON test
+//var sql = "SELECT test_a.c2, test_a.c3, test_b.c2 FROM test_a full outer join test_b on test_a.c1 = test_b.c1";
+//var sql = "SELECT test_a.c2, test_a.c3 FROM test_a left semi join test_b on test_a.c1 = test_b.c1";
+
+//var sql = "SELECT ta.c2 aa, ta.c3 bb, tb.c2 tb FROM test_a ta join test_b tb on ta.c1 = tb.c1";
 
 try
 {

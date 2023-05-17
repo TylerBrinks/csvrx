@@ -137,8 +137,6 @@ internal interface ILogicalPlan : INode
             return new Join(inputs[0], inputs[1], newOn, filterExpression, join.JoinType, join.JoinConstraint, schema);
         }
     }
-
-
 }
 
 internal interface ILogicalPlanParent : ILogicalPlan

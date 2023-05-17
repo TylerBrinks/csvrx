@@ -22,7 +22,7 @@ internal class BooleanArray : TypedRecordArray<bool?>
     public override RecordArray NewEmpty(int count)
     {
         var array = new BooleanArray();
-        FillWithNull(count);
+        FillWithNull(array, count);
         return array;
     }
 }

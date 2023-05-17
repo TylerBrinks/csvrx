@@ -15,35 +15,34 @@ internal record Join(
     ) : ILogicalPlanParent
 {
     internal static Join TryNew(
-        ILogicalPlan Left,
-        ILogicalPlan Right,
-        JoinType JoinType,
-        (List<Column> Left, List<Column> Rigt) JoinKeys,
-        JoinConstraint JoinConstraint,
-        ILogicalExpression? Filter)
+        ILogicalPlan left,
+        ILogicalPlan right,
+        JoinType joinType,
+        (List<Column> Left, List<Column> Rigt) joinKeys,
+        JoinConstraint joinConstraint,
+        ILogicalExpression? expressionFilter)
     {
         ILogicalExpression? filter = null;
-        if (Filter != null)
+        if (expressionFilter != null)
         {
-            var schemas = new List<List<Schema>> { new() { Left.Schema, Right.Schema } };
-            filter = Filter.NormalizeColumnWithSchemas(schemas, new List<HashSet<Column>>());
+            var schemas = new List<List<Schema>> { new() { left.Schema, right.Schema } };
+            filter = expressionFilter.NormalizeColumnWithSchemas(schemas, new List<HashSet<Column>>());
         }
 
         // join keys
-        var (leftKeys, rightKeys) = GetJoinKeys(JoinKeys);
+        var (leftKeys, rightKeys) = GetJoinKeys(joinKeys);
 
         var on = leftKeys.Zip(rightKeys)
             .Select(k => ((ILogicalExpression)k.First, (ILogicalExpression)k.Second))
             .ToList();
 
-        var joinSchema = LogicalExtensions.BuildJoinSchema(Left.Schema, Right.Schema, JoinType);
+        var joinSchema = LogicalExtensions.BuildJoinSchema(left.Schema, right.Schema, joinType);
 
-        return new Join(Left, Right, on, filter, JoinType, JoinConstraint, joinSchema);
+        return new Join(left, right, on, filter, joinType, joinConstraint, joinSchema);
 
-
-        (List<Column> Left, List<Column> Right) GetJoinKeys((List<Column> Left, List<Column> Right) joinKeys)
+        (List<Column> Left, List<Column> Right) GetJoinKeys((List<Column> Left, List<Column> Right) joinKeyValues)
         {
-            var keys = joinKeys.Left.Zip(joinKeys.Right)
+            var keys = joinKeyValues.Left.Zip(joinKeyValues.Right)
                 .Select(k =>
                 {
                     var leftColumn = k.First;
@@ -59,34 +58,34 @@ internal record Join(
                         _ => throw new NotImplementedException()
                     };
 
-                    (Column Left, Column Right) GetDualKeys(TableReference left, TableReference right)
+                    (Column Left, Column Right) GetDualKeys(TableReference leftReference, TableReference rightReference)
                     {
-                        var leftPlan = ((ILogicalPlanParent)Left).Plan;
-                        var rightPlan = ((ILogicalPlanParent)Right).Plan;
+                        var leftPlan = ((ILogicalPlanParent)left).Plan;
+                        var rightPlan = ((ILogicalPlanParent)right).Plan;
 
-                        var alIsLeft = leftPlan.Schema.FieldsWithQualifiedName(left, leftColumn.Name);
-                        var aColIsRight = rightPlan.Schema.FieldsWithQualifiedName(left, leftColumn.Name);
-                        var bIsLeft = leftPlan.Schema.FieldsWithQualifiedName(right, rightColumn.Name);
-                        var bIsRight = rightPlan.Schema.FieldsWithQualifiedName(right, rightColumn.Name);
+                        var alIsLeft = leftPlan.Schema.FieldsWithQualifiedName(leftReference, leftColumn.Name);
+                        var aColIsRight = rightPlan.Schema.FieldsWithQualifiedName(leftReference, leftColumn.Name);
+                        var bIsLeft = leftPlan.Schema.FieldsWithQualifiedName(rightReference, rightColumn.Name);
+                        var bIsRight = rightPlan.Schema.FieldsWithQualifiedName(rightReference, rightColumn.Name);
 
                         return (lIsLeft: alIsLeft, lIsRight: aColIsRight, rIsLeft: bIsLeft, rIsRight: bIsRight) switch
                         {
                             (_, { }, { }, _) => (r: rightColumn, l: leftColumn),
                             ({ }, _, _, { }) => (l: leftColumn, r: rightColumn),
-                            _ => (Normalize(Left, leftColumn), Normalize(Right, rightColumn))
+                            _ => (Normalize(left, leftColumn), Normalize(right, rightColumn))
                         };
                     }
 
                 }).ToList();
 
-            return joinKeys;
+            return joinKeyValues;
         }
 
-        Column Normalize(ILogicalPlan left, Column leftColumn)
+        Column Normalize(ILogicalPlan leftPlan, Column leftColumn)
         {
-            var schema = new List<Schema> { left.Schema };
-            var fallbackSchemas = Left.FallbackNormalizeSchemas();
-            var usingColumns = Left.UsingColumns;
+            var schema = new List<Schema> { leftPlan.Schema };
+            var fallbackSchemas = left.FallbackNormalizeSchemas();
+            var usingColumns = left.UsingColumns;
 
             var schemaList = new List<List<Schema>> { schema, fallbackSchemas };
             return leftColumn.NormalizeColumnWithSchemas(schemaList, usingColumns);

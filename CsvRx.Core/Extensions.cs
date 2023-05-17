@@ -7,5 +7,10 @@ namespace CsvRx.Core
         {
             return source.Cast<long?>().ToArray();
         }
+
+        internal static int NullCount(this IEnumerable<long?> source)
+        {
+            return source.Count(i => i == null);
+        }
     }
 }
