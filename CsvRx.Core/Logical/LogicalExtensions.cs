@@ -279,7 +279,7 @@ internal static class LogicalExtensions
 
             case JoinOperator.LeftSemi ls:
                 return ParseJoin(left, right, ls.JoinConstraint, JoinType.LeftSemi, context);
-            
+
             case JoinOperator.RightSemi rs:
                 return ParseJoin(left, right, rs.JoinConstraint, JoinType.RightSemi, context);
 
@@ -608,7 +608,7 @@ internal static class LogicalExtensions
         var schema = plan.Schema;
         var fallback = plan.FallbackNormalizeSchemas();
         var usingColumns = plan.UsingColumns;
-        var schemas = new List<List<Schema>> { new() {schema}, fallback };
+        var schemas = new List<List<Schema>> { new() { schema }, fallback };
         var normalized = NormalizeColumnWithSchemas(column, schemas, usingColumns);
 
         return normalized;
@@ -677,13 +677,15 @@ internal static class LogicalExtensions
 
         foreach (var expr in expressions)
         {
-            // wildcard?
-            // unqualified wildcard?
-            //if (expr is Column c)
+            if (expr is Wildcard /*or QualifiedWildcard*/)
             {
+                throw new NotImplementedException("Need to implement wildcard");
+            }
+            //else 
+            //{
                 var normalized = NormalizeColumnWithSchemas(expr, plan.Schema.AsNested(), new List<HashSet<Column>>());
                 projectedExpressions.Add(ToColumnExpression(normalized, plan.Schema));
-            }
+            //}
         }
 
         var fields = projectedExpressions.ExpressionListToFields(plan);
@@ -811,8 +813,8 @@ internal static class LogicalExtensions
         List<QualifiedField> GetLeftJoinFields()
         {
             var rightFieldsNullable = rightFields
-                .Select(f => f.Qualifier != null 
-                    ? new QualifiedField(f.Name, f.DataType, f.Qualifier) 
+                .Select(f => f.Qualifier != null
+                    ? new QualifiedField(f.Name, f.DataType, f.Qualifier)
                     : new QualifiedField(f.Name, f.DataType)).ToList();
 
             return leftFields.ToList().Concat(rightFieldsNullable).ToList();
