@@ -8,71 +8,81 @@ context.RegisterCsv("mycsv", @"C:\Users\tyler\source\repos\sink\CsvRx\CsvRx\test
 context.RegisterCsv("test_a", @"C:\Users\tyler\source\repos\sink\CsvRx\CsvRx\join_a.csv");
 context.RegisterCsv("test_b", @"C:\Users\tyler\source\repos\sink\CsvRx\CsvRx\join_b.csv");
 
-//var results = context.ExecuteSql("SELECT c1, MAX(c3) FROM aggregate_test_100 GROUP BY c1"); //WHERE c11 > .2 AND c11 < 0.9 
-//var results = context.ExecuteSql("SELECT * FROM aggregate_test_100");
-//var results = context.ExecuteSql("SELECT avg(c3) FROM aggregate_test_100 group by c1");
-//var results = context.ExecuteSql("SELECT c1, c3 FROM aggregate_test_100 order by c1, c3");
-
-//var sql = "SELECT c1 as abc FROM mycsv group by 1";
-//var sql = "SELECT c1, count(c3) as cnt FROM mycsv group by c1";
-
-var sql = "SELECT covar(c2, c12) aa FROM mycsv";
-
-//var sql = "SELECT c1, c2 as abc FROM mycsv where c1 = 'c'";
-//var sql = "SELECT c1 as a, c3 FROM mycsv order by a limit 23 offset 20"
-//var sql = "SELECT c1, c2 as abc FROM mycsv mv where mv.c1 = 'c'";
-
-
-//****var sql = "SELECT test_a.c2, test_a.c3, test_b.c2 FROM test_a join test_b USING(c1)";
-//select t1.* from t t1 CROSS JOIN t t2"
-//let sql = "SELECT test.col_int32 FROM test JOIN ( SELECT col_int32 FROM test WHERE false ) AS ta1 ON test
-//var sql = "SELECT test_a.c2, test_a.c3, test_b.c2 FROM test_a full outer join test_b on test_a.c1 = test_b.c1";
-//var sql = "SELECT test_a.c2, test_a.c3 FROM test_a left semi join test_b on test_a.c1 = test_b.c1";
-
-//var sql = "SELECT ta.c2 aa, ta.c3 bb, tb.c2 tb FROM test_a ta join test_b tb on ta.c1 = tb.c1";
-
-try
+var queries = new List<string>
 {
-    Console.WriteLine();
-    var options = new QueryOptions
-    {
-        BatchSize = 3
-    };
-    Table? table = null;
-    context.BuildLogicalPlan(sql);
-    var exec = context.BuildPhysicalPlan();
+    "SELECT c1, MAX(c3) FROM mycsv GROUP BY c1", //WHERE c11 > .2 AND c11 < 0.9 
+    "SELECT * FROM mycsv",
+    "SELECT avg(c3) FROM mycsv group by c1",
+    "SELECT c1, c3 FROM mycsv order by c1, c3",
 
-    await foreach (var batch in context.ExecutePlan(exec, options))
+    "SELECT c1 as abc FROM mycsv group by 1",
+    "SELECT c1, count(c3) as cnt FROM mycsv group by c1",
+    "SELECT covar(c2, c12) aa FROM mycsv",
+
+    "SELECT c1, c2 as abc FROM mycsv where c1 = 'c'",
+    "SELECT c1 as a, c3 FROM mycsv order by a limit 23 offset 20",
+    "SELECT c1, c2 as abc FROM mycsv mv where mv.c1 = 'c'",
+
+
+    //****var sql = "SELECT test_a.c2, test_a.c3, test_b.c2 FROM test_a join test_b USING(c1)";
+    //select t1.* from t t1 CROSS JOIN t t2"
+    //let sql = "SELECT test.col_int32 FROM test JOIN ( SELECT col_int32 FROM test WHERE false ) AS ta1 ON test
+    //var sql = "SELECT test_a.c2, test_a.c3, test_b.c2 FROM test_a full outer join test_b on test_a.c1 = test_b.c1";
+    //var sql = "SELECT test_a.c2, test_a.c3 FROM test_a left semi join test_b on test_a.c1 = test_b.c1";
+
+    "SELECT ta.c2 aa, ta.c3 bb, tb.c2 tb FROM test_a ta join test_b tb on ta.c1 = tb.c1"
+
+};
+
+foreach (var sql in queries)
+{
+    try
     {
-        if (table == null)
+        //Console.Clear();
+        Console.WriteLine();
+        Console.WriteLine();
+        AnsiConsole.MarkupLine($"[green]{sql}[/]");
+
+        var options = new QueryOptions
         {
-            table = new Table();
-            foreach (var field in batch.Schema.Fields)
+            BatchSize = 3
+        };
+
+        Table? table = null;
+
+        await foreach (var batch in context.ExecuteSql(sql, options))
+        {
+            if (table == null)
             {
-                table.AddColumn(field.Name);
+                table = new Table();
+                foreach (var field in batch.Schema.Fields)
+                {
+                    table.AddColumn(field.Name);
+                }
+            }
+
+            for (var i = 0; i < batch.RowCount; i++)
+            {
+                table.AddRow(batch.Results.Select(value => value.Values[i]?.ToString() ?? "").ToArray());
             }
         }
 
-        for (var i = 0; i < batch.RowCount; i++)
-        {
-            table.AddRow(batch.Results.Select(value => value.Values[i]?.ToString() ?? "").ToArray());
-        }
+        AnsiConsole.Write(table);
     }
-
-    AnsiConsole.Write(table);
+    catch (ParserException pe)
+    {
+        NotifyInvalidSyntax(sql, pe.Message, Convert.ToUInt32(pe.Line), Convert.ToUInt32(pe.Column));
+    }
+    catch (TokenizeException te)
+    {
+        NotifyInvalidSyntax(sql, te.Message, Convert.ToUInt32(te.Line), Convert.ToUInt32(te.Column));
+    }
+    //catch (Exception ex)
+    //{
+    //    throw ex;
+    //}
+    Console.ReadKey();
 }
-catch (ParserException pe)
-{
-    NotifyInvalidSyntax(sql, pe.Message, Convert.ToUInt32(pe.Line), Convert.ToUInt32(pe.Column));
-}
-catch (TokenizeException te)
-{
-    NotifyInvalidSyntax(sql, te.Message, Convert.ToUInt32(te.Line), Convert.ToUInt32(te.Column));
-}
-//catch (Exception ex)
-//{
-//    throw ex;
-//}
 
 static void NotifyInvalidSyntax(string query, string message, uint line, uint column)
 {

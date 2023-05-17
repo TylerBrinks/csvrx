@@ -584,9 +584,34 @@ internal static class LogicalExtensions
 
             groupByExpr = groupByExpr.ResolveAliasToExpressions(aliasMap);
             groupByExpr = groupByExpr.ResolvePositionsToExpressions(selectExpressions) ?? groupByExpr;
-
+            groupByExpr = groupByExpr.NormalizeColumn(plan);
             return groupByExpr;
         }).ToList();
+    }
+
+    internal static ILogicalExpression NormalizeColumn(this ILogicalExpression expression, ILogicalPlan plan)
+    {
+        return expression.Transform(expression, e =>
+        {
+            if (e is Column c)
+            {
+                return c.Normalize(plan);
+            }
+
+            return e;
+        });
+    }
+
+
+    internal static ILogicalExpression Normalize(this Column column, ILogicalPlan plan)
+    {
+        var schema = plan.Schema;
+        var fallback = plan.FallbackNormalizeSchemas();
+        var usingColumns = plan.UsingColumns;
+        var schemas = new List<List<Schema>> { new() {schema}, fallback };
+        var normalized = NormalizeColumnWithSchemas(column, schemas, usingColumns);
+
+        return normalized;
     }
 
     internal static ILogicalExpression? MapHaving(this Expression? having, Schema schema, Dictionary<string, ILogicalExpression> aliasMap)
@@ -654,9 +679,9 @@ internal static class LogicalExtensions
         {
             // wildcard?
             // unqualified wildcard?
-            if (expr is Column c)
+            //if (expr is Column c)
             {
-                var normalized = NormalizeColumnWithSchemas(c, plan.Schema.AsNested(), new List<HashSet<Column>>());
+                var normalized = NormalizeColumnWithSchemas(expr, plan.Schema.AsNested(), new List<HashSet<Column>>());
                 projectedExpressions.Add(ToColumnExpression(normalized, plan.Schema));
             }
         }

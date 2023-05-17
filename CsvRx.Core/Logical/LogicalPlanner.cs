@@ -45,7 +45,7 @@ internal class LogicalPlanner
         var groupByExpressions = select.GroupBy.FindGroupByExpressions(
             selectExpressions,
             combinedSchemas,
-            plan,
+            projectedPlan, //plan
             aliasMap);
 
         List<ILogicalExpression>? selectPostAggregate;

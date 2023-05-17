@@ -11,7 +11,6 @@ namespace CsvRx.Execution;
 public class ExecutionContext
 {
     private readonly Dictionary<string, DataSource> _tables = new();
-    private ILogicalPlan _logicalPlan = null!;
 
     public void RegisterCsv(string tableName, string path)
     {
@@ -28,7 +27,31 @@ public class ExecutionContext
         _tables.Add(tableName, dataSource);
     }
 
-    public void BuildLogicalPlan(string sql)
+    public async IAsyncEnumerable<RecordBatch> ExecuteSql(string sql)
+    {
+        await foreach (var batch in ExecuteSql(sql, new QueryOptions()))
+        {
+            yield return batch;
+        }
+    }
+
+    public async IAsyncEnumerable<RecordBatch> ExecuteSql(string sql, QueryOptions options)
+    {
+        var logicalPlan = BuildLogicalPlan(sql);
+        var physicalPlan = BuildPhysicalPlan(logicalPlan);
+
+        if (physicalPlan == null)
+        {
+            throw new InvalidOperationException("Must build a physical plan first");
+        }
+
+        await foreach (var batch in physicalPlan.Execute(options))
+        {
+            yield return batch;
+        }
+    }
+   
+    private ILogicalPlan BuildLogicalPlan(string sql)
     {
         var ast = new Parser().ParseSql(sql);
 
@@ -43,38 +66,16 @@ public class ExecutionContext
             _ => throw new NotImplementedException()
         };
 
-        _logicalPlan = new LogicalPlanOptimizer().Optimize(plan)!;
+        return new LogicalPlanOptimizer().Optimize(plan)!;
     }
 
-    public IExecutionPlan BuildPhysicalPlan()
+    private static IExecutionPlan BuildPhysicalPlan(ILogicalPlan logicalPlan)
     {
-        if (_logicalPlan == null)
+        if (logicalPlan == null)
         {
             throw new InvalidOperationException("Must build a logical plan first");
         }
 
-        return new PhysicalPlanner().CreateInitialPlan(_logicalPlan);
+        return new PhysicalPlanner().CreateInitialPlan(logicalPlan);
     }
-
-    public async IAsyncEnumerable<RecordBatch> ExecutePlan(IExecutionPlan executionPlan, QueryOptions options)
-    {
-        if (executionPlan == null)
-        {
-            throw new InvalidOperationException("Must build a physical plan first");
-        }
-
-        await foreach (var batch in executionPlan.Execute(options))
-        {
-            yield return batch;
-        }
-    }
-
-
-    //internal static async IAsyncEnumerable<RecordBatch> ExecutePhysicalPlan(IExecutionPlan physicalPlan, QueryOptions options)
-    //{
-    //    await foreach (var batch in physicalPlan.Execute(options))
-    //    {
-    //        yield return batch;
-    //    }
-    //}
 }
