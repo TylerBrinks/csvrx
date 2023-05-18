@@ -11,17 +11,12 @@ internal record Sort(ILogicalPlan Plan, List<ILogicalExpression> OrderByExpressi
 
         var missingColumns = new HashSet<Column>();
 
-        foreach (var expr in expressions)
-        {
-            var columns = expr.ToColumns();
+        var missingExpressions = expressions.Select(expr => expr.ToColumns())
+            .SelectMany(columns => columns.Where(column => plan.Schema.FieldFromColumn(column) == null));
 
-            foreach (var column in columns)
-            {
-                if (plan.Schema.FieldFromColumn(column) == null)
-                {
-                    missingColumns.Add(column);
-                }
-            }
+        foreach (var column in missingExpressions)
+        {
+            missingColumns.Add(column);
         }
 
         if (!missingColumns.Any())
@@ -33,9 +28,7 @@ internal record Sort(ILogicalPlan Plan, List<ILogicalExpression> OrderByExpressi
 
         plan = plan.AddMissingColumns(missingColumns, false);
 
-        var normalized = expressions.NormalizeColumn(plan);
-
-        var sort = new Sort(plan, normalized);
+        var sort = new Sort(plan, expressions.NormalizeColumn(plan));
 
         return new Projection(sort, newExpressions, plan.Schema);
     }
