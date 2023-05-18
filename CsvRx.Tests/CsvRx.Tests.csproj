@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CsvRx.Core\CsvRx.Core.csproj" />
+    <ProjectReference Include="..\CsvRx.Execution\CsvRx.Execution.csproj" />
   </ItemGroup>
 
 </Project>

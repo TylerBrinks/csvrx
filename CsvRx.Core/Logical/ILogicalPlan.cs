@@ -70,8 +70,11 @@ internal interface ILogicalPlan : INode
 
     ILogicalPlan WithNewInputs(List<ILogicalPlan> inputs)
     {
-        var expressions = GetExpressions();
+        return FromPlan(GetExpressions(), inputs);
+    }
 
+    ILogicalPlan FromPlan(List<ILogicalExpression> expressions, List<ILogicalPlan> inputs)
+    {
         switch (this)
         {
             case Projection p:

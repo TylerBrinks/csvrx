@@ -78,4 +78,20 @@ public class Schema
         var fields = Fields.ToList().Concat(joinSchema.Fields.ToList()).ToList();
         return new Schema(fields);
     }
+
+    internal QualifiedField? FieldFromColumn(Column column)
+    {
+        return column.Relation != null 
+            ? GetQualifiedField(column.Relation, column.Name) 
+            : FieldsWithUnqualifiedName(column.Name).FirstOrDefault();
+    }
+
+    internal bool HasColumn(Column column)
+    {
+        Field? field = column.Relation != null 
+            ? GetQualifiedField(column.Relation, column.Name) 
+            : FieldsWithUnqualifiedName(column.Name).FirstOrDefault();
+
+        return field != null;
+    }
 }

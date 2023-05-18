@@ -10,5 +10,9 @@
     <ProjectReference Include="..\CsvRx.Core\CsvRx.Core.csproj" />
     <ProjectReference Include="..\CsvRx.Csv\CsvRx.Csv.csproj" />
   </ItemGroup>
+	
+  <ItemGroup>
+    <InternalsVisibleTo Include="CsvRx.Tests" />
+  </ItemGroup>
 
 </Project>

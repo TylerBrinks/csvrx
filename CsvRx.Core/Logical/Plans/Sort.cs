@@ -10,7 +10,19 @@ internal record Sort(ILogicalPlan Plan, List<ILogicalExpression> OrderByExpressi
         var expressions = RewriteByAggregates(orderByExpressions, plan);
 
         var missingColumns = new HashSet<Column>();
-        expressions.ExpressionListToColumns(missingColumns);
+
+        foreach (var expr in expressions)
+        {
+            var columns = expr.ToColumns();
+
+            foreach (var column in columns)
+            {
+                if (plan.Schema.FieldFromColumn(column) == null)
+                {
+                    missingColumns.Add(column);
+                }
+            }
+        }
 
         if (!missingColumns.Any())
         {
@@ -19,7 +31,11 @@ internal record Sort(ILogicalPlan Plan, List<ILogicalExpression> OrderByExpressi
 
         var newExpressions = plan.Schema.Fields.Select(f => (ILogicalExpression)f.QualifiedColumn()).ToList();
 
-        var sort = new Sort(plan, newExpressions);
+        plan = plan.AddMissingColumns(missingColumns, false);
+
+        var normalized = expressions.NormalizeColumn(plan);
+
+        var sort = new Sort(plan, normalized);
 
         return new Projection(sort, newExpressions, plan.Schema);
     }

@@ -123,17 +123,17 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
 
                     return projection.WithNewInputs(new List<ILogicalPlan> { scan });
                 }
-            case SubqueryAlias a:
+            case SubqueryAlias sa:
                 {
-                    var replaceMap = GenerateColumnReplaceMap(a);
+                    var replaceMap = GenerateColumnReplaceMap(sa);
                     var requiredColumns = new HashSet<Column>();
                     var expr = ((Projection)projection).Expression;
 
                     expr.ExpressionListToColumns(requiredColumns);
 
                     var newRequiredColumns = requiredColumns.Select(c => replaceMap[c]).ToList();
-                    var newExpression = GetExpression(newRequiredColumns, a.Plan.Schema);
-                    var newProjection = Projection.TryNew(a.Plan, newExpression);
+                    var newExpression = GetExpression(newRequiredColumns, sa.Plan.Schema);
+                    var newProjection = Projection.TryNew(sa.Plan, newExpression);
                     var newAlias = childPlan.WithNewInputs(new List<ILogicalPlan> { newProjection });
 
                     return GeneratePlan(empty, projection, newAlias);
@@ -158,6 +158,26 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
                     var newRight = GenerateProjection(pushColumns, j.Right.Schema, j.Right);
                     var newJoin = childPlan.WithNewInputs(new List<ILogicalPlan> { newLeft, newRight });
                     return GeneratePlan(empty, projection, newJoin);
+                }
+
+            case Sort s:
+                {
+                    if (CanEliminate(projection, childPlan.Schema))
+                    {
+                        var newProjection = projection.WithNewInputs(new List<ILogicalPlan> { s.Plan });
+                        return childPlan.WithNewInputs(new List<ILogicalPlan> { newProjection });
+                    }
+                    else
+                    {
+                        var requiredColumns = new HashSet<Column>();
+                        projection.GetExpressions().ExpressionListToColumns(requiredColumns);
+                        s.OrderByExpressions.ExpressionListToColumns(requiredColumns);
+                        var newExpression = GetExpression(requiredColumns, s.Plan.Schema);
+                        var newProjection = Projection.TryNew(s.Plan, newExpression);
+                        var newSort = childPlan.WithNewInputs(new List<ILogicalPlan> {newProjection});
+                        
+                        return GeneratePlan(empty, projection, newSort);
+                    }
                 }
             default:
                 throw new NotImplementedException("FromChildPlan plan type not implemented yet");

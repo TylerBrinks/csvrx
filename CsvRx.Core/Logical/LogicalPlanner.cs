@@ -18,10 +18,10 @@ internal class LogicalPlanner
         var plan = select.From.PlanTableWithJoins(context);
 
         // Wrap the scan in a filter if a where clause exists
-        plan = select.Selection.PlanFromSelection(plan);
+        plan = select.Selection.PlanFromSelection(plan, context);
 
         // Build a select plan converting each select item into a logical expression
-        var selectExpressions = select.Projection.PrepareSelectExpressions(plan, plan is EmptyRelation);
+        var selectExpressions = select.Projection.PrepareSelectExpressions(plan, plan is EmptyRelation, context);
 
         var projectedPlan = plan.PlanProjection(selectExpressions);
 
@@ -30,7 +30,7 @@ internal class LogicalPlanner
 
         var aliasMap = selectExpressions.Where(e => e is Alias).Cast<Alias>().ToDictionary(a => a.Name, a => a.Expression);
 
-        var havingExpression = select.Having.MapHaving(combinedSchemas, aliasMap);
+        var havingExpression = select.Having.MapHaving(combinedSchemas, aliasMap, context);
 
         var aggregateExpressionList = selectExpressions.ToList();
         if (havingExpression != null)
@@ -44,8 +44,9 @@ internal class LogicalPlanner
         var groupByExpressions = select.GroupBy.FindGroupByExpressions(
             selectExpressions,
             combinedSchemas,
-            projectedPlan, //plan
-            aliasMap);
+            projectedPlan,
+            aliasMap,
+            context);
 
         List<ILogicalExpression>? selectPostAggregate;
         ILogicalExpression? havingPostAggregate;
@@ -81,7 +82,7 @@ internal class LogicalPlanner
         }
 
         // Wrap the plan in a sort
-        plan = plan.OrderBy(query.OrderBy);
+        plan = plan.OrderBy(query.OrderBy, context);
 
         // Wrap the plan in a limit
         return plan.Limit(query.Offset, query.Limit);

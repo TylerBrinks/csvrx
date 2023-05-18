@@ -1,4 +1,6 @@
-﻿namespace CsvRx.Core.Logical.Expressions;
+﻿using CsvRx.Core.Logical.Plans;
+
+namespace CsvRx.Core.Logical.Expressions;
 
 internal interface ILogicalExpression : INode
 {
@@ -26,11 +28,14 @@ internal interface ILogicalExpression : INode
         return expression switch
         {
             Column or ScalarVariable => new List<ILogicalExpression>(),
-            Binary b => new List<ILogicalExpression> { b.Left, b.Right },
             AggregateFunction fn => GetAggregateChildren(fn),
             Alias a => new List<ILogicalExpression> { a.Expression },
+            OrderBy o => new List<ILogicalExpression>{ o.Expression },
+
+            Binary b => new List<ILogicalExpression> { b.Left, b.Right },
+
             //// Like
-            //// between
+            //// Between
             //// Case
             //// InList
             _ => new List<ILogicalExpression>()
@@ -56,7 +61,9 @@ internal interface ILogicalExpression : INode
         {
             Alias a => a with {Expression = transform(a.Expression)} as T,
             Binary b => new Binary(transform(b.Left), b.Op, transform(b.Right)) as T,
-            AggregateFunction fn => (fn with {Args = TransformList(fn.Args, transform)}) as T,
+            AggregateFunction fn => fn with {Args = TransformList(fn.Args, transform)} as T,
+            OrderBy o => o with {Expression = transform(o.Expression)} as T,
+            
             _ => (T)this,
         })!;
 

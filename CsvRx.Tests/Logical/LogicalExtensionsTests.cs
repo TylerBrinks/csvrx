@@ -3,7 +3,6 @@ using CsvRx.Core.Logical;
 using CsvRx.Core.Logical.Expressions;
 using CsvRx.Core.Logical.Values;
 using SqlParser.Ast;
-using System.Linq.Expressions;
 using SqlParser;
 using static SqlParser.Ast.Expression;
 // ReSharper disable IdentifierTypo
@@ -156,17 +155,18 @@ namespace CsvRx.Tests.Logical
             var ident = new Identifier("ident");
             var fn = new Function(new ObjectName("min"));
             var compound = new CompoundIdentifier(new Sequence<Ident>(new List<Ident> { "first" }));
+            var context = new PlannerContext(null, null);
 
-            var literalExpr = (Literal)literal.SqlToExpression(null);
+            var literalExpr = (Literal)literal.SqlToExpression(null, context);
             Assert.True((bool)literalExpr.Value.RawValue!);
 
-            var identExpr = (Column)ident.SqlToExpression(schema);
+            var identExpr = (Column)ident.SqlToExpression(schema, context);
             Assert.Equal("ident", identExpr.Name);
 
-            var fnExpr = (AggregateFunction)fn.SqlToExpression(schema);
+            var fnExpr = (AggregateFunction)fn.SqlToExpression(schema, context);
             Assert.Equal(AggregateFunctionType.Min, fnExpr.FunctionType);
 
-            var compoundExpr = (Column)compound.SqlToExpression(schema);
+            var compoundExpr = (Column)compound.SqlToExpression(schema, context);
             Assert.Equal("first", compoundExpr.Name);
         }
 
@@ -185,7 +185,7 @@ namespace CsvRx.Tests.Logical
                 BinaryOperator.Eq,
                 new LiteralValue(new Value.Number("1")));
 
-            var binaryExpr = (Binary)binary.SqlToExpression(schema);
+            var binaryExpr = (Binary)binary.SqlToExpression(schema, new PlannerContext(null, null));
             Assert.IsType<Literal>(binaryExpr.Left);
             Assert.IsType<Literal>(binaryExpr.Right);
             Assert.Equal(BinaryOperator.Eq, binaryExpr.Op);
@@ -238,8 +238,8 @@ namespace CsvRx.Tests.Logical
         public void Identifiers_Convert_To_Columns()
         {
             var ident = new Identifier(new Ident("name"));
-            var schema = new Schema(new List<QualifiedField> {new("name", ColumnDataType.Integer) });
-            var column = ident.SqlIdentifierToExpression(schema);
+            var schema = new Schema(new List<QualifiedField> { new("name", ColumnDataType.Integer) });
+            var column = ident.SqlIdentifierToExpression(schema, new PlannerContext(null, null));
             Assert.Equal("name", column.Name);
             Assert.Null(column.Relation);
         }
@@ -273,7 +273,7 @@ namespace CsvRx.Tests.Logical
         [Fact]
         public void Idents_Convert_To_Search_Terms()
         {
-            var terms = new List<string> {"one", "two" };
+            var terms = new List<string> { "one", "two" };
             var search = terms.GenerateSearchTerms();
 
             Assert.Equal("one", search[0].Table.Name);

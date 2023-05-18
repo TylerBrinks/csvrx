@@ -27,7 +27,6 @@ public class CsvDataSource : DataSource
             return _schema;
         }
 
-        //using var reader = new StreamReader(_filePath);
         using var fs = new FileStream(_filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         using var reader = new StreamReader(fs);
         var config = new CsvConfiguration(CultureInfo.InvariantCulture)

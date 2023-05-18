@@ -51,7 +51,7 @@ public class ExecutionContext
         }
     }
    
-    private ILogicalPlan BuildLogicalPlan(string sql)
+    internal ILogicalPlan BuildLogicalPlan(string sql)
     {
         var ast = new Parser().ParseSql(sql);
 
@@ -69,7 +69,7 @@ public class ExecutionContext
         return new LogicalPlanOptimizer().Optimize(plan)!;
     }
 
-    private static IExecutionPlan BuildPhysicalPlan(ILogicalPlan logicalPlan)
+    internal static IExecutionPlan BuildPhysicalPlan(ILogicalPlan logicalPlan)
     {
         if (logicalPlan == null)
         {
