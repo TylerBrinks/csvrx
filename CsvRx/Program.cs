@@ -82,7 +82,7 @@ foreach (var sql in queries)
     //{
     //    throw ex;
     //}
-    Console.ReadKey();
+    //Console.ReadKey();
 }
 
 static void NotifyInvalidSyntax(string query, string message, uint line, uint column)

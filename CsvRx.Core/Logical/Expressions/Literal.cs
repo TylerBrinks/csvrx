@@ -1,5 +1,4 @@
-﻿using System.Reflection.Metadata.Ecma335;
-using CsvRx.Core.Logical.Values;
+﻿using CsvRx.Core.Logical.Values;
 
 namespace CsvRx.Core.Logical.Expressions;
 

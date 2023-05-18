@@ -6,6 +6,7 @@ using SqlParser.Ast;
 using System.Linq.Expressions;
 using SqlParser;
 using static SqlParser.Ast.Expression;
+// ReSharper disable IdentifierTypo
 
 namespace CsvRx.Tests.Logical
 {
@@ -18,10 +19,10 @@ namespace CsvRx.Tests.Logical
             var alias = new Alias(column, "alias");
             var binary = new Binary(column, BinaryOperator.Eq, new Column("right"));
             var literal = new Literal(new StringScalar("value"));
-            var function = new AggregateFunction(AggregateFunctionType.Min, 
-                new List<ILogicalExpression> {column}, false);
+            var function = new AggregateFunction(AggregateFunctionType.Min,
+                new List<ILogicalExpression> { column }, false);
             var functionDistinct = new AggregateFunction(AggregateFunctionType.Min,
-                new List<ILogicalExpression> {column}, true);
+                new List<ILogicalExpression> { column }, true);
             var wildcard = new Wildcard();
 
             Assert.Equal("table.column", column.CreateName());
@@ -82,8 +83,8 @@ namespace CsvRx.Tests.Logical
 
             var expression = new Column("column");
             var alias = new Alias(new Column("other"), "alias");
-            var fn = new AggregateFunction(AggregateFunctionType.Min, new () { new Column("column") }, false);
-            var fnDouble = new AggregateFunction(AggregateFunctionType.Avg, new () { new Column("column") }, false);
+            var fn = new AggregateFunction(AggregateFunctionType.Min, new() { new Column("column") }, false);
+            var fnDouble = new AggregateFunction(AggregateFunctionType.Avg, new() { new Column("column") }, false);
 
             Assert.Equal(ColumnDataType.Integer, expression.GetDataType(schema));
             Assert.Equal(ColumnDataType.Integer, alias.GetDataType(schema));
@@ -107,7 +108,7 @@ namespace CsvRx.Tests.Logical
         {
             var column = new Column("column");
             var alias = (Alias)column.CloneWithReplacement(e => new Alias(e, "alias"));
-            
+
             Assert.IsType<Alias>(alias);
             Assert.Same(alias.Expression, column);
         }
@@ -118,27 +119,27 @@ namespace CsvRx.Tests.Logical
             var column = new Column("column");
             var literal = new Literal(new IntegerScalar(1));
             var alias = new Alias(column, "alias");
-            var fn = new AggregateFunction(AggregateFunctionType.Min, new List<ILogicalExpression> {column, alias}, false);
+            var fn = new AggregateFunction(AggregateFunctionType.Min, new List<ILogicalExpression> { column, alias }, false);
             var orderBy = new OrderBy(column, false);
 
-            var columnClone = column.CloneWithReplacement(e => null);
+            var columnClone = column.CloneWithReplacement(_ => null);
             Assert.IsType<Column>(columnClone);
             Assert.Same(columnClone, column);
 
-            var literalClone = literal.CloneWithReplacement(e => null);
+            var literalClone = literal.CloneWithReplacement(_ => null);
             Assert.IsType<Literal>(literalClone);
             Assert.Same(literalClone, literal);
 
-            var aliasClone = alias.CloneWithReplacement(e => null);
+            var aliasClone = alias.CloneWithReplacement(_ => null);
             Assert.IsType<Alias>(aliasClone);
             Assert.Equal(aliasClone, alias);
             Assert.Equal(alias.Expression, column);
 
-            var fnClone = fn.CloneWithReplacement(e => null);
+            var fnClone = fn.CloneWithReplacement(_ => null);
             Assert.IsType<AggregateFunction>(fnClone);
             Assert.Equal(fnClone, fn);
 
-            Assert.Throws<NotImplementedException>(()=> orderBy.CloneWithReplacement(e => null));
+            Assert.Throws<NotImplementedException>(() => orderBy.CloneWithReplacement(_ => null));
         }
 
         [Fact]
@@ -154,10 +155,10 @@ namespace CsvRx.Tests.Logical
             var literal = new LiteralValue(new Value.Boolean(true));
             var ident = new Identifier("ident");
             var fn = new Function(new ObjectName("min"));
-            var compound = new CompoundIdentifier(new Sequence<Ident>(new List<Ident> {"first"}));
+            var compound = new CompoundIdentifier(new Sequence<Ident>(new List<Ident> { "first" }));
 
             var literalExpr = (Literal)literal.SqlToExpression(null);
-            Assert.True((bool)literalExpr.Value.RawValue);
+            Assert.True((bool)literalExpr.Value.RawValue!);
 
             var identExpr = (Column)ident.SqlToExpression(schema);
             Assert.Equal("ident", identExpr.Name);
@@ -180,7 +181,7 @@ namespace CsvRx.Tests.Logical
             });
 
             var binary = new BinaryOp(
-                new LiteralValue(new Value.Number("1")), 
+                new LiteralValue(new Value.Number("1")),
                 BinaryOperator.Eq,
                 new LiteralValue(new Value.Number("1")));
 
@@ -191,7 +192,7 @@ namespace CsvRx.Tests.Logical
         }
 
         [Fact]
-        public void Expressions_Rebase_As_Collection()
+        public void Expressions_Rebase_From_Collection()
         {
             var column = new Column("column");
             var alias = new Alias(column, "alias");
@@ -200,7 +201,95 @@ namespace CsvRx.Tests.Logical
                 new("column", ColumnDataType.Integer),
                 new("alias", ColumnDataType.Integer),
             });
-            alias.RebaseExpression(new List<ILogicalExpression> {column}, schema);
+
+            var rebased = (Column)alias.RebaseExpression(new List<ILogicalExpression> { alias }, schema);
+            Assert.Equal("alias", rebased.Name);
+        }
+
+        [Fact]
+        public void Column_Expressions_Rebase_As_Self()
+        {
+            var column = new Column("column");
+            var schema = new Schema(new List<QualifiedField>
+            {
+                new("column", ColumnDataType.Integer),
+            });
+
+            var rebased = (Column)column.RebaseExpression(new List<ILogicalExpression> { column }, schema);
+            Assert.Equal("column", rebased.Name);
+            Assert.NotSame(column, rebased);
+        }
+
+        [Fact]
+        public void Expressions_Rebase_As_Self_Without_Schema_Column()
+        {
+            var column = new Column("column");
+            var schema = new Schema(new List<QualifiedField>
+            {
+                new("column", ColumnDataType.Integer),
+            });
+
+            var rebased = (Column)column.RebaseExpression(new List<ILogicalExpression> { new Column("other") }, schema);
+            Assert.Equal("column", rebased.Name);
+            Assert.Same(column, rebased);
+        }
+
+        [Fact]
+        public void Identifiers_Convert_To_Columns()
+        {
+            var ident = new Identifier(new Ident("name"));
+            var schema = new Schema(new List<QualifiedField> {new("name", ColumnDataType.Integer) });
+            var column = ident.SqlIdentifierToExpression(schema);
+            Assert.Equal("name", column.Name);
+            Assert.Null(column.Relation);
+        }
+
+        [Fact]
+        public void Literal_Values_Parse_To_Expressions()
+        {
+            var number = new LiteralValue(new Value.Number("1"));
+            var str = new LiteralValue(new Value.SingleQuotedString("abc"));
+            var boolean = new LiteralValue(new Value.Boolean(true));
+
+            var numberLiteral = (Literal)number.ParseValue();
+            var stringLiteral = (Literal)str.ParseValue();
+            var booleanLiteral = (Literal)boolean.ParseValue();
+
+            Assert.IsType<IntegerScalar>(numberLiteral.Value);
+            Assert.IsType<StringScalar>(stringLiteral.Value);
+            Assert.IsType<BooleanScalar>(booleanLiteral.Value);
+        }
+
+        [Fact]
+        public void Sql_Numbers_Parse_To_Literal_Expression()
+        {
+            Assert.IsType<IntegerScalar>(((Literal)new Value.Number("1").ParseSqlNumber()).Value);
+
+            Assert.IsType<DoubleScalar>(((Literal)new Value.Number("1.23").ParseSqlNumber()).Value);
+
+            Assert.IsType<StringScalar>(((Literal)new Value.Number("abc").ParseSqlNumber()).Value);
+        }
+
+        [Fact]
+        public void Idents_Convert_To_Search_Terms()
+        {
+            var terms = new List<string> {"one", "two" };
+            var search = terms.GenerateSearchTerms();
+
+            Assert.Equal("one", search[0].Table.Name);
+            Assert.Equal("two", search[0].ColumnName);
+            Assert.Equal(0, search[0].NestedNames.Length);
+
+            Assert.Null(search[1].Table);
+            Assert.Equal("one", search[1].ColumnName);
+            Assert.Equal("two", search[1].NestedNames[0]);
+        }
+
+        [Fact]
+        public void Idents_Have_Length_Constraints()
+        {
+            var terms = new List<string> { "one", "two", "three" };
+            Assert.Throws<InvalidOperationException>(() => terms.GenerateSearchTerms());
         }
     }
 }

@@ -253,7 +253,7 @@ internal static class LogicalExtensions
     /// <summary>
     /// Relational expression from sql expression
     /// </summary>
-    internal static ILogicalExpression SqlToExpression(this Expression predicate, Schema schema)
+    internal static ILogicalExpression SqlToExpression(this Expression? predicate, Schema schema)
     {
         var expr = SqlExpressionToLogicalExpression(predicate, schema);
 
@@ -267,7 +267,7 @@ internal static class LogicalExtensions
     /// Rebuilds an expression as a projection on top of
     /// a collection of expressions.
     ///
-    /// "a + b < 1" would require 2 individual input colums
+    /// "a + b = 1" would require 2 individual input columns
     /// for 'a' and 'b'.  However if the base expressions
     /// already contain the "a + b" result, then that can
     /// be used in place of the columns.
@@ -295,6 +295,312 @@ internal static class LogicalExtensions
             var field = schema.GetField(c.Name);
             return field!.QualifiedColumn();
         }
+    }
+    /// <summary>
+    /// Converts an AST SQL expression into a logical expression
+    /// </summary>
+    /// <param name="expression">Expression to convert</param>
+    /// <param name="schema">Schema containing column definitions</param>
+    /// <returns>Logical expression instance</returns>
+    internal static ILogicalExpression SqlExpressionToLogicalExpression(Expression? expression, Schema schema)
+    {
+        if (expression is BinaryOp b)
+        {
+            return ParseSqlBinaryOp(b.Left, b.Op, b.Right, schema);
+        }
+
+        return SqlExpressionToLogicalInternal(expression, schema);
+    }
+    /// <summary>
+    /// Converts literal values, identifiers, compound identifiers,
+    /// and functions into logical expressions
+    /// </summary>
+    /// <param name="expression">Expression to convert</param>
+    /// <param name="schema">Schema containing column definitions</param>
+    /// <returns>Logical expression instance</returns>
+    /// <exception cref="NotImplementedException"></exception>
+    internal static ILogicalExpression SqlExpressionToLogicalInternal(Expression? expression, Schema schema)
+    {
+        return expression switch
+        {
+            LiteralValue v => v.ParseValue(),
+            Identifier ident => ident.SqlIdentifierToExpression(schema),
+            Function fn => SqlFunctionToExpression(fn, schema),
+            CompoundIdentifier ci => SqlCompoundIdentToExpression(ci, schema),
+
+            _ => throw new NotImplementedException()
+        };
+    }
+    /// <summary>
+    /// Converts a SQL Identifier into an unqualified column
+    /// </summary>
+    /// <param name="ident">SQL identifier</param>
+    /// <param name="schema">Schema containing column definitions</param>
+    /// <returns>Column instance</returns>
+    internal static Column SqlIdentifierToExpression(this Identifier ident, Schema schema)
+    {
+        // Found a match without a qualified name, this is a inner table column
+        return new Column(schema.GetField(ident.Ident.Value)!.Name);
+    }
+    /// <summary>
+    /// Parses a SQL Binary operator into a set of logical expressions
+    /// in the form of a logical binary expression
+    /// </summary>
+    /// <param name="left">Operation left expression</param>
+    /// <param name="op">Operator</param>
+    /// <param name="right">Operation right expression</param>
+    /// <param name="schema">Schema containing column definitions</param>
+    /// <returns>Binary expression</returns>
+    internal static Expressions.Binary ParseSqlBinaryOp(Expression left, BinaryOperator op, Expression right, Schema schema)
+    {
+        return new Expressions.Binary(SqlExpressionToLogicalExpression(left, schema), op, SqlExpressionToLogicalExpression(right, schema));
+    }
+    /// <summary>
+    /// Parses SQL literal values into logical expression types
+    /// </summary>
+    /// <param name="literalValue">SQL literal value</param>
+    /// <returns>Logical expression instance</returns>
+    /// <exception cref="NotImplementedException"></exception>
+    internal static ILogicalExpression ParseValue(this LiteralValue literalValue)
+    {
+        switch (literalValue.Value)
+        {
+            //TODO case Value.Null: literal scalar value
+
+            case Value.Number n:
+                return n.ParseSqlNumber();
+
+            case Value.SingleQuotedString sq:
+                return new Literal(new StringScalar(sq.Value));
+
+            case Value.Boolean b:
+                return new Literal(new BooleanScalar(b.Value));
+
+            default:
+                throw new NotImplementedException();
+        }
+    }
+    /// <summary>
+    /// Converts a SQL function to a logical expression
+    /// </summary>
+    /// <param name="function">SQL function to convert</param>
+    /// <param name="schema">Schema containing column definitions</param>
+    /// <returns>Logical expression instance</returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    internal static ILogicalExpression SqlFunctionToExpression(Function function, Schema schema)
+    {
+        // scalar functions
+
+        // aggregate functions
+        var name = function.Name;
+
+        var aggregateType = AggregateFunction.GetFunctionType(name);
+        if (aggregateType.HasValue)
+        {
+            var distinct = function.Distinct;
+
+            var (aggregateFunction, expressionArgs) = AggregateFunctionToExpression(aggregateType.Value, function.Args, schema);
+            return new AggregateFunction(aggregateFunction, expressionArgs, distinct);
+        }
+
+        throw new InvalidOperationException("Invalid function");
+    }
+    /// <summary>
+    /// Parses a SQL numeric value into a literal value
+    /// containing a type-specific scalar value
+    /// </summary>
+    /// <param name="number">SQL number to convert </param>
+    /// <returns>Logical expression instance</returns>
+    internal static ILogicalExpression ParseSqlNumber(this Value.Number number)
+    {
+        if (long.TryParse(number.Value, out var parsedInt))
+        {
+            return new Literal(new IntegerScalar(parsedInt));
+        }
+
+        return double.TryParse(number.Value, out var parsedDouble)
+            ? new Literal(new DoubleScalar(parsedDouble))
+            : new Literal(new StringScalar(number.Value));
+    }
+    /// <summary>
+    /// Converts a compound identifier into a logical expression
+    /// </summary>
+    /// <param name="ident">Identifier to convert</param>
+    /// <param name="schema">Schema containing column definitions</param>
+    /// <returns>Logical expression instance</returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    /// <exception cref="NotImplementedException"></exception>
+    internal static ILogicalExpression SqlCompoundIdentToExpression(CompoundIdentifier ident, Schema schema)
+    {
+        if (ident.Idents.Count > 2)
+        {
+            throw new InvalidOperationException("Not a valid compound identifier");
+        }
+
+        var idents = ident.Idents.Select(i => i.Value).ToList();
+        var terms = idents.GenerateSearchTerms().ToList();
+
+        var result = terms.Select(term => new
+            {
+                Term = term,
+                Field = schema.GetQualifiedField(term.Table, term.ColumnName)
+            })
+            .Where(term => term.Field != null)
+            .Select(term => (term.Field, term.Term.NestedNames))
+            .FirstOrDefault();
+
+
+        if (result.Field != null && result.NestedNames.Length == 0)
+        {
+            return result.Field.QualifiedColumn();
+        }
+
+        throw new NotImplementedException("SqlCompoundIdentToExpression not implemented for identifier");
+        // todo case field & nested is not empty
+        // case null
+    }
+
+    internal static List<ILogicalExpression> FindNestedExpressions(List<ILogicalExpression> expressions, Func<ILogicalExpression, bool> predicate)
+    {
+        return expressions
+            .SelectMany(e => FindNestedExpression(e, predicate))
+            .Aggregate(new List<ILogicalExpression>(), (list, value) =>
+            {
+                if (!list.Contains(value)) { list.Add(value); }
+
+                return list;
+            })
+            .ToList();
+    }
+
+    internal static IEnumerable<ILogicalExpression> FindNestedExpression(ILogicalExpression expression, Func<ILogicalExpression, bool> predicate)
+    {
+        var expressions = new List<ILogicalExpression>();
+        expression.Apply(e =>
+        {
+            if (!predicate((ILogicalExpression)e))
+            {
+                return VisitRecursion.Continue;
+            }
+
+            if (!expressions.Contains(e))
+            {
+                expressions.Add((ILogicalExpression)e);
+            }
+
+            return VisitRecursion.Skip;
+
+        });
+
+        return expressions;
+    }
+    /// <summary>
+    /// Converts a schema into a nested list containing the single schema
+    /// </summary>
+    /// <param name="schema">Schema to insert into the hierarchy</param>
+    /// <returns>List of schema lists</returns>
+    internal static List<List<Schema>> AsNested(this Schema schema)
+    {
+        return new List<List<Schema>> { new() { schema } };
+    }
+    /// <summary>
+    /// Converts a hash set into a nested list containing the single hash set
+    /// </summary>
+    /// <param name="usingColumns">Hash set to insert into the hierarchy</param>
+    /// <returns>List of hash sets with column values</returns>
+    internal static List<HashSet<Column>> AsNested(this HashSet<Column> usingColumns)
+    {
+        return new List<HashSet<Column>> { usingColumns };
+    }
+    /// <summary>
+    /// Merges one schema into another by selecting distinct fields from the second schema into the first
+    /// </summary>
+    /// <param name="self">Target schema to merge fields into</param>
+    /// <param name="fromSchema">Schema containing fields to merge</param>
+    internal static void MergeSchemas(this Schema self, Schema fromSchema)
+    {
+        if (!fromSchema.Fields.Any())
+        {
+            return;
+        }
+
+        // TODO null fields?
+        foreach (var field in fromSchema.Fields/*.Where(f => f != null)*/)
+        {
+            var duplicate = self.Fields.FirstOrDefault(f => /*f != null && */ f.Name == field.Name) != null;//field!.Name
+
+            if (!duplicate)
+            {
+                self.Fields.Add(field);
+            }
+        }
+    }
+    /// <summary>
+    /// Used for normalizing columns as the fallback schemas to
+    /// a plan's main schema
+    /// </summary>
+    /// <param name="plan">Plan to normalize</param>
+    /// <returns>List of schemas</returns>
+    internal static List<Schema> FallbackNormalizeSchemas(this ILogicalPlan plan)
+    {
+        return plan switch
+        {
+            Projection
+                or Aggregate
+                or Join => plan.GetInputs().Select(input => input.Schema).ToList(),
+
+            // TODO or Cross join
+
+            _ => new List<Schema>()
+        };
+    }
+    /// <summary>
+    /// Generates a list of possible search terms from a list
+    /// of identifiers
+    ///
+    /// Length = 2
+    /// (table.column)
+    /// (column).nested
+    ///
+    /// Length = 3:
+    /// 1. (schema.table.column)
+    /// 2. (table.column).nested
+    /// 3. (column).nested1.nested2
+    ///
+    /// Length = 4:
+    /// 1. (catalog.schema.table.column)
+    /// 2. (schema.table.column).nested1
+    /// 3. (table.column).nested1.nested2
+    /// 4. (column).nested1.nested2.nested3
+    /// </summary>
+    /// <param name="idents">Identifier list used to build search values</param>
+    /// <returns>List of table references and column names</returns>
+    internal static List<(TableReference? Table, string ColumnName, string[] NestedNames)>
+        GenerateSearchTerms(this IReadOnlyCollection<string> idents)
+    {
+        var ids = idents.ToArray();
+        // at most 4 identifiers to form a column to search with
+        // 1 for the column name
+        // 0 - 3 for the table reference
+        var bound = Math.Min(idents.Count, 4);
+
+        return Enumerable.Range(0, bound).Reverse().Select(i =>
+        {
+            var nestedNamesIndex = i + 1;
+            var qualifierWithColumn = ids[..nestedNamesIndex];
+            var (relation, columnName) = FromIdentifier(qualifierWithColumn);
+            return (relation, columnName, ids[nestedNamesIndex..]);
+        }).ToList();
+    }
+
+    private static (TableReference?, string) FromIdentifier(IReadOnlyList<string> idents)
+    {
+        return idents.Count switch
+        {
+            1 => (null, idents[0]),
+            2 => (new TableReference(idents[0]), idents[1]),
+            _ => throw new InvalidOperationException("Incorrect number of identifiers")
+        };
     }
 
     #endregion
@@ -989,240 +1295,6 @@ internal static class LogicalExtensions
             default:
                 throw new NotImplementedException();
         }
-    }
-
-    #endregion
-
-    #region Helpers
-
-    /// <summary>
-    /// Merges one schema into another by selecting distinct fields from the second schema into the first
-    /// </summary>
-    /// <param name="self">Target schema to merge fields into</param>
-    /// <param name="fromSchema">Schema containing fields to merge</param>
-    internal static void MergeSchemas(this Schema self, Schema fromSchema)
-    {
-        if (!fromSchema.Fields.Any())
-        {
-            return;
-        }
-
-        // TODO null fields?
-        foreach (var field in fromSchema.Fields/*.Where(f => f != null)*/)
-        {
-            var duplicate = self.Fields.FirstOrDefault(f => /*f != null && */ f.Name == field.Name) != null;//field!.Name
-
-            if (!duplicate)
-            {
-                self.Fields.Add(field);
-            }
-        }
-    }
-
-
-   
-    internal static ILogicalExpression SqlExpressionToLogicalExpression(Expression predicate, Schema schema)
-    {
-        if (predicate is BinaryOp b)
-        {
-            return ParseSqlBinaryOp(b.Left, b.Op, b.Right, schema);
-        }
-
-        return SqlExpressionToLogicalInternal(predicate, schema);
-    }
-
-    internal static ILogicalExpression ParseSqlBinaryOp(Expression left, BinaryOperator op, Expression right, Schema schema)
-    {
-        return new Expressions.Binary(SqlExpressionToLogicalExpression(left, schema), op, SqlExpressionToLogicalExpression(right, schema));
-    }
-
-    internal static ILogicalExpression SqlExpressionToLogicalInternal(Expression expression, Schema schema)
-    {
-        return expression switch
-        {
-            LiteralValue v => ParseValue(v),
-            Identifier ident => SqlIdentifierToExpression(ident, schema),
-            Function fn => SqlFunctionToExpression(fn, schema),
-            CompoundIdentifier ci => SqlCompoundIdentToExpression(ci, schema),
-
-            _ => throw new NotImplementedException()
-        };
-    }
-
-    internal static ILogicalExpression SqlIdentifierToExpression(Identifier ident, Schema schema)
-    {
-        // Found a match without a qualified name, this is a inner table column
-        return new Column(schema.GetField(ident.Ident.Value)!.Name);
-    }
-
-    internal static ILogicalExpression ParseValue(LiteralValue literalValue)
-    {
-        switch (literalValue.Value)
-        {
-            //TODO case Value.Null: literal scalar value
-
-            case Value.Number n:
-                return ParseSqlNumber(n);
-
-            case Value.SingleQuotedString sq:
-                return new Literal(new StringScalar(sq.Value));
-
-            case Value.Boolean b:
-                return new Literal(new BooleanScalar(b.Value));
-
-            default:
-                throw new NotImplementedException();
-        }
-    }
-
-    internal static ILogicalExpression SqlFunctionToExpression(Function function, Schema schema)
-    {
-        // scalar functions
-
-        // aggregate functions
-        var name = function.Name;
-
-        var aggregateType = AggregateFunction.GetFunctionType(name);
-        if (aggregateType.HasValue)
-        {
-            var distinct = function.Distinct;
-
-            var (aggregateFunction, expressionArgs) = AggregateFunctionToExpression(aggregateType.Value, function.Args, schema);
-            return new AggregateFunction(aggregateFunction, expressionArgs, distinct);
-        }
-
-        throw new InvalidOperationException("Invalid function");
-    }
-
-    internal static ILogicalExpression SqlCompoundIdentToExpression(CompoundIdentifier ident, Schema schema)
-    {
-        if (ident.Idents.Count > 2)
-        {
-            throw new InvalidOperationException("Not a valid compound identifier");
-        }
-
-        var terms = GenerateSearchTerms(ident.Idents.Select(i => i.Value).ToList()).ToList();
-
-        var result = terms.Select(term => new
-        {
-            Term = term,
-            Field = schema.GetQualifiedField(term.Table, term.ColumnName)
-        })
-        .Where(term => term.Field != null)
-        .Select(term => (term.Field, term.Term.NestedNames))
-        .FirstOrDefault();
-
-
-        if (result.Field != null && result.NestedNames.Length == 0)
-        {
-            return result.Field.QualifiedColumn();
-        }
-
-        throw new NotImplementedException("SqlCompoundIdentToExpression not implemented for identifier");
-        // todo case field & nested is not empty
-        // case null
-    }
-
-    internal static ILogicalExpression ParseSqlNumber(Value.Number number)
-    {
-        if (long.TryParse(number.Value, out var parsedInt))
-        {
-            return new Literal(new IntegerScalar(parsedInt));
-        }
-
-        if (double.TryParse(number.Value, out var parsedDouble))
-        {
-            return new Literal(new DoubleScalar(parsedDouble));
-        }
-
-        return new Literal(new StringScalar(number.Value));
-    }
-
-    internal static List<ILogicalExpression> FindNestedExpressions(List<ILogicalExpression> expressions, Func<ILogicalExpression, bool> predicate)
-    {
-        return expressions
-            .SelectMany(e => FindNestedExpression(e, predicate))
-            .Aggregate(new List<ILogicalExpression>(), (list, value) =>
-            {
-                if (!list.Contains(value)) { list.Add(value); }
-
-                return list;
-            })
-            .ToList();
-    }
-
-    internal static IEnumerable<ILogicalExpression> FindNestedExpression(ILogicalExpression expression, Func<ILogicalExpression, bool> predicate)
-    {
-        var expressions = new List<ILogicalExpression>();
-        expression.Apply(e =>
-        {
-            if (!predicate((ILogicalExpression)e))
-            {
-                return VisitRecursion.Continue;
-            }
-
-            if (!expressions.Contains(e))
-            {
-                expressions.Add((ILogicalExpression)e);
-            }
-
-            return VisitRecursion.Skip;
-
-        });
-
-        return expressions;
-    }
-
-    internal static List<List<Schema>> AsNested(this Schema schema)
-    {
-        return new List<List<Schema>> { new() { schema } };
-    }
-
-    internal static List<HashSet<Column>> AsNested(this HashSet<Column> usingColumns)
-    {
-        return new List<HashSet<Column>> { usingColumns };
-    }
-
-    internal static List<Schema> FallbackNormalizeSchemas(this ILogicalPlan schema)
-    {
-        return schema switch
-        {
-            Projection
-                or Aggregate
-                or Join => schema.GetInputs().Select(input => input.Schema).ToList(),
-
-            // TODO or Crossjoin
-
-            _ => new List<Schema>()
-        };
-    }
-
-    private static List<(TableReference? Table, string ColumnName, string[] NestedNames)>
-        GenerateSearchTerms(IReadOnlyCollection<string> idents)
-    {
-        var ids = idents.ToArray();
-        // at most 4 identifiers to form a column to search with
-        // 1 for the column name
-        // 0 - 3 for the table reference
-        var bound = Math.Min(idents.Count, 4);
-
-        return Enumerable.Range(0, bound).Reverse().Select(i =>
-        {
-            var nestedNamesIndex = i + 1;
-            var qualifierWithColumn = ids[..nestedNamesIndex];
-            var (relation, columnName) = FromIdentifier(qualifierWithColumn);
-            return (relation, columnName, ids[nestedNamesIndex..]);
-        }).ToList();
-    }
-
-    private static (TableReference?, string) FromIdentifier(IReadOnlyList<string> idents)
-    {
-        return idents.Count switch
-        {
-            1 => (null, idents[0]),
-            2 => (new TableReference(idents[0]), idents[1]),
-            _ => throw new InvalidOperationException("Incorrect number of identifiers")
-        };
     }
 
     #endregion
