@@ -8,7 +8,14 @@ internal class StringArray : TypedRecordArray<string?>
     {
         if (s != null)
         {
-            List.Add((string) s);
+            if (s is string str)
+            {
+                List.Add(str);
+            }
+            else
+            {
+                List.Add(s.ToString());
+            }
         }
         else
         {

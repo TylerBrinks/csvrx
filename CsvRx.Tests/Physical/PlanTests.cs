@@ -1,4 +1,5 @@
-﻿using CsvRx.Core.Data;
+﻿using CsvRx.Core;
+using CsvRx.Core.Data;
 using CsvRx.Core.Execution;
 using CsvRx.Core.Physical.Expressions;
 using SqlParser.Ast;
@@ -8,24 +9,29 @@ namespace CsvRx.Tests.Physical;
 
 public class PlanTests
 {
-    private Execution.ExecutionContext _context;
-    private Schema _schema;
-    private InMemoryDataSource _memDb;
+    private readonly Execution.ExecutionContext _context;
 
     public PlanTests()
     {
         _context = new Execution.ExecutionContext();
 
-        _schema = new Schema(new List<QualifiedField>
+        var schema = new Schema(new List<QualifiedField>
         {
             new("a", ColumnDataType.Integer),
             new("b", ColumnDataType.Utf8),
             new("c", ColumnDataType.Double)
         });
+        var memDb = new InMemoryDataSource(schema, new List<int> { 0, 1, 2 });
+        _context.RegisterDataSource("db", memDb);
 
-        _memDb = new InMemoryDataSource(_schema, new List<int> { 0, 1, 2 });
-
-        _context.RegisterDataSource("db", _memDb);
+        var joinSchema = new Schema(new List<QualifiedField>
+        {
+            new("c", ColumnDataType.Integer),
+            new("d", ColumnDataType.Utf8),
+            new("e", ColumnDataType.Double)
+        });
+        var joinDb = new InMemoryDataSource(joinSchema, new List<int> { 0, 1, 2 });
+        _context.RegisterDataSource("joinDb", joinDb);
     }
 
     [Fact]
@@ -85,7 +91,6 @@ public class PlanTests
         Assert.IsType<InMemoryTableExecution>(filterExec.Plan);
         Assert.Equal(3, filterExec.Plan.Schema.Fields.Count);
     }
-
 
     [Fact]
     public void Context_Uses_Multiple_Aggregation_Steps()
@@ -162,36 +167,165 @@ public class PlanTests
     {
         const string sql = "SELECT a FROM db order by b";
         var logicalPlan = _context.BuildLogicalPlan(sql);
-        var sortExec = (SortExecution)Execution.ExecutionContext.BuildPhysicalPlan(logicalPlan);
+        var projectionExec = (ProjectionExecution)Execution.ExecutionContext.BuildPhysicalPlan(logicalPlan);
 
-        Assert.Equal(3, sortExec.Schema.Fields.Count);
-        Assert.Equal("a", ((Column)sortExec.SortExpressions[0].Expression).Name);
+        Assert.Single(projectionExec.Schema.Fields);
+        Assert.Equal("a", ((Column)projectionExec.Expressions[0].Expression).Name);
 
-        var scanExec = (InMemoryTableExecution)sortExec.Plan;
+        var sortExec = (SortExecution) projectionExec.Plan;
+        Assert.Equal(2, sortExec.Schema.Fields.Count);
+        Assert.Single(sortExec.SortExpressions);
+        Assert.Equal("b", ((Column)sortExec.SortExpressions[0].Expression).Name);
+
+        var nestedProjection = (ProjectionExecution) sortExec.Plan;
+        Assert.Equal(2, nestedProjection.Schema.Fields.Count);
+        Assert.Equal("a", ((Column)nestedProjection.Expressions[0].Expression).Name);
+        Assert.Equal("b", ((Column)nestedProjection.Expressions[1].Expression).Name);
+
+        var scanExec = (InMemoryTableExecution)nestedProjection.Plan;
         Assert.Equal(3, scanExec.Schema.Fields.Count);
     }
 
-    /*
-     * "SELECT c1, MAX(c3) FROM mycsv GROUP BY c1", //WHERE c11 > .2 AND c11 < 0.9 
+    [Fact]
+    public void Context_Groups_Columns()
+    {
+        const string sql = "SELECT max(a), b FROM db group by b";
+        var logicalPlan = _context.BuildLogicalPlan(sql);
+        var projectionExec = (ProjectionExecution)Execution.ExecutionContext.BuildPhysicalPlan(logicalPlan);
+        var finalAggregateExec = (AggregateExecution)projectionExec.Plan;
+        var partialAggregateExec = (AggregateExecution)finalAggregateExec.Plan;
+        var scanExec = (InMemoryTableExecution)partialAggregateExec.Plan;
 
-    "SELECT avg(c3) FROM mycsv group by c1",
-    "SELECT c1, c3 FROM mycsv order by c1, c3",
+        Assert.Equal(2, projectionExec.Schema.Fields.Count);
+        Assert.Equal("MAX(db.a)", ((Column)projectionExec.Expressions[0].Expression).Name);
+        Assert.Equal("b", ((Column)projectionExec.Expressions[1].Expression).Name);
 
-    "SELECT c1 as abc FROM mycsv group by 1",
-    "SELECT c1, count(c3) as cnt FROM mycsv group by c1",
-    "SELECT covar(c2, c12) aa FROM mycsv",
+        Assert.Equal(2, finalAggregateExec.Schema.Fields.Count);
+        Assert.Single(finalAggregateExec.AggregateExpressions);
+        Assert.Single(finalAggregateExec.GroupBy.Expression);
+        Assert.Equal("b", ((Column)finalAggregateExec.GroupBy.Expression[0].Expression).Name);
+        Assert.Equal("a", ((Column)finalAggregateExec.AggregateExpressions[0].Expression).Name);
 
-    "SELECT c1, c2 as abc FROM mycsv where c1 = 'c'",
-    "SELECT c1 as a, c3 FROM mycsv order by a limit 23 offset 20",
-    "SELECT c1, c2 as abc FROM mycsv mv where mv.c1 = 'c'",
+        Assert.Equal(2, partialAggregateExec.Schema.Fields.Count);
+        Assert.Single(partialAggregateExec.AggregateExpressions);
+        Assert.Single(partialAggregateExec.GroupBy.Expression);
+        Assert.Equal("b", ((Column)partialAggregateExec.GroupBy.Expression[0].Expression).Name);
+        Assert.Equal("a", ((Column)partialAggregateExec.AggregateExpressions[0].Expression).Name);
 
+        Assert.Equal(3, scanExec.Schema.Fields.Count);
+    }
 
-    //****var sql = "SELECT test_a.c2, test_a.c3, test_b.c2 FROM test_a join test_b USING(c1)";
-    //select t1.* from t t1 CROSS JOIN t t2"
-    //let sql = "SELECT test.col_int32 FROM test JOIN ( SELECT col_int32 FROM test WHERE false ) AS ta1 ON test
-    //var sql = "SELECT test_a.c2, test_a.c3, test_b.c2 FROM test_a full outer join test_b on test_a.c1 = test_b.c1";
-    //var sql = "SELECT test_a.c2, test_a.c3 FROM test_a left semi join test_b on test_a.c1 = test_b.c1";
+    [Fact]
+    public void Context_Replaces_Having_Step_With_Filter()
+    {
+        const string sql = "SELECT max(a), b FROM db group by b having b = 1";
+        var logicalPlan = _context.BuildLogicalPlan(sql);
+        var projectionExec = (ProjectionExecution)Execution.ExecutionContext.BuildPhysicalPlan(logicalPlan);
+        var filterExec = (FilterExecution) projectionExec.Plan;
+        var finalAggregateExec = (AggregateExecution)filterExec.Plan;
+        var partialAggregateExec = (AggregateExecution)finalAggregateExec.Plan;
+        var scanExec = (InMemoryTableExecution)partialAggregateExec.Plan;
 
-    "SELECT ta.c2 aa, ta.c3 bb, tb.c2 tb FROM test_a ta join test_b tb on ta.c1 = tb.c1"
-     */
+        Assert.Equal(2, projectionExec.Schema.Fields.Count);
+        Assert.Equal("MAX(db.a)", ((Column)projectionExec.Expressions[0].Expression).Name);
+        Assert.Equal("b", ((Column)projectionExec.Expressions[1].Expression).Name);
+
+        Assert.Equal(2, filterExec.Schema.Fields.Count);
+        Assert.IsType<Binary>(filterExec.Predicate);
+
+        Assert.Equal(2, finalAggregateExec.Schema.Fields.Count);
+        Assert.Single(finalAggregateExec.AggregateExpressions);
+        Assert.Single(finalAggregateExec.GroupBy.Expression);
+        Assert.Equal("b", ((Column)finalAggregateExec.GroupBy.Expression[0].Expression).Name);
+        Assert.Equal("a", ((Column)finalAggregateExec.AggregateExpressions[0].Expression).Name);
+
+        Assert.Equal(2, partialAggregateExec.Schema.Fields.Count);
+        Assert.Single(partialAggregateExec.AggregateExpressions);
+        Assert.Single(partialAggregateExec.GroupBy.Expression);
+        Assert.Equal("b", ((Column)partialAggregateExec.GroupBy.Expression[0].Expression).Name);
+        Assert.Equal("a", ((Column)partialAggregateExec.AggregateExpressions[0].Expression).Name);
+
+        Assert.Equal(3, scanExec.Schema.Fields.Count);
+    }
+
+    [Fact]
+    public void Context_Filters_With_Where_Clause()
+    {
+        const string sql = "SELECT max(a) as a, b FROM db where b = 'x' group by b";
+        var logicalPlan = _context.BuildLogicalPlan(sql);
+        var projectionExec = (ProjectionExecution)Execution.ExecutionContext.BuildPhysicalPlan(logicalPlan);
+        var finalAggregateExec = (AggregateExecution)projectionExec.Plan;
+        var partialAggregateExec = (AggregateExecution)finalAggregateExec.Plan;
+        var filterExec = (FilterExecution)partialAggregateExec.Plan;
+        var subProjection = (ProjectionExecution)filterExec.Plan;
+        var scanExec = (InMemoryTableExecution)subProjection.Plan;
+
+        Assert.Equal(2, projectionExec.Schema.Fields.Count);
+        Assert.Equal("MAX(db.a)", ((Column)projectionExec.Expressions[0].Expression).Name);
+        Assert.Equal("b", ((Column)projectionExec.Expressions[1].Expression).Name);
+
+        Assert.Equal(2, finalAggregateExec.Schema.Fields.Count);
+        Assert.Single(finalAggregateExec.AggregateExpressions);
+        Assert.Single(finalAggregateExec.GroupBy.Expression);
+        Assert.Equal("b", ((Column)finalAggregateExec.GroupBy.Expression[0].Expression).Name);
+        Assert.Equal("a", ((Column)finalAggregateExec.AggregateExpressions[0].Expression).Name);
+
+        Assert.Equal(2, partialAggregateExec.Schema.Fields.Count);
+        Assert.Single(partialAggregateExec.AggregateExpressions);
+        Assert.Single(partialAggregateExec.GroupBy.Expression);
+        Assert.Equal("b", ((Column)partialAggregateExec.GroupBy.Expression[0].Expression).Name);
+        Assert.Equal("a", ((Column)partialAggregateExec.AggregateExpressions[0].Expression).Name);
+
+        Assert.Equal(2, filterExec.Schema.Fields.Count);
+        Assert.IsType<Binary>(filterExec.Predicate);
+
+        Assert.Equal(2, projectionExec.Schema.Fields.Count);
+        Assert.Equal("MAX(db.a)", ((Column)projectionExec.Expressions[0].Expression).Name);
+        Assert.Equal("b", ((Column)projectionExec.Expressions[1].Expression).Name);
+
+        Assert.Equal(3, scanExec.Schema.Fields.Count);
+    }
+
+    [Fact]
+    public void Context_Orders_And_Limits_Results()
+    {
+        const string sql = "SELECT a, b FROM db order by a desc  offset 5 limit 10";
+        var logicalPlan = _context.BuildLogicalPlan(sql);
+        var limitExec = (LimitExecution)Execution.ExecutionContext.BuildPhysicalPlan(logicalPlan);
+        var sortExec = (SortExecution) limitExec.Plan;
+        var scanExec = (InMemoryTableExecution)sortExec.Plan;
+
+        Assert.Equal(2, logicalPlan.Schema.Fields.Count);
+        Assert.Equal(10, limitExec.Fetch);
+        Assert.Equal(5, limitExec.Skip);
+
+        Assert.Equal(3, sortExec.Schema.Fields.Count);
+        Assert.IsType<PhysicalSortExpression>(sortExec.SortExpressions[0]);
+
+        Assert.Equal(3, scanExec.Schema.Fields.Count);
+    }
+
+    [Fact]
+    public void Context_Joins_Tables_Results()
+    {
+        const string sql = "SELECT db.a, joinDb.d FROM db join joinDb on db.c = joinDb.e";
+        var logicalPlan = _context.BuildLogicalPlan(sql);
+        var projectionExec = (ProjectionExecution)Execution.ExecutionContext.BuildPhysicalPlan(logicalPlan);
+        var joinExec = (NestedLoopJoinExecution)projectionExec.Plan;
+        var scanExecLeft = (InMemoryTableExecution)joinExec.Left;
+        var scanExecRight = (InMemoryTableExecution)joinExec.Right;
+
+        Assert.Equal(2, logicalPlan.Schema.Fields.Count);
+        Assert.Equal(2, projectionExec.Expressions.Count);
+        
+        Assert.Equal(6, joinExec.Schema.Fields.Count);
+        Assert.Equal(JoinType.Inner, joinExec.JoinType);
+
+        var binary = (Binary)joinExec.Filter!.FilterExpression;
+        Assert.Equal("c", ((Column)binary.Left).Name);
+        Assert.Equal("e", ((Column)binary.Right).Name);
+
+        Assert.Equal(3, scanExecLeft.Schema.Fields.Count);
+        Assert.Equal(3, scanExecRight.Schema.Fields.Count);
+    }
 }

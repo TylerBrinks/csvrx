@@ -55,7 +55,7 @@ public class Schema
     {
         HashCode hash = new();
 
-        foreach (var field in Fields/*.Where(f => f!=null)*/)
+        foreach (var field in Fields)
         {
             hash.Add(field);
         }

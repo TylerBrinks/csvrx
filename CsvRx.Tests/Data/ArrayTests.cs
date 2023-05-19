@@ -5,6 +5,41 @@ namespace CsvRx.Tests.Data;
 public class ArrayTests
 {
     [Fact]
+    public void StringArray_Adds_Values()
+    {
+        var array = new StringArray();
+        array.Add(true);
+        array.Add("true");
+        array.Add(1);
+        array.Add(false);
+        array.Add("false");
+        array.Add(0);
+        array.Add("abc");
+        array.Add(123);
+        array.Add(null);
+
+        Assert.Equal(9, array.Values.Count);
+        Assert.Equal(8, array.Values.Cast<string?>().Count(_ => !string.IsNullOrWhiteSpace(_)));
+        Assert.Equal(1, array.Values.Cast<string?>().Count(string.IsNullOrWhiteSpace));
+    }
+
+    [Fact]
+    public void StringArray_Fills_Null_Values()
+    {
+        var array = new StringArray().FillWithNull(5);
+
+        Assert.Equal(5, array.Values.Cast<string?>().Count(_ => _ == null));
+    }
+
+    [Fact]
+    public void StringArray_Creates_Empty_Arrays()
+    {
+        var array = new StringArray().NewEmpty(5);
+
+        Assert.Equal(5, array.Values.Cast<string?>().Count(_ => _ == null));
+    }
+
+    [Fact]
     public void BooleanArray_Adds_Values()
     {
         var array = new BooleanArray();
@@ -33,6 +68,14 @@ public class ArrayTests
     }
 
     [Fact]
+    public void BooleanArray_Creates_Empty_Arrays()
+    {
+        var array = new BooleanArray().NewEmpty(5);
+
+        Assert.Equal(5, array.Values.Cast<bool?>().Count(_ => _ == null));
+    }
+
+    [Fact]
     public void IntegerArray_Adds_Values()
     {
         var array = new IntegerArray();
@@ -56,6 +99,14 @@ public class ArrayTests
     }
 
     [Fact]
+    public void IntegerArray_Creates_Empty_Arrays()
+    {
+        var array = new IntegerArray().NewEmpty(5);
+
+        Assert.Equal(5, array.Values.Cast<long?>().Count(_ => _ == null));
+    }
+
+    [Fact]
     public void DoubleArray_Adds_Values()
     {
         var array = new DoubleArray();
@@ -74,6 +125,14 @@ public class ArrayTests
     public void DoubleArray_Fills_Null_Values()
     {
         var array = new DoubleArray().FillWithNull(5);
+
+        Assert.Equal(5, array.Values.Cast<double?>().Count(_ => _ == null));
+    }
+
+    [Fact]
+    public void DoubleArray_Creates_Empty_Arrays()
+    {
+        var array = new DoubleArray().NewEmpty(5);
 
         Assert.Equal(5, array.Values.Cast<double?>().Count(_ => _ == null));
     }

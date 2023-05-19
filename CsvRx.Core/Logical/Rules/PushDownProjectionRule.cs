@@ -159,7 +159,6 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
                     var newJoin = childPlan.WithNewInputs(new List<ILogicalPlan> { newLeft, newRight });
                     return GeneratePlan(empty, projection, newJoin);
                 }
-
             case Sort s:
                 {
                     if (CanEliminate(projection, childPlan.Schema))
