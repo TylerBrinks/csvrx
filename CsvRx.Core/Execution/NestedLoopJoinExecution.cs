@@ -13,8 +13,6 @@ internal record NestedLoopJoinExecution(
     List<ColumnIndex> ColumnIndices,
     Schema Schema) : IExecutionPlan
 {
-    private List<bool> _visitedLeftSide = new();
-
     internal bool LeftIsBuildSide => JoinType is JoinType.Right
         or JoinType.RightSemi
         or JoinType.RightAnti

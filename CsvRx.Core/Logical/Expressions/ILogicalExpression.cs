@@ -1,6 +1,4 @@
-﻿using CsvRx.Core.Logical.Plans;
-
-namespace CsvRx.Core.Logical.Expressions;
+﻿namespace CsvRx.Core.Logical.Expressions;
 
 internal interface ILogicalExpression : INode
 {

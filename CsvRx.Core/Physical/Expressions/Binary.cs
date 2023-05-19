@@ -1,8 +1,8 @@
 ﻿using CsvRx.Core.Data;
-using CsvRx.Core.Logical.Values;
 using CsvRx.Core.Values;
 using SqlParser.Ast;
 using System.Collections;
+using CsvRx.Core.Logical;
 
 namespace CsvRx.Core.Physical.Expressions;
 
@@ -10,146 +10,7 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
 {
     public ColumnDataType GetDataType(Schema schema)
     {
-        return GetDataType(Left.GetDataType(schema), Right.GetDataType(schema));
-    }
-
-    internal ColumnDataType GetDataType(ColumnDataType leftDataType, ColumnDataType rightDataType)
-    {
-        var resultType = CoerceTypes(leftDataType, rightDataType);
-
-        return Op switch
-        {
-            BinaryOperator.Eq
-                or BinaryOperator.NotEq
-                or BinaryOperator.And
-                or BinaryOperator.Or
-                or BinaryOperator.Lt
-                or BinaryOperator.Gt
-                or BinaryOperator.GtEq
-                or BinaryOperator.LtEq => ColumnDataType.Boolean,
-
-            BinaryOperator.BitwiseAnd
-                or BinaryOperator.BitwiseOr
-                or BinaryOperator.BitwiseXor => resultType,
-
-            BinaryOperator.Plus
-                or BinaryOperator.Minus
-                or BinaryOperator.Divide
-                or BinaryOperator.Multiply
-                or BinaryOperator.Modulo => resultType,
-
-            _ => throw new NotImplementedException($"Binary operator {Op} not implemented")
-        };
-    }
-
-    internal ColumnDataType CoerceTypes(ColumnDataType leftDataType, ColumnDataType rightDataType)
-    {
-        return Op switch
-        {
-            BinaryOperator.BitwiseAnd
-                or BinaryOperator.BitwiseOr
-                or BinaryOperator.BitwiseXor
-                or BinaryOperator.PGBitwiseShiftLeft
-                or BinaryOperator.PGBitwiseShiftRight => BitwiseCoercion(leftDataType, rightDataType),
-
-            BinaryOperator.And
-                or BinaryOperator.Or
-                when leftDataType is ColumnDataType.Boolean &&
-                     rightDataType is ColumnDataType.Boolean => ColumnDataType.Boolean,
-
-            BinaryOperator.Eq
-                or BinaryOperator.NotEq
-                or BinaryOperator.Lt
-                or BinaryOperator.Gt
-                or BinaryOperator.GtEq
-                or BinaryOperator.LtEq => ComparisonCoercion(leftDataType, rightDataType),
-
-            BinaryOperator.Plus
-                or BinaryOperator.Minus
-                or BinaryOperator.Divide
-                or BinaryOperator.Multiply
-                or BinaryOperator.Modulo => MathNumericalCoercion(leftDataType, rightDataType),
-
-            _ => throw new NotImplementedException($"Column data type coercion not implemented for operator {Op}")
-        };
-    }
-
-    internal static ColumnDataType BitwiseCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
-    {
-        return (leftDataType, rightDataType) switch
-        {
-            (ColumnDataType.Double, ColumnDataType.Double)
-                or (ColumnDataType.Double, ColumnDataType.Integer)
-                or (ColumnDataType.Integer, ColumnDataType.Double)
-                or (_, ColumnDataType.Double)
-                or (ColumnDataType.Double, _) => ColumnDataType.Double,
-
-            (ColumnDataType.Integer, ColumnDataType.Integer)
-                or (ColumnDataType.Integer, _)
-                or (_, ColumnDataType.Integer) => ColumnDataType.Integer,
-
-            _ => throw new NotImplementedException("Coercion not implemented")
-        };
-    }
-
-    internal static ColumnDataType MathNumericalCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
-    {
-        return (leftDataType, rightDataType) switch
-        {
-            (ColumnDataType.Double, _)
-                or (_, ColumnDataType.Double) => ColumnDataType.Double,
-
-            (ColumnDataType.Integer, _)
-                or (_, ColumnDataType.Integer) => ColumnDataType.Integer,
-
-            _ => throw new NotImplementedException("Coercion not implemented")
-        };
-    }
-
-    internal static ColumnDataType ComparisonCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
-    {
-        if (leftDataType == rightDataType)
-        {
-            return leftDataType;
-        }
-
-        return ComparisonBinaryNumericCoercion(leftDataType, rightDataType) ??
-               //DictionaryCoercion() ??
-               //temporal
-               StringCoercion(leftDataType, rightDataType) ??
-               // null coercion
-               //StringNumericCoercion()
-               throw new NotImplementedException("Coercion not implemented");
-    }
-
-    internal static ColumnDataType? StringCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
-    {
-        return leftDataType == ColumnDataType.Utf8 && rightDataType == ColumnDataType.Utf8
-            ? ColumnDataType.Utf8
-            : null;
-    }
-
-    internal static ColumnDataType? ComparisonBinaryNumericCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
-    {
-        if (leftDataType == rightDataType)
-        {
-            return leftDataType;
-        }
-
-        return (leftDataType, rightDataType) switch
-        {
-            (ColumnDataType.Double, ColumnDataType.Double)
-                or (ColumnDataType.Integer, ColumnDataType.Double)
-                or (ColumnDataType.Double, ColumnDataType.Integer)
-                or (ColumnDataType.Double, _)
-                or (_, ColumnDataType.Double) => ColumnDataType.Double,
-
-            (ColumnDataType.Integer, ColumnDataType.Integer)
-                or (ColumnDataType.Integer, _)
-                or (_, ColumnDataType.Integer) => ColumnDataType.Integer,
-
-            _ => null
-        };
+        return LogicalExtensions.GetBinaryDataType(Left.GetDataType(schema), Op, Right.GetDataType(schema));
     }
 
     public ColumnValue Evaluate(RecordBatch batch, int? schemaIndex = null)
@@ -206,7 +67,7 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
             results[i] = value;
         }
 
-        var outputType = MathNumericalCoercion(leftValue.DataType, rightValue.DataType);
+        var outputType = LogicalExtensions.GetMathNumericalCoercion(leftValue.DataType, rightValue.DataType);
 
         IList data = outputType == ColumnDataType.Integer
             ? results.Select(Convert.ToInt64).ToList()
@@ -215,28 +76,28 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
         return new ArrayColumnValue(data, outputType);
     }
 
-    public ArrayColumnValue Add(ColumnValue leftValue, ColumnValue rightValue)
+    public static ArrayColumnValue Add(ColumnValue leftValue, ColumnValue rightValue)
     {
         return Calculate(leftValue, rightValue, (l, r) => l + r);
     }
 
-    public ArrayColumnValue Subtract(ColumnValue leftValue, ColumnValue rightValue)
+    public static ArrayColumnValue Subtract(ColumnValue leftValue, ColumnValue rightValue)
     {
         return Calculate(leftValue, rightValue, (l, r) => l - r);
     }
 
-    public ArrayColumnValue Multiple(ColumnValue leftValue, ColumnValue rightValue)
+    public static ArrayColumnValue Multiple(ColumnValue leftValue, ColumnValue rightValue)
     {
         return Calculate(leftValue, rightValue, (l, r) => l * r);
 
     }
 
-    public ArrayColumnValue Divide(ColumnValue leftValue, ColumnValue rightValue)
+    public static ArrayColumnValue Divide(ColumnValue leftValue, ColumnValue rightValue)
     {
         return Calculate(leftValue, rightValue, (l, r) => l / r);
     }
 
-    public ArrayColumnValue Modulo(ColumnValue leftValue, ColumnValue rightValue)
+    public static ArrayColumnValue Modulo(ColumnValue leftValue, ColumnValue rightValue)
     {
         return Calculate(leftValue, rightValue, (l, r) => l % r);
     }
@@ -254,7 +115,7 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
         return new BooleanColumnValue(bitVector);
     }
 
-    private bool CompareValues(object left, object right, ColumnDataType dataType)
+    private bool CompareValues(object? left, object? right, ColumnDataType dataType)
     {
         switch (dataType)
         {
@@ -275,10 +136,10 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
         }
     }
 
-    private bool CompareStrings(object left, object right)
+    private bool CompareStrings(object? left, object? right)
     {
-        var leftValue = left as string ?? left.ToString();
-        var rightValue = right as string ?? right.ToString();
+        var leftValue = left as string ?? (left ?? "").ToString();
+        var rightValue = right as string ?? (right ?? "").ToString();
 
         return Op switch
         {
@@ -288,7 +149,7 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
         };
     }
 
-    private bool CompareIntegers(object left, object right)
+    private bool CompareIntegers(object? left, object? right)
     {
         var leftValue = Convert.ToInt64(left);
         var rightValue = Convert.ToInt64(right);
@@ -306,10 +167,10 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
         };
     }
 
-    private bool CompareDecimals(object left, object right)
+    private bool CompareDecimals(object? left, object? right)
     {
-        var leftValue = Convert.ToDecimal(left);
-        var rightValue = Convert.ToDecimal(right);
+        var leftValue = Convert.ToDouble(left ?? double.NaN);
+        var rightValue = Convert.ToDouble(right ?? double.NaN);
 
         return Op switch
         {
@@ -324,10 +185,10 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
         };
     }
 
-    private bool CompareBooleans(object left, object right)
+    private bool CompareBooleans(object? left, object? right)
     {
-        var leftValue = (bool)left;
-        var rightValue = (bool)right;
+        var leftValue = Convert.ToBoolean(left ?? false);
+        var rightValue = Convert.ToBoolean(right ?? false);
 
         return Op switch
         {
@@ -339,5 +200,4 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
             _ => throw new NotImplementedException("CompareBooleans not implemented for integers yet")
         };
     }
-
 }

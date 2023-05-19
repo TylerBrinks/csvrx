@@ -193,9 +193,9 @@ internal class PhysicalPlanner
             var leftIndices = leftFieldIndices.Select(i => new ColumnIndex(i, JoinSide.Left));
             var rightIndices = rightFieldIndices.Select(i => new ColumnIndex(i, JoinSide.Right));
 
-            var columnIndices = leftIndices.Concat(rightIndices).ToList();
+            var allIndices = leftIndices.Concat(rightIndices).ToList();
 
-            return new JoinFilter(filterExpression, columnIndices, filterSchema);
+            return new JoinFilter(filterExpression, allIndices, filterSchema);
         }
     }
 

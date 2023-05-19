@@ -61,7 +61,8 @@ internal interface ILogicalPlan : INode
 
     T INode.Transform<T>(T instance, Func<T, T> func)
     {
-        var afterOpChildren = MapChildren(this, node => node.Transform(node, func as Func<ILogicalPlan, ILogicalPlan>));
+        var transform = func as Func<ILogicalPlan, ILogicalPlan>;
+        var afterOpChildren = MapChildren(this, node => node.Transform(node, transform!));
 
         var newNode = func((T)afterOpChildren);
 
@@ -112,7 +113,7 @@ internal interface ILogicalPlan : INode
 
         ILogicalPlan BuildJoin(Join join)
         {
-            var schema = LogicalExtensions.BuildJoinSchema(inputs[0].Schema, inputs[1].Schema, join.JoinType);
+            //var schema = LogicalExtensions.BuildJoinSchema(inputs[0].Schema, inputs[1].Schema, join.JoinType);
 
             var expressionCount = join.On.Count;
             var newOn = expressions.Take(expressionCount)
@@ -136,7 +137,7 @@ internal interface ILogicalPlan : INode
                 filterExpression = expressions[^1];
             }
 
-            return new Join(inputs[0], inputs[1], newOn, filterExpression, join.JoinType, join.JoinConstraint, schema);
+            return new Join(inputs[0], inputs[1], newOn, filterExpression, join.JoinType, join.JoinConstraint);//, schema);
         }
     }
 }

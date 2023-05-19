@@ -1,6 +1,7 @@
 ﻿using CsvRx.Core.Data;
 using CsvRx.Core.Physical.Aggregation;
 using CsvRx.Core.Physical.Expressions;
+// ReSharper disable StringLiteralTypo
 
 namespace CsvRx.Core.Physical.Functions;
 

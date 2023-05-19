@@ -1,4 +1,5 @@
-﻿namespace CsvRx.Core.Logical.Expressions;
+﻿// ReSharper disable StringLiteralTypo
+namespace CsvRx.Core.Logical.Expressions;
 
 internal record AggregateFunction(
        AggregateFunctionType FunctionType,

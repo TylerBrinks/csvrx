@@ -1,5 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using CsvRx.Core.Data;
 using CsvRx.Core.Logical.Expressions;
 using CsvRx.Core.Logical.Plans;
@@ -31,7 +30,7 @@ internal static class LogicalExtensions
         {
             Alias a => a.Name,
             Column c => c.FlatName,
-            Expressions.Binary b => $"{b.Left.CreateName()} {b.Op} {b.Right.CreateName()}",
+            Binary b => $"{b.Left.CreateName()} {b.Op} {b.Right.CreateName()}",
             AggregateFunction fn => GetFunctionName(fn, fn.Distinct, fn.Args),
             Literal { Value.RawValue: { } } l => l.Value.RawValue.ToString(),
             //Like
@@ -119,8 +118,8 @@ internal static class LogicalExtensions
     /// Converts a list of expressions into a list of qualified fields
     /// </summary>
     /// <param name="expressions">Logical expressions to iterate</param>
-    /// <param name="schema"></param>
-    /// <returns></returns>
+    /// <param name="plan">Plan containing field definitions</param>
+    /// <returns>List of qualified fields</returns>
     internal static List<QualifiedField> ExpressionListToFields(this IEnumerable<ILogicalExpression> expressions, ILogicalPlan plan)
     {
         return expressions.Select(e => e.ToField(plan.Schema)).ToList();
@@ -157,7 +156,7 @@ internal static class LogicalExtensions
             Column c => schema.GetField(c.Name)!.DataType,
             Alias a => a.Expression.GetDataType(schema),
             AggregateFunction fn => GetAggregateDataType(fn),
-            Binary b => GetBinaryDataType(b),
+            Binary b => GetBinaryDataType(GetDataType(b.Left, schema), b.Op, GetDataType(b.Right, schema)),
 
             _ => throw new NotImplementedException("GetDataType not implemented for ColumnDataType"),
         };
@@ -202,73 +201,78 @@ internal static class LogicalExtensions
                 return inputTypes[0];
             }
         }
+    }
 
-        ColumnDataType GetBinaryDataType(Binary binary)
+    internal static ColumnDataType GetBinaryDataType(ColumnDataType leftDataType, BinaryOperator op, ColumnDataType rightDataType)
+    {
+        //var leftDataType = GetDataType(binary.Left, schema);
+        //var rightDataType = GetDataType(binary.Left, schema);
+
+        var resultType = CoerceBinaryTypes(leftDataType, op, rightDataType);
+
+        return op switch
         {
-            var leftDataType = GetDataType(binary.Left, schema);
-            var rightDataType = GetDataType(binary.Left, schema);
+            BinaryOperator.Eq
+                or BinaryOperator.NotEq
+                or BinaryOperator.And
+                or BinaryOperator.Or
+                or BinaryOperator.Lt
+                or BinaryOperator.Gt
+                or BinaryOperator.GtEq
+                or BinaryOperator.LtEq
+                // or BinaryOperator.RegexMatch
+                // or BinaryOperator.RegexIMatch
+                // or BinaryOperator.RegexNotMatch
+                // or BinaryOperator.RegexNotIMatch
+                // or BinaryOperator.IsDistinctFrom
+                // or BinaryOperator.IsNotDistinctFrom
+                => ColumnDataType.Boolean,
 
-            var resultType = CoerceBinaryTypes(leftDataType, binary.Op, rightDataType);
+            _ => resultType
+        };
+    }
 
-            return binary.Op switch
-            {
-                BinaryOperator.Eq
-                    or BinaryOperator.NotEq
-                    or BinaryOperator.And
-                    or BinaryOperator.Or
-                    or BinaryOperator.Lt
-                    or BinaryOperator.Gt
-                    or BinaryOperator.GtEq
-                    or BinaryOperator.LtEq
-                //    | Operator::RegexMatch
-                //    | Operator::RegexIMatch
-                //    | Operator::RegexNotMatch
-                //    | Operator::RegexNotIMatch
-                //    | Operator::IsDistinctFrom
-                //    | Operator::IsNotDistinctFrom
-                    => ColumnDataType.Boolean,
-
-                _ => resultType
-            };
-        }
-
-        static ColumnDataType CoerceBinaryTypes(ColumnDataType leftDataType, BinaryOperator op, ColumnDataType rightDataType)
+    internal static ColumnDataType CoerceBinaryTypes(ColumnDataType leftDataType, BinaryOperator op, ColumnDataType rightDataType)
+    {
+        switch (op)
         {
-            switch (op)
-            {
-                case BinaryOperator.BitwiseAnd
-                    or BinaryOperator.BitwiseOr
-                    or BinaryOperator.BitwiseXor:
-                    return GetBitwiseCoercion(leftDataType, rightDataType);
+            case BinaryOperator.BitwiseAnd
+                or BinaryOperator.BitwiseOr
+                or BinaryOperator.BitwiseXor:
+                return GetBitwiseCoercion(leftDataType, rightDataType);
 
-                case BinaryOperator.And or BinaryOperator.Or:
-                    return ColumnDataType.Boolean;
+            //case BinaryOperator.And or BinaryOperator.Or:
+            //    return ColumnDataType.Boolean;
+            case BinaryOperator.And or BinaryOperator.Or
+                when leftDataType is ColumnDataType.Boolean &&
+                     rightDataType is ColumnDataType.Boolean:
+                return ColumnDataType.Boolean;
 
-                case BinaryOperator.Eq
-                    or BinaryOperator.NotEq
-                    or BinaryOperator.Lt
-                    or BinaryOperator.Gt
-                    or BinaryOperator.LtEq
-                    or BinaryOperator.GtEq:
-                    return GetComparisonCoercion(leftDataType, rightDataType);
+            case BinaryOperator.Eq
+                or BinaryOperator.NotEq
+                or BinaryOperator.Lt
+                or BinaryOperator.Gt
+                or BinaryOperator.LtEq
+                or BinaryOperator.GtEq:
+                return GetComparisonCoercion(leftDataType, rightDataType);
 
-                //case BinaryOperator.Plus
-                //    or BinaryOperator.Minus when IsDateOrTime(leftDataType) && IsDateOrTime(rightDataType):
-                //    return TemporalAddSubCoercion();
+            //case BinaryOperator.Plus
+            //    or BinaryOperator.Minus when IsDateOrTime(leftDataType) && IsDateOrTime(rightDataType):
+            //    return TemporalAddSubCoercion();
 
-                case BinaryOperator.Plus
-                    or BinaryOperator.Minus
-                    or BinaryOperator.Modulo
-                    or BinaryOperator.Divide
-                    or BinaryOperator.Multiply:
-                    return GetMathNumericalCoercion(leftDataType, rightDataType);
+            case BinaryOperator.Plus
+                or BinaryOperator.Minus
+                or BinaryOperator.Modulo
+                or BinaryOperator.Divide
+                or BinaryOperator.Multiply:
+                return GetMathNumericalCoercion(leftDataType, rightDataType);
 
-                case BinaryOperator.StringConcat:
-                default:
-                    return ColumnDataType.Utf8;
-            }
+            case BinaryOperator.StringConcat:
+            default:
+                return ColumnDataType.Utf8;
         }
     }
+
     /// <summary>
     /// Finds the coerced data type for a bitwise operation
     /// </summary>
@@ -282,9 +286,23 @@ internal static class LogicalExtensions
             return ColumnDataType.Utf8;
         }
 
-        return leftDataType == rightDataType 
-            ? leftDataType 
-            : ColumnDataType.Double;
+        return (leftDataType, rightDataType) switch
+        {
+            (ColumnDataType.Double, ColumnDataType.Double)
+                or (ColumnDataType.Double, ColumnDataType.Integer)
+                or (ColumnDataType.Integer, ColumnDataType.Double)
+                or (_, ColumnDataType.Double)
+                or (ColumnDataType.Double, _) => ColumnDataType.Double,
+
+            (ColumnDataType.Integer, ColumnDataType.Integer)
+                or (ColumnDataType.Integer, _)
+                or (_, ColumnDataType.Integer) => ColumnDataType.Integer,
+
+            _ => throw new NotImplementedException("Coercion not implemented")
+        };
+        //return leftDataType == rightDataType 
+        //    ? leftDataType 
+        //    : ColumnDataType.Double;
     }
     /// <summary>
     /// Finds the coerced data type for a comparison operation
@@ -294,13 +312,56 @@ internal static class LogicalExtensions
     /// <returns>Coerced column data type</returns>
     internal static ColumnDataType GetComparisonCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
     {
-        if (leftDataType == ColumnDataType.Boolean && rightDataType == ColumnDataType.Boolean)
+        if (leftDataType == rightDataType)
         {
-            return ColumnDataType.Boolean;
+            return leftDataType;
         }
 
-        return ColumnDataType.Double;
+        return ComparisonBinaryNumericCoercion(leftDataType, rightDataType) ??
+               //DictionaryCoercion() ??
+               //temporal
+               StringCoercion(leftDataType, rightDataType) ??
+               // null coercion
+               //StringNumericCoercion()
+               throw new NotImplementedException("Coercion not implemented");
     }
+    internal static ColumnDataType? StringCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
+    {
+        return leftDataType == ColumnDataType.Utf8 && rightDataType == ColumnDataType.Utf8
+            ? ColumnDataType.Utf8
+            : null;
+    }
+    internal static ColumnDataType? ComparisonBinaryNumericCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
+    {
+        if (leftDataType == rightDataType)
+        {
+            return leftDataType;
+        }
+
+        return (leftDataType, rightDataType) switch
+        {
+            (ColumnDataType.Double, ColumnDataType.Double)
+                or (ColumnDataType.Integer, ColumnDataType.Double)
+                or (ColumnDataType.Double, ColumnDataType.Integer)
+                or (ColumnDataType.Double, _)
+                or (_, ColumnDataType.Double) => ColumnDataType.Double,
+
+            (ColumnDataType.Integer, ColumnDataType.Integer)
+                or (ColumnDataType.Integer, _)
+                or (_, ColumnDataType.Integer) => ColumnDataType.Integer,
+
+            _ => null
+        };
+    }
+    //internal static ColumnDataType GetComparisonCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
+    //{
+    //    if (leftDataType == ColumnDataType.Boolean && rightDataType == ColumnDataType.Boolean)
+    //    {
+    //        return ColumnDataType.Boolean;
+    //    }
+
+    //    return ColumnDataType.Double;
+    //}
     /// <summary>
     /// Finds the coerced data type for a math operation
     /// </summary>
@@ -314,9 +375,16 @@ internal static class LogicalExtensions
             return ColumnDataType.Utf8;
         }
 
-        return leftDataType == rightDataType 
-            ? leftDataType 
-            : ColumnDataType.Double;
+        return (leftDataType, rightDataType) switch
+        {
+            (ColumnDataType.Double, _)
+                or (_, ColumnDataType.Double) => ColumnDataType.Double,
+
+            (ColumnDataType.Integer, _)
+                or (_, ColumnDataType.Integer) => ColumnDataType.Integer,
+
+            _ => throw new NotImplementedException("Coercion not implemented")
+        };
     }
     /// <summary>
     /// Checks if a column data type is numeric
@@ -327,19 +395,19 @@ internal static class LogicalExtensions
     {
         return dataType is ColumnDataType.Integer or ColumnDataType.Double;
     }
-    /// <summary>
-    /// Checks if a column data type is a date/time field
-    /// </summary>
-    /// <param name="dataType">Data type to evaluate</param>
-    /// <returns>True if date/time; otherwise false.</returns>
-    private static bool IsDateOrTime(this ColumnDataType dataType)
-    {
-        return dataType is ColumnDataType.Date32
-            or ColumnDataType.TimestampSecond
-            or ColumnDataType.TimestampMillisecond
-            or ColumnDataType.TimestampMicrosecond
-            or ColumnDataType.TimestampNanosecond;
-    }
+    // <summary>
+    // Checks if a column data type is a date/time field
+    // </summary>
+    // <param name="dataType">Data type to evaluate</param>
+    // <returns>True if date/time; otherwise false.</returns>
+    //private static bool IsDateOrTime(this ColumnDataType dataType)
+    //{
+    //    return dataType is ColumnDataType.Date32
+    //        or ColumnDataType.TimestampSecond
+    //        or ColumnDataType.TimestampMillisecond
+    //        or ColumnDataType.TimestampMicrosecond
+    //        or ColumnDataType.TimestampNanosecond;
+    //}
     /// <summary>
     /// Removes an alias and reverts to the underlying field name
     ///  for an expression that has been aliased
@@ -378,9 +446,7 @@ internal static class LogicalExtensions
             Column or Literal => expression,
             AggregateFunction fn => fn with { Args = fn.Args.Select(_ => _.CloneWithReplacement(replacement)).ToList() },
             Alias a => a with { Expression = a.Expression.CloneWithReplacement(replacement) },
-
-            Expressions.Binary b => new Expressions.Binary(
-                b.Left.CloneWithReplacement(replacement), b.Op, b.Right.CloneWithReplacement(replacement)),
+            Binary b => new Binary(b.Left.CloneWithReplacement(replacement), b.Op, b.Right.CloneWithReplacement(replacement)),
 
             _ => throw new NotImplementedException() //todo other types
         };
@@ -504,10 +570,10 @@ internal static class LogicalExtensions
             return new Column(schema.GetField(ident.Ident.Value)!.Name);
         }
         
-        if (context.OuterQuerySchema != null)
-        {
-            //todo df/sql/source/expr/identifier.rs
-        }
+        //if (context.OuterQuerySchema != null)
+        //{
+        //    //todo df/sql/source/expr/identifier.rs
+        //}
 
         return new Column(ident.Ident.Value);
     }
@@ -519,15 +585,16 @@ internal static class LogicalExtensions
     /// <param name="op">Operator</param>
     /// <param name="right">Operation right expression</param>
     /// <param name="schema">Schema containing column definitions</param>
+    /// <param name="context">Planner context</param>
     /// <returns>Binary expression</returns>
-    internal static Expressions.Binary ParseSqlBinaryOp(
+    internal static Binary ParseSqlBinaryOp(
         Expression left, 
         BinaryOperator op, 
         Expression right,
         Schema schema,
         PlannerContext context)
     {
-        return new Expressions.Binary(
+        return new Binary(
             SqlExpressionToLogicalExpression(left, schema, context), 
             op, 
             SqlExpressionToLogicalExpression(right, schema, context));
@@ -557,11 +624,13 @@ internal static class LogicalExtensions
                 throw new NotImplementedException();
         }
     }
+
     /// <summary>
     /// Converts a SQL function to a logical expression
     /// </summary>
     /// <param name="function">SQL function to convert</param>
     /// <param name="schema">Schema containing column definitions</param>
+    /// <param name="context">Planner context</param>
     /// <returns>Logical expression instance</returns>
     /// <exception cref="InvalidOperationException"></exception>
     internal static ILogicalExpression SqlFunctionToExpression(Function function, Schema schema, PlannerContext context)
@@ -905,11 +974,13 @@ internal static class LogicalExtensions
     #endregion
 
     #region Select Plan
+
     /// <summary>
     /// Builds a logical plan from a query filter
     /// </summary>
     /// <param name="selection">Filter expression</param>
     /// <param name="plan">Input plan</param>
+    /// <param name="context">Planner context</param>
     /// <returns>ILogicalPlan instance to filter the input plan</returns>
     internal static ILogicalPlan PlanFromSelection(this Expression? selection, ILogicalPlan plan, PlannerContext context)
     {
@@ -925,13 +996,15 @@ internal static class LogicalExtensions
         filterExpression = NormalizeColumnWithSchemas(filterExpression, plan.Schema.AsNested(), usingColumns.AsNested());
         return new Filter(plan, filterExpression);
     }
+
     /// <summary>
     /// Create a projection from a `SELECT` statement
     /// </summary>
     /// <param name="projection"></param>
     /// <param name="plan"></param>
     /// <param name="emptyFrom"></param>
-    /// <returns></returns>
+    /// <param name="context">Planner context</param>
+    /// <returns>List of parsed select expressions</returns>
     internal static List<ILogicalExpression> PrepareSelectExpressions(
         this IEnumerable<SelectItem> projection,
         ILogicalPlan plan, 
@@ -1478,7 +1551,7 @@ internal static class LogicalExtensions
                     expression = a.Expression;
                     continue;
 
-                case Expressions.Binary b:
+                case Binary b:
                     {
                         var left = b.Left.CreatePhysicalExpression(inputDfSchema, inputSchema);
                         var right = b.Right.CreatePhysicalExpression(inputDfSchema, inputSchema);
@@ -1497,7 +1570,7 @@ internal static class LogicalExtensions
         return expression switch
         {
             Column c => c.Name,
-            Expressions.Binary b => $"{b.Left.GetPhysicalName()} {b.Op} {b.Right.GetPhysicalName()}",
+            Binary b => $"{b.Left.GetPhysicalName()} {b.Op} {b.Right.GetPhysicalName()}",
             Alias a => a.Name,
             AggregateFunction fn => fn.CreateFunctionPhysicalName(fn.Distinct, fn.Args),
             _ => throw new NotImplementedException()

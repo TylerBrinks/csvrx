@@ -10,8 +10,8 @@ internal record Join(
     List<(ILogicalExpression Left, ILogicalExpression Right)> On,
     ILogicalExpression? Filter,
     JoinType JoinType,
-    JoinConstraint JoinConstraint,
-    Schema Schema
+    JoinConstraint JoinConstraint
+    //Schema Schema
     ) : ILogicalPlanParent
 {
     internal static Join TryNew(
@@ -38,7 +38,7 @@ internal record Join(
 
         var joinSchema = LogicalExtensions.BuildJoinSchema(left.Schema, right.Schema, joinType);
 
-        return new Join(left, right, on, filter, joinType, joinConstraint, joinSchema);
+        return new Join(left, right, on, filter, joinType, joinConstraint);//, joinSchema);
 
         (List<Column> Left, List<Column> Right) GetJoinKeys((List<Column> Left, List<Column> Right) joinKeyValues)
         {

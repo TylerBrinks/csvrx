@@ -11,8 +11,9 @@ internal record Sort(ILogicalPlan Plan, List<ILogicalExpression> OrderByExpressi
 
         var missingColumns = new HashSet<Column>();
 
+        var capturedPlan = plan;
         var missingExpressions = expressions.Select(expr => expr.ToColumns())
-            .SelectMany(columns => columns.Where(column => plan.Schema.FieldFromColumn(column) == null));
+            .SelectMany(columns => columns.Where(column => capturedPlan.Schema.FieldFromColumn(column) == null));
 
         foreach (var column in missingExpressions)
         {
@@ -76,7 +77,7 @@ internal record Sort(ILogicalPlan Plan, List<ILogicalExpression> OrderByExpressi
             var name = expression.CreateName();
             var searchColumn = new Column(name);
 
-            var foundMatch = projectionExpressions.Find(_ => searchColumn == _);
+            var foundMatch = projectionExpressions.Find(_ => searchColumn == _ as Column);
             if (foundMatch != null)
             {
                 //TODO cast & try cast
