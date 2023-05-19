@@ -10,10 +10,10 @@ context.RegisterCsv("test_b", @"C:\Users\tyler\source\repos\sink\CsvRx\CsvRx\joi
 
 var queries = new List<string>
 {
-    "SELECT c1 FROM mycsv order by 1",
     "SELECT c2, c12, c2 * c2 FROM mycsv",
 
     "SELECT c1 FROM mycsv order by c2",
+    "SELECT c1 FROM mycsv order by 1",
     "SELECT c1, MAX(c3) FROM mycsv GROUP BY c1", //WHERE c11 > .2 AND c11 < 0.9 
     "SELECT distinct c1 FROM mycsv",
     "SELECT * FROM mycsv",
@@ -27,7 +27,6 @@ var queries = new List<string>
     "SELECT c1, c2 as abc FROM mycsv where c1 = 'c'",
     "SELECT c1 as a, c3 FROM mycsv order by a limit 23 offset 20",
     "SELECT c1, c2 as abc FROM mycsv mv where mv.c1 = 'c'",
-
 
     //****var sql = "SELECT test_a.c2, test_a.c3, test_b.c2 FROM test_a join test_b USING(c1)";
     //select t1.* from t t1 CROSS JOIN t t2"
