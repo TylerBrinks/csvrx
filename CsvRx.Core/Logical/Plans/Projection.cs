@@ -16,7 +16,7 @@ internal record Projection(ILogicalPlan Plan, List<ILogicalExpression> Expressio
 
     public static Projection TryNew(ILogicalPlan plan, List<ILogicalExpression> expressions)
     {
-        var schema = new Schema(expressions.ExpressionListToFields(plan.Schema));
+        var schema = new Schema(expressions.ExpressionListToFields(plan));
         return new Projection(plan, expressions, schema);
     }
 }

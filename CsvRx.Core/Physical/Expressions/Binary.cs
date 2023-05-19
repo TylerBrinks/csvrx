@@ -1,14 +1,21 @@
 ﻿using CsvRx.Core.Data;
+using CsvRx.Core.Logical.Values;
 using CsvRx.Core.Values;
 using SqlParser.Ast;
+using System.Collections;
 
 namespace CsvRx.Core.Physical.Expressions;
 
 internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExpression Right) : IPhysicalExpression
 {
-    public ColumnDataType GetDataType(Schema schema) 
+    public ColumnDataType GetDataType(Schema schema)
     {
-        var resultType = CoerceTypes(Left.GetDataType(schema), Right.GetDataType(schema));
+        return GetDataType(Left.GetDataType(schema), Right.GetDataType(schema));
+    }
+
+    internal ColumnDataType GetDataType(ColumnDataType leftDataType, ColumnDataType rightDataType)
+    {
+        var resultType = CoerceTypes(leftDataType, rightDataType);
 
         return Op switch
         {
@@ -35,7 +42,7 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
         };
     }
 
-    private ColumnDataType CoerceTypes(ColumnDataType leftDataType, ColumnDataType rightDataType)
+    internal ColumnDataType CoerceTypes(ColumnDataType leftDataType, ColumnDataType rightDataType)
     {
         return Op switch
         {
@@ -67,7 +74,7 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
         };
     }
 
-    private static ColumnDataType BitwiseCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
+    internal static ColumnDataType BitwiseCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
     {
         return (leftDataType, rightDataType) switch
         {
@@ -85,23 +92,21 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
         };
     }
 
-    private static ColumnDataType MathNumericalCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
+    internal static ColumnDataType MathNumericalCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
     {
-        //todo check both not null and both numeric
-
         return (leftDataType, rightDataType) switch
         {
             (ColumnDataType.Double, _)
-                or (ColumnDataType.Double, _) => ColumnDataType.Double,
+                or (_, ColumnDataType.Double) => ColumnDataType.Double,
 
             (ColumnDataType.Integer, _)
-                or (ColumnDataType.Integer, _) => ColumnDataType.Integer,
+                or (_, ColumnDataType.Integer) => ColumnDataType.Integer,
 
             _ => throw new NotImplementedException("Coercion not implemented")
         };
     }
 
-    private ColumnDataType ComparisonCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
+    internal static ColumnDataType ComparisonCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
     {
         if (leftDataType == rightDataType)
         {
@@ -117,16 +122,15 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
                throw new NotImplementedException("Coercion not implemented");
     }
 
-    private static ColumnDataType? StringCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
+    internal static ColumnDataType? StringCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
     {
         return leftDataType == ColumnDataType.Utf8 && rightDataType == ColumnDataType.Utf8
             ? ColumnDataType.Utf8
             : null;
     }
 
-    private static ColumnDataType? ComparisonBinaryNumericCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
+    internal static ColumnDataType? ComparisonBinaryNumericCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
     {
-        // todo check if non-numeric types
         if (leftDataType == rightDataType)
         {
             return leftDataType;
@@ -167,7 +171,74 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
         //    throw new InvalidOperationException("Data type mismatch");
         //}
 
-        return Compare(leftValue, rightValue);
+        return Op switch
+        {
+            BinaryOperator.Lt
+                or BinaryOperator.LtEq
+                or BinaryOperator.Gt
+                or BinaryOperator.GtEq
+                or BinaryOperator.Eq
+                or BinaryOperator.NotEq => Compare(leftValue, rightValue),
+
+            BinaryOperator.Plus => Add(leftValue, rightValue),
+            BinaryOperator.Minus => Subtract(leftValue, rightValue),
+            BinaryOperator.Multiply => Multiple(leftValue, rightValue),
+            BinaryOperator.Divide => Divide(leftValue, rightValue),
+            BinaryOperator.Modulo => Modulo(leftValue, rightValue),
+
+            //TODO bitwise operators
+
+            _ => throw new NotImplementedException("Binary Evaluation not yet implemented")
+        };
+    }
+
+    public static ArrayColumnValue Calculate(ColumnValue leftValue, ColumnValue rightValue, Func<double, double, double> calculate)
+    {
+        var results = new double[leftValue.Size];
+
+        for (var i = 0; i < leftValue.Size; i++)
+        {
+            var left = leftValue.GetValue(i);
+            var right = rightValue.GetValue(i);
+
+            var value = calculate(Convert.ToDouble(left), Convert.ToDouble(right));
+            
+            results[i] = value;
+        }
+
+        var outputType = MathNumericalCoercion(leftValue.DataType, rightValue.DataType);
+
+        IList data = outputType == ColumnDataType.Integer
+            ? results.Select(Convert.ToInt64).ToList()
+            : results.ToList();
+
+        return new ArrayColumnValue(data, outputType);
+    }
+
+    public ArrayColumnValue Add(ColumnValue leftValue, ColumnValue rightValue)
+    {
+        return Calculate(leftValue, rightValue, (l, r) => l + r);
+    }
+
+    public ArrayColumnValue Subtract(ColumnValue leftValue, ColumnValue rightValue)
+    {
+        return Calculate(leftValue, rightValue, (l, r) => l - r);
+    }
+
+    public ArrayColumnValue Multiple(ColumnValue leftValue, ColumnValue rightValue)
+    {
+        return Calculate(leftValue, rightValue, (l, r) => l * r);
+
+    }
+
+    public ArrayColumnValue Divide(ColumnValue leftValue, ColumnValue rightValue)
+    {
+        return Calculate(leftValue, rightValue, (l, r) => l / r);
+    }
+
+    public ArrayColumnValue Modulo(ColumnValue leftValue, ColumnValue rightValue)
+    {
+        return Calculate(leftValue, rightValue, (l, r) => l % r);
     }
 
     public BooleanColumnValue Compare(ColumnValue leftValue, ColumnValue rightValue)
@@ -206,8 +277,8 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
 
     private bool CompareStrings(object left, object right)
     {
-        var leftValue = (string)left;
-        var rightValue = (string)right;
+        var leftValue = left as string ?? left.ToString();
+        var rightValue = right as string ?? right.ToString();
 
         return Op switch
         {
@@ -219,8 +290,8 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
 
     private bool CompareIntegers(object left, object right)
     {
-        var leftValue = (long)left;
-        var rightValue = (long)right;
+        var leftValue = Convert.ToInt64(left);
+        var rightValue = Convert.ToInt64(right);
 
         return Op switch
         {
@@ -234,7 +305,7 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
             _ => throw new NotImplementedException("CompareIntegers not implemented for integers yet")
         };
     }
-   
+
     private bool CompareDecimals(object left, object right)
     {
         var leftValue = Convert.ToDecimal(left);

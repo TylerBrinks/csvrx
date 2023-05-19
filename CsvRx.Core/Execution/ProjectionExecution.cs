@@ -18,7 +18,7 @@ internal record ProjectionExecution(
         //TODO alias loop
         //TODO output ordering respect alias
 
-        return new ProjectionExecution(physicalExpressions, schema, plan);//todo alias_map, metrics?
+        return new ProjectionExecution(physicalExpressions, schema, plan);//todo alias_map
     }
 
     public async IAsyncEnumerable<RecordBatch> Execute(QueryOptions options)

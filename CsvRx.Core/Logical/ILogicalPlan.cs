@@ -118,7 +118,6 @@ internal interface ILogicalPlan : INode
             var newOn = expressions.Take(expressionCount)
                 .Select(expr =>
                 {
-                    // todo: unalias, implement simplify rule
                     var unaliased = expr.Unalias();
 
                     if (unaliased is Binary b)

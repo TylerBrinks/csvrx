@@ -51,7 +51,7 @@ internal class LogicalPlanOptimizer
         var inputs = plan.GetInputs();
         var result = inputs.Select(p => OptimizeRecursively(rule, p)).ToList();
 
-        if (!result.Any() || result.All(r => r == null)) //TODO: or all are null
+        if (!result.Any() || result.All(r => r == null))
         {
             return null;
         }

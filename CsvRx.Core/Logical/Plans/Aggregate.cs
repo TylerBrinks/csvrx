@@ -22,7 +22,7 @@ internal record Aggregate(
     public static Aggregate TryNew(ILogicalPlan plan, List<ILogicalExpression> groupExpressions, List<ILogicalExpression> aggregateExpressions)
     {
         var allExpressions = groupExpressions.Concat(aggregateExpressions).ToList();
-        var schema = new Schema(allExpressions.ExpressionListToFields(plan.Schema));
+        var schema = new Schema(allExpressions.ExpressionListToFields(plan));
         return new Aggregate(plan, groupExpressions, aggregateExpressions, schema);
     }
 }
