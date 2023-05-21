@@ -40,11 +40,6 @@ public class ExecutionContext
         var logicalPlan = BuildLogicalPlan(sql);
         var physicalPlan = BuildPhysicalPlan(logicalPlan);
 
-        if (physicalPlan == null)
-        {
-            throw new InvalidOperationException("Must build a physical plan first");
-        }
-
         await foreach (var batch in physicalPlan.Execute(options))
         {
             yield return batch;

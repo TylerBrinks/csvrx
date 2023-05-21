@@ -12,6 +12,7 @@ internal record FilterExecution(IPhysicalExpression Predicate, IExecutionPlan Pl
     public static FilterExecution TryNew(IPhysicalExpression predicate, IExecutionPlan plan)
     {
         var dt = predicate.GetDataType(plan.Schema);
+
         if (dt != ColumnDataType.Boolean)
         {
             throw new InvalidOleVariantTypeException("invalid filter expression");

@@ -11,7 +11,7 @@ internal record Limit(ILogicalPlan Plan, int? Skip = 0, int? Fetch = 0) : ILogic
         return $"Limit: Skip {Skip}, Limit {Fetch}";
     }
 
-    public string ToStringIndented(Indentation? indentation)
+    public string ToStringIndented(Indentation? indentation = null)
     {
         var indent = indentation ?? new Indentation();
         return $"Limit: Skip {Skip}, Limit {Fetch}{indent.Next(Plan)}";

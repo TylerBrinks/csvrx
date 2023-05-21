@@ -1,6 +1,6 @@
 ﻿using CsvRx.Core.Data;
 using CsvRx.Core.Execution;
-using CsvRx.Core.Logical.Plans;
+
 namespace CsvRx.Tests;
 
 public class InMemoryDataSource : DataSource

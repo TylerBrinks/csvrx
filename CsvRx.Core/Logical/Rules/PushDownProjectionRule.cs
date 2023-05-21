@@ -64,14 +64,13 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
                         .Select(e => ReplaceColumnsByName(e, replaceMap))
                         .Select((e, i) =>
                         {
-                            var parentName = projection.Schema.Fields[i].Name; // removed f!.name
+                            var parentName = projection.Schema.Fields[i].QualifiedName;
 
                             return e.CreateName() == parentName ? e : new Alias(e, parentName);
                         })
                         .ToList();
 
-                    var newPlan = new Projection(p.Plan, newExpressions, projection.Schema);
-                    return TryOptimize(newPlan);
+                    return TryOptimize(new Projection(p.Plan, newExpressions, projection.Schema));
                 }
             case Aggregate a:
                 {
@@ -157,6 +156,7 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
                     var newLeft = GenerateProjection(pushColumns, j.Plan.Schema, j.Plan);
                     var newRight = GenerateProjection(pushColumns, j.Right.Schema, j.Right);
                     var newJoin = childPlan.WithNewInputs(new List<ILogicalPlan> { newLeft, newRight });
+
                     return GeneratePlan(empty, projection, newJoin);
                 }
             case Sort s:
@@ -213,7 +213,7 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
 
     private static Dictionary<string, ILogicalExpression> CollectProjectionExpressions(Projection projection)
     {
-        return projection.Schema.Fields.Select((f, i) =>
+        return projection.Schema.Fields.SelectMany((f, i) =>
         {
             var expr = projection.Expression[i] switch
             {
@@ -221,7 +221,13 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
                 _ => projection.Expression[i]
             };
 
-            return (f.Name, Expr: expr);// removed f!.Name
+            var projections = new List<(string Name, ILogicalExpression Expr) >
+            {
+                (f.Name, Expr: expr),
+                (f.QualifiedColumn().FlatName, Expr: expr)
+            };
+            // return (f.Name, Expr: expr);// removed f!.Name
+           return projections;
         })
         .ToDictionary(f => f.Name, f => f.Expr);
     }

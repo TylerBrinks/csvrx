@@ -16,9 +16,9 @@ internal record StandardDeviationFunction(
 
     internal override List<QualifiedField> StateFields => new()
     {
-        QualifiedField.Unqualified($"STDDEV{StatePrefix}({Name})[count]", ColumnDataType.Integer),
-        QualifiedField.Unqualified($"STDDEV{StatePrefix}({Name})[mean]", ColumnDataType.Double),
-        QualifiedField.Unqualified($"STDDEV{StatePrefix}({Name})[m2]", ColumnDataType.Double),
+        QualifiedField.Unqualified($"{StatePrefix}({Name})[count]", ColumnDataType.Integer),
+        QualifiedField.Unqualified($"{StatePrefix}({Name})[mean]", ColumnDataType.Double),
+        QualifiedField.Unqualified($"{StatePrefix}({Name})[m2]", ColumnDataType.Double),
     };
 
     private string StatePrefix => _prefix ??= StatisticType == Core.StatisticType.Population ? "_POP" : "";

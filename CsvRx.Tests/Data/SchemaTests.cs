@@ -63,7 +63,7 @@ public class SchemaTests
         var table = new TableReference("table");
         var schema = new Schema(new List<QualifiedField> { new("test", ColumnDataType.Integer, table) });
 
-        Assert.NotNull(schema.GetQualifiedField(table, "test"));
+        Assert.NotNull(schema.GetFieldFromColumn(new Column("test", table)));
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public class SchemaTests
         var table2 = new TableReference("other");
         var schema = new Schema(new List<QualifiedField> { new("test", ColumnDataType.Integer, table) });
 
-        Assert.Null(schema.GetQualifiedField(table2, "test"));
+        Assert.Null(schema.GetFieldFromColumn(new Column("test", table)));
     }
 
     [Fact]

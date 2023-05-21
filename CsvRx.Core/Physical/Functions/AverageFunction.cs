@@ -9,7 +9,7 @@ internal record AverageFunction(IPhysicalExpression InputExpression, string Name
 {
     internal override List<QualifiedField> StateFields => new()
     {
-        QualifiedField.Unqualified($"AVG({Name})", DataType)
+        QualifiedField.Unqualified($"{Name}", DataType)
     };
 
     internal override QualifiedField NamedQualifiedField => new(Name, DataType);

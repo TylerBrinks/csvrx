@@ -88,6 +88,7 @@ internal record Join(
             var usingColumns = left.UsingColumns;
 
             var schemaList = new List<List<Schema>> { schema, fallbackSchemas };
+
             return leftColumn.NormalizeColumnWithSchemas(schemaList, usingColumns);
         }
     }
@@ -99,7 +100,7 @@ internal record Join(
         return $"Join: {Filter}";
     }
 
-    public string ToStringIndented(Indentation? indentation)
+    public string ToStringIndented(Indentation? indentation = null)
     {
         var indent = indentation ?? new Indentation();
         return $"{this} {indent.Next(Plan)}{indent.Repeat(Right)}";

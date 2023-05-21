@@ -17,10 +17,10 @@ internal record CovarianceFunction(
    
     internal override List<QualifiedField> StateFields => new()
     {
-         QualifiedField.Unqualified($"COVAR{StatePrefix}({Name})[count]", ColumnDataType.Integer),
-         QualifiedField.Unqualified($"COVAR{StatePrefix}({Name})[mean1]", ColumnDataType.Double),
-         QualifiedField.Unqualified($"COVAR{StatePrefix}({Name})[mean2]", ColumnDataType.Double),
-         QualifiedField.Unqualified($"COVAR{StatePrefix}({Name})[algoConst]", ColumnDataType.Double),
+         QualifiedField.Unqualified($"{StatePrefix}({Name})[count]", ColumnDataType.Integer),
+         QualifiedField.Unqualified($"{StatePrefix}({Name})[mean1]", ColumnDataType.Double),
+         QualifiedField.Unqualified($"{StatePrefix}({Name})[mean2]", ColumnDataType.Double),
+         QualifiedField.Unqualified($"{StatePrefix}({Name})[algoConst]", ColumnDataType.Double),
     };
 
     private string StatePrefix => _prefix ??= StatisticType == StatisticType.Population ? "_POP" : "";

@@ -18,6 +18,15 @@ public record QualifiedField(string Name, ColumnDataType DataType, TableReferenc
         return new Column(Name, Qualifier);
     }
 
+    internal string QualifiedName
+    {
+        get
+        {
+            var qualifier = Qualifier != null ? $"{Qualifier.Name}."  : string.Empty;
+            return $"{qualifier}{Name}";
+        }
+    }
+
     public static QualifiedField Unqualified(string name, ColumnDataType dataType)
     {
         return new QualifiedField(name, dataType);

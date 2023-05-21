@@ -107,7 +107,10 @@ namespace CsvRx.Core.Physical
             {
                 return dataType switch
                 {
-                    ColumnDataType.Integer or ColumnDataType.Double => ColumnDataType.Double,
+                    ColumnDataType.Integer 
+                        or ColumnDataType.Double 
+                        or ColumnDataType.Integer | ColumnDataType.Double
+                        => ColumnDataType.Double,
                     _ => throw new InvalidOperationException($"{functionName} does not support data type {dataType}")
                 };
             }
@@ -196,6 +199,7 @@ namespace CsvRx.Core.Physical
             bool ascending)
         {
             var physicalExpression = expression.CreatePhysicalExpression(sortSchema, inputSchema);
+
             return new PhysicalSortExpression(physicalExpression, sortSchema, inputSchema, ascending);
         }
     }

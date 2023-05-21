@@ -39,7 +39,7 @@ internal interface ILogicalExpression : INode
             _ => new List<ILogicalExpression>()
         };
 
-        List<ILogicalExpression> GetAggregateChildren(AggregateFunction fn)
+        static List<ILogicalExpression> GetAggregateChildren(AggregateFunction fn)
         {
             var args = fn.Args.ToList();
             if (fn.Filter != null)
@@ -77,8 +77,6 @@ internal interface ILogicalExpression : INode
         var transformFunc = func as Func<ILogicalExpression, ILogicalExpression>;
         var afterOpChildren = MapChildren(this, node => node.Transform(node, transformFunc!));
 
-        var newNode = func!((T)afterOpChildren);
-
-        return newNode;
+        return func!((T)afterOpChildren);
     }
 }

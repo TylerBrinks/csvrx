@@ -15,9 +15,9 @@ internal record VarianceFunction(
 
     internal override List<QualifiedField> StateFields => new()
     {
-        QualifiedField.Unqualified($"VAR{StatePrefix}({Name})[count]", ColumnDataType.Integer),
-        QualifiedField.Unqualified($"VAR{StatePrefix}({Name})[mean]", ColumnDataType.Double),
-        QualifiedField.Unqualified($"VAR{StatePrefix}({Name})[m2]",  ColumnDataType.Double),
+        QualifiedField.Unqualified($"{StatePrefix}({Name})[count]", ColumnDataType.Integer),
+        QualifiedField.Unqualified($"{StatePrefix}({Name})[mean]", ColumnDataType.Double),
+        QualifiedField.Unqualified($"{StatePrefix}({Name})[m2]",  ColumnDataType.Double),
     };
 
     private string StatePrefix => _prefix ??= StatisticType == StatisticType.Population ? "_POP" : "";

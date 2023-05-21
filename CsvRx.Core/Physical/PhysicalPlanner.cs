@@ -70,8 +70,7 @@ internal class PhysicalPlanner
             .Select(e => e.CreateAggregateExpression(logicalSchema, physicalSchema))
             .ToList();
 
-        var initialAggregate =
-            AggregateExecution.TryNew(AggregationMode.Partial, groups, aggregates, inputExec, physicalSchema);
+        var initialAggregate = AggregateExecution.TryNew(AggregationMode.Partial, groups, aggregates, inputExec, physicalSchema);
 
         var finalGroup = initialAggregate.OutputGroupExpression();
 
@@ -260,7 +259,7 @@ internal class PhysicalPlanner
         return (new Schema(fields), columnIndices);
     }
 
-    private QualifiedField OutputJoinField(QualifiedField oldField, JoinType joinType, bool isLeft)
+    private static QualifiedField OutputJoinField(QualifiedField oldField, JoinType joinType, bool isLeft)
     {
 
         var forceNullable = joinType switch

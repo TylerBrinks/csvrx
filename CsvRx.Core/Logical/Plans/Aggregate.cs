@@ -10,7 +10,7 @@ internal record Aggregate(
     Schema Schema)
     : ILogicalPlanParent
 {
-    public string ToStringIndented(Indentation? indentation)
+    public string ToStringIndented(Indentation? indentation = null)
     {
         var indent = indentation ?? new Indentation();
         var groups = string.Join(",", GroupExpressions);
@@ -23,6 +23,7 @@ internal record Aggregate(
     {
         var allExpressions = groupExpressions.Concat(aggregateExpressions).ToList();
         var schema = new Schema(allExpressions.ExpressionListToFields(plan));
+
         return new Aggregate(plan, groupExpressions, aggregateExpressions, schema);
     }
 }

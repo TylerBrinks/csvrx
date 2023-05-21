@@ -112,6 +112,7 @@ internal class GroupedHashAggregation
         }
 
         var index = _groupBy.Expression.Count;
+
         return _aggregates.Select(ae => ae.Expression.Evaluate(batch, index++)).ToList();
     }
 }

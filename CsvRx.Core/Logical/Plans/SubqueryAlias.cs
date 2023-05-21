@@ -13,7 +13,7 @@ internal record SubqueryAlias(ILogicalPlan Plan, Schema Schema, string Alias) : 
         return new SubqueryAlias(plan, aliasedSchema, alias);
     }
 
-    public string ToStringIndented(Indentation? indentation)
+    public string ToStringIndented(Indentation? indentation = null)
     {
         var indent = indentation ?? new Indentation();
         return $"{this}{indent.Next(Plan)}";

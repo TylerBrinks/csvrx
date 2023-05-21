@@ -39,7 +39,6 @@ internal record AggregateExecution(
         AggregationMode mode)
     {
         var fields = groupBy
-            //.Select(group => new Field(group.Name, group.Expression.GetDataType(planSchema)))
             .Select(group => QualifiedField.Unqualified(group.Name, group.Expression.GetDataType(planSchema)))
             .ToList();
 

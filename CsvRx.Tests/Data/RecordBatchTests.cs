@@ -13,6 +13,7 @@ public class RecordBatchTests
         Assert.IsType<DoubleArray>(RecordBatch.GetArrayType(new QualifiedField("", ColumnDataType.Double)));
         Assert.IsType<BooleanArray>(RecordBatch.GetArrayType(new QualifiedField("", ColumnDataType.Boolean)));
         Assert.IsType<StringArray>(RecordBatch.GetArrayType(new QualifiedField("", ColumnDataType.TimestampMicrosecond)));
+        Assert.IsType<StringArray>(RecordBatch.GetArrayType(null));
     }
 
     [Fact]
@@ -196,5 +197,12 @@ public class RecordBatchTests
         Assert.Equal(3L, batch1.Results[0].Values[1]);
         Assert.Equal(2L, batch1.Results[1].Values[0]);
         Assert.Equal(4L, batch1.Results[1].Values[1]);
+    }
+
+    [Fact]
+    public void RecordBatch_Counts_Zero_Rows()
+    {
+        var schema = new Schema(new List<QualifiedField>(new List<QualifiedField> {new("", ColumnDataType.Integer)}));
+        Assert.Equal(0, new RecordBatch(schema).RowCount);
     }
 }

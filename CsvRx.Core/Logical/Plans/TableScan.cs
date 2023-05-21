@@ -14,8 +14,9 @@ internal record TableScan(string Name, Schema Schema, DataSource Source, List<in
         string? fields = null;
         if (Projection != null)
         {
-            fields = " projection=" + string.Join(",",  Projection.Select(i => Schema.Fields[i].Name));
+            fields = " projection=" + string.Join(",",  Projection.Select(i => Source.Schema!.Fields[i].Name));
         }
+
         return $"Table Scan: {Name}{fields}";
     }
 }

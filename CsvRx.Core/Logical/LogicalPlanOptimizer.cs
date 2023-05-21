@@ -13,14 +13,13 @@ internal class LogicalPlanOptimizer
 
     public ILogicalPlan? Optimize(ILogicalPlan logicalPlan)
     {
-        var newPlan = logicalPlan;
-
-        foreach (var result in Rules.Select(rule => OptimizeRecursively(rule, newPlan)))
+        var plan = logicalPlan;
+        foreach (var result in Rules.Select(rule => OptimizeRecursively(rule, plan)))
         {
-            newPlan = result;
+            plan = result;
         }
 
-        return newPlan;
+        return plan;
     }
 
     private ILogicalPlan? OptimizeRecursively(ILogicalPlanOptimizationRule rule, ILogicalPlan plan)
@@ -34,6 +33,7 @@ internal class LogicalPlanOptimizer
 
                     return optimizeInputsOpt ?? optimizeSelfOpt;
                 }
+
             case ApplyOrder.BottomUp:
                 {
                     var optimizeInputsOpt = OptimizeInputs(rule, plan);
@@ -41,6 +41,7 @@ internal class LogicalPlanOptimizer
 
                     return optimizeSelfOpt ?? optimizeInputsOpt;
                 }
+
             default:
                 return rule.TryOptimize(plan);
         }

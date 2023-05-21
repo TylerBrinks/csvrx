@@ -41,14 +41,16 @@ internal record NestedLoopJoinExecution(
                 yield return intermediate;
             }
 
-            if (JoinType == JoinType.Full)
+            if (JoinType != JoinType.Full)
             {
-                var (finalLeft, finalRight) = GetFinalIndices(visitedLeftSide, JoinType.Full);
-
-                var emptyBatch = new RecordBatch(Left.Schema);
-                var finalBatch = BuildBatchFromIndices(Schema, leftMerged, emptyBatch, finalLeft, finalRight, ColumnIndices, JoinSide.Left);
-                yield return finalBatch;
+                yield break;
             }
+
+            var (finalLeft, finalRight) = GetFinalIndices(visitedLeftSide, JoinType.Full);
+
+            var emptyBatch = new RecordBatch(Left.Schema);
+            var finalBatch = BuildBatchFromIndices(Schema, leftMerged, emptyBatch, finalLeft, finalRight, ColumnIndices, JoinSide.Left);
+            yield return finalBatch;
         }
         else
         {
@@ -270,6 +272,4 @@ internal record NestedLoopJoinExecution(
 
         return (newLeftIndices, newRightIndices);
     }
-    
-
 }

@@ -7,7 +7,10 @@ namespace CsvRx.Core.Physical.Functions;
 internal record MaxFunction(IPhysicalExpression InputExpression, string Name, ColumnDataType DataType) 
     : Aggregate(InputExpression), IAggregation
 {
-    internal override List<QualifiedField> StateFields => new() { QualifiedField.Unqualified($"MAX({Name})", DataType) };
+    internal override List<QualifiedField> StateFields => new()
+    {
+        QualifiedField.Unqualified($"{Name}", DataType)
+    };
 
     internal override QualifiedField NamedQualifiedField => QualifiedField.Unqualified(Name, DataType);
 

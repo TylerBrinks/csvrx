@@ -18,10 +18,8 @@ public class LogicalExtensionsTests
         var alias = new Alias(column, "alias");
         var binary = new Binary(column, BinaryOperator.Eq, new Column("right"));
         var literal = new Literal(new StringScalar("value"));
-        var function = new AggregateFunction(AggregateFunctionType.Min,
-            new List<ILogicalExpression> { column }, false);
-        var functionDistinct = new AggregateFunction(AggregateFunctionType.Min,
-            new List<ILogicalExpression> { column }, true);
+        var function = new AggregateFunction(AggregateFunctionType.Min, new List<ILogicalExpression> { column }, false);
+        var functionDistinct = new AggregateFunction(AggregateFunctionType.Min, new List<ILogicalExpression> { column }, true);
         var wildcard = new Wildcard();
 
         Assert.Equal("table.column", column.CreateName());

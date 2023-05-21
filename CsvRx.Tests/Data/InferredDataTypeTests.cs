@@ -1,4 +1,5 @@
 ﻿using CsvRx.Core.Data;
+using CsvRx.Core.Logical;
 
 namespace CsvRx.Tests.Data;
 
@@ -95,5 +96,13 @@ public class InferredDataTypeTests
 
         Assert.Equal(ColumnDataType.TimestampNanosecond,
             inference.DataType);
+    }
+
+    [Fact]
+    public void InferredDataType_Overrides_ToString()
+    {
+        var inference = new InferredDataType();
+        inference.Update("123");
+        Assert.Equal("Integer", inference.ToString());
     }
 }

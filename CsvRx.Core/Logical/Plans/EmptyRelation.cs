@@ -11,7 +11,7 @@ internal record EmptyRelation(bool ProduceOneRow = false) : ILogicalPlan
         return "Empty Relation";
     }
 
-    public string ToStringIndented(Indentation? indentation)
+    public string ToStringIndented(Indentation? indentation = null)
     {
         return ToString();
     }

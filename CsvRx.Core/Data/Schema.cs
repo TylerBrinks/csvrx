@@ -1,5 +1,6 @@
 ﻿using CsvRx.Core.Logical;
 using CsvRx.Core.Logical.Expressions;
+using static SqlParser.Ast.FetchDirection;
 
 namespace CsvRx.Core.Data;
 
@@ -20,18 +21,19 @@ public class Schema
         return FieldsWithUnqualifiedName(name).FirstOrDefault();
     }
 
-    public QualifiedField? GetQualifiedField(TableReference? qualifier, string name)
+    internal QualifiedField? GetFieldFromColumn(Column column)
     {
-        return qualifier != null
-            ? FieldsWithQualifiedName(qualifier, name).FirstOrDefault()
-            : GetField(name);
+        // Fields may not be qualified for a given schema, so
+        // method for looking up fields depends on the type
+        // of schema being queried.
+        return _fullyQualified && column.Relation != null
+            ? FieldsWithQualifiedName(column.Relation, column.Name).FirstOrDefault()
+            : GetField(column.Name);
     }
 
-    internal int? IndexOfColumn(Column col)
+    internal int? IndexOfColumn(Column column)
     {
-        var field = _fullyQualified && col.Relation != null 
-            ? GetQualifiedField(col.Relation, col.Name) 
-            : GetField(col.Name);
+        var field = GetFieldFromColumn(column);
 
         if (field == null)
         {
@@ -79,19 +81,8 @@ public class Schema
         return new Schema(fields);
     }
 
-    internal QualifiedField? FieldFromColumn(Column column)
-    {
-        return column.Relation != null 
-            ? GetQualifiedField(column.Relation, column.Name) 
-            : FieldsWithUnqualifiedName(column.Name).FirstOrDefault();
-    }
-
     internal bool HasColumn(Column column)
     {
-        Field? field = column.Relation != null 
-            ? GetQualifiedField(column.Relation, column.Name) 
-            : FieldsWithUnqualifiedName(column.Name).FirstOrDefault();
-
-        return field != null;
+        return GetFieldFromColumn(column) != null;
     }
 }

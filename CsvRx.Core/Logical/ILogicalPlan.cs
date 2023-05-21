@@ -9,7 +9,7 @@ internal interface ILogicalPlan : INode
     Schema Schema { get; }
     List<HashSet<Column>> UsingColumns => new();
 
-    string ToStringIndented(Indentation? indentation);
+    string ToStringIndented(Indentation? indentation = null);
 
     T INode.MapChildren<T>(T instance, Func<T, T> map)
     {
@@ -64,9 +64,7 @@ internal interface ILogicalPlan : INode
         var transform = func as Func<ILogicalPlan, ILogicalPlan>;
         var afterOpChildren = MapChildren(this, node => node.Transform(node, transform!));
 
-        var newNode = func((T)afterOpChildren);
-
-        return newNode;
+        return func((T)afterOpChildren);
     }
 
     ILogicalPlan WithNewInputs(List<ILogicalPlan> inputs)
@@ -113,8 +111,6 @@ internal interface ILogicalPlan : INode
 
         ILogicalPlan BuildJoin(Join join)
         {
-            //var schema = LogicalExtensions.BuildJoinSchema(inputs[0].Schema, inputs[1].Schema, join.JoinType);
-
             var expressionCount = join.On.Count;
             var newOn = expressions.Take(expressionCount)
                 .Select(expr =>

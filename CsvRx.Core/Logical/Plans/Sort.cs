@@ -13,7 +13,7 @@ internal record Sort(ILogicalPlan Plan, List<ILogicalExpression> OrderByExpressi
 
         var capturedPlan = plan;
         var missingExpressions = expressions.Select(expr => expr.ToColumns())
-            .SelectMany(columns => columns.Where(column => capturedPlan.Schema.FieldFromColumn(column) == null));
+            .SelectMany(columns => columns.Where(column => capturedPlan.Schema.GetFieldFromColumn(column) == null));
 
         foreach (var column in missingExpressions)
         {
@@ -44,6 +44,7 @@ internal record Sort(ILogicalPlan Plan, List<ILogicalExpression> OrderByExpressi
             }
 
             return e;
+
         }).ToList();
     }
 
@@ -51,13 +52,14 @@ internal record Sort(ILogicalPlan Plan, List<ILogicalExpression> OrderByExpressi
     {
         var inputs = plan.GetInputs();
 
-        if (inputs.Count == 1)
+        if (inputs.Count != 1)
         {
-            var projectedExpressions = plan.GetExpressions();
-            return RewriteForProjection(expression, projectedExpressions, inputs[0]);
+            return expression;
         }
 
-        return expression;
+        var projectedExpressions = plan.GetExpressions();
+        return RewriteForProjection(expression, projectedExpressions, inputs[0]);
+
     }
 
     private static ILogicalExpression RewriteForProjection(
@@ -90,7 +92,7 @@ internal record Sort(ILogicalPlan Plan, List<ILogicalExpression> OrderByExpressi
 
     public Schema Schema => Plan.Schema;
 
-    public string ToStringIndented(Indentation? indentation)
+    public string ToStringIndented(Indentation? indentation = null)
     {
         var indent = indentation ?? new Indentation();
         return $"Sort: {indent.Next(Plan)}";

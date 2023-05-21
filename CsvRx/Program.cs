@@ -10,6 +10,13 @@ context.RegisterCsv("test_b", @"C:\Users\tyler\source\repos\sink\CsvRx\CsvRx\joi
 
 var queries = new List<string>
 {
+    //"SELECT test_a.c1, stddev(test_b.c3) FROM test_a join test_b on test_a.c1 = test_b.c1 group by test_a.c1",
+
+
+    //"SELECT avg(test_a.c1) FROM test_a join test_b on test_a.c1 = test_b.c1",
+    "SELECT test_b.c1, avg(test_a.c1) FROM test_a join test_b on test_a.c1 = test_b.c1 group by test_b.c1",
+
+    "SELECT test_a.c1, avg(test_b.c3) FROM test_a join test_b on test_a.c1 = test_b.c1 group by test_a.c1",
     "SELECT c2, c12, c2 * c2 FROM mycsv",
 
     "SELECT c1 FROM mycsv order by c2",
@@ -28,13 +35,13 @@ var queries = new List<string>
     "SELECT c1 as a, c3 FROM mycsv order by a limit 23 offset 20",
     "SELECT c1, c2 as abc FROM mycsv mv where mv.c1 = 'c'",
 
-    //****var sql = "SELECT test_a.c2, test_a.c3, test_b.c2 FROM test_a join test_b USING(c1)";
-    //select t1.* from t t1 CROSS JOIN t t2"
-    //let sql = "SELECT test.col_int32 FROM test JOIN ( SELECT col_int32 FROM test WHERE false ) AS ta1 ON test
-    //var sql = "SELECT test_a.c2, test_a.c3, test_b.c2 FROM test_a full outer join test_b on test_a.c1 = test_b.c1";
-    //var sql = "SELECT test_a.c2, test_a.c3 FROM test_a left semi join test_b on test_a.c1 = test_b.c1";
-
     "SELECT ta.c2 aa, ta.c3 bb, tb.c2 tb FROM test_a ta join test_b tb on ta.c1 = tb.c1"
+    
+    ////****var sql = "SELECT test_a.c2, test_a.c3, test_b.c2 FROM test_a join test_b USING(c1)";
+    ////select t1.* from t t1 CROSS JOIN t t2"
+    ////let sql = "SELECT test.col_int32 FROM test JOIN ( SELECT col_int32 FROM test WHERE false ) AS ta1 ON test
+    ////var sql = "SELECT test_a.c2, test_a.c3, test_b.c2 FROM test_a full outer join test_b on test_a.c1 = test_b.c1";
+    ////var sql = "SELECT test_a.c2, test_a.c3 FROM test_a left semi join test_b on test_a.c1 = test_b.c1";
 
 };
 

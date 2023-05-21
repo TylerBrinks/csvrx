@@ -43,4 +43,14 @@ public class FieldTests
         Assert.Equal("name", column.Name);
         Assert.NotNull(column.Qualifier);
     }
+
+    [Fact]
+    public void Fields_Overrides_ToString()
+    {
+        var qualifiedField = new QualifiedField("name", ColumnDataType.Integer, new TableReference("table"));
+        Assert.Equal("table.name::Integer", qualifiedField.ToString());
+
+        var field = (Field) qualifiedField;
+        Assert.Equal("table.name::Integer", field.ToString());
+    }
 }
