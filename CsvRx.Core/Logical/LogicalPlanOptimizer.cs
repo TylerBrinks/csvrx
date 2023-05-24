@@ -17,7 +17,10 @@ internal class LogicalPlanOptimizer
         var plan = logicalPlan;
         foreach (var result in Rules.Select(rule => OptimizeRecursively(rule, plan)))
         {
-            plan = result;
+            if (result != null)
+            {
+                plan = result;
+            }
         }
 
         return plan;

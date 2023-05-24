@@ -95,7 +95,9 @@ internal record HashJoinExecution(
         int countRightBatch,
         JoinType joinType)
     {
+#pragma warning disable CS8524
         return joinType switch
+#pragma warning restore CS8524
         {
             JoinType.Inner or JoinType.Left => (leftIndices.AsNullable(), rightIndices.AsNullable()),
 
@@ -284,22 +286,16 @@ internal record HashJoinExecution(
             // This possibly contains rows with hash collisions,
             // So we have to check here whether rows are equal or not
 
-            var exists = buildHashmap.TryGetValue(hashValue, out var indices);
-            if (exists)
+            if (!buildHashmap.TryGetValue(hashValue, out var indices))
             {
-                foreach (var i in indices!)
-                {
+                continue;
+            }
 
-                    var offsetBuildIndex = i - offset;
-
-                    if (!EqualRows(offsetBuildIndex, row, buildJoinValues, keysValues))
-                    {
-                        continue;
-                    }
-
-                    buildIndices.Add(offsetBuildIndex);
-                    probeIndices.Add(row);
-                }
+            foreach (var offsetBuildIndex in indices!.Select(i => i - offset)
+                         .Where(offsetBuildIndex => EqualRows(offsetBuildIndex, row, buildJoinValues, keysValues)))
+            {
+                buildIndices.Add(offsetBuildIndex);
+                probeIndices.Add(row);
             }
         }
 
