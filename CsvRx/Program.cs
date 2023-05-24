@@ -12,30 +12,31 @@ var queries = new List<string>
 {
     //"SELECT test_a.c1, stddev(test_b.c3) FROM test_a join test_b on test_a.c1 = test_b.c1 group by test_a.c1",
 
+   // "SELECT test_b.c1, avg(test_a.c1) FROM test_a join test_b on test_a.c1 = test_b.c1 group by test_b.c1",
+    "SELECT test_b.c1 FROM test_a join test_b on test_a.c1 = test_b.c1 where test_b.c1 > 0",
 
-    //"SELECT avg(test_a.c1) FROM test_a join test_b on test_a.c1 = test_b.c1",
-    "SELECT test_b.c1, avg(test_a.c1) FROM test_a join test_b on test_a.c1 = test_b.c1 group by test_b.c1",
+    //"SELECT test_b.c1, avg(test_a.c1) FROM test_a join test_b on test_a.c1 = test_b.c1 group by test_b.c1",
 
-    "SELECT test_a.c1, avg(test_b.c3) FROM test_a join test_b on test_a.c1 = test_b.c1 group by test_a.c1",
-    "SELECT c2, c12, c2 * c2 FROM mycsv",
+    //"SELECT test_a.c1, avg(test_b.c3) FROM test_a join test_b on test_a.c1 = test_b.c1 group by test_a.c1",
+    //"SELECT c2, c12, c2 * c2 FROM mycsv",
 
-    "SELECT c1 FROM mycsv order by c2",
-    "SELECT c1 FROM mycsv order by 1",
-    "SELECT c1, MAX(c3) FROM mycsv GROUP BY c1", //WHERE c11 > .2 AND c11 < 0.9 
-    "SELECT distinct c1 FROM mycsv",
-    "SELECT * FROM mycsv",
-    "SELECT avg(c3) FROM mycsv group by c1",
-    "SELECT c1, c3 FROM mycsv order by c1, c3",
+    //"SELECT c1 FROM mycsv order by c2",
+    //"SELECT c1 FROM mycsv order by 1",
+    //"SELECT c1, MAX(c3) FROM mycsv GROUP BY c1", //WHERE c11 > .2 AND c11 < 0.9 
+    //"SELECT distinct c1 FROM mycsv",
+    //"SELECT * FROM mycsv",
+    //"SELECT avg(c3) FROM mycsv group by c1",
+    //"SELECT c1, c3 FROM mycsv order by c1, c3",
 
-    "SELECT c1 as abc FROM mycsv group by 1",
-    "SELECT c1, count(c3) as cnt FROM mycsv group by c1",
-    "SELECT covar(c2, c12) aa FROM mycsv",
+    //"SELECT c1 as abc FROM mycsv group by 1",
+    //"SELECT c1, count(c3) as cnt FROM mycsv group by c1",
+    //"SELECT covar(c2, c12) aa FROM mycsv",
 
-    "SELECT c1, c2 as abc FROM mycsv where c1 = 'c'",
-    "SELECT c1 as a, c3 FROM mycsv order by a limit 23 offset 20",
-    "SELECT c1, c2 as abc FROM mycsv mv where mv.c1 = 'c'",
+    //"SELECT c1, c2 as abc FROM mycsv where c1 = 'c'",
+    //"SELECT c1 as a, c3 FROM mycsv order by a limit 23 offset 20",
+    //"SELECT c1, c2 as abc FROM mycsv mv where mv.c1 = 'c'",
 
-    "SELECT ta.c2 aa, ta.c3 bb, tb.c2 tb FROM test_a ta join test_b tb on ta.c1 = tb.c1"
+    //"SELECT ta.c2 aa, ta.c3 bb, tb.c2 tb FROM test_a ta join test_b tb on ta.c1 = tb.c1"
     
     ////****var sql = "SELECT test_a.c2, test_a.c3, test_b.c2 FROM test_a join test_b USING(c1)";
     ////select t1.* from t t1 CROSS JOIN t t2"

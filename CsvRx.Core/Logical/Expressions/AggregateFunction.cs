@@ -17,18 +17,21 @@ internal record AggregateFunction(
             "avg" or "mean" => AggregateFunctionType.Avg,
             "sum" => AggregateFunctionType.Sum,
             "median" => AggregateFunctionType.Median,
-            // approx_distinct
-            // array_agg
+            
+            //"approx_distinct" => AggregateFunctionType.ApproxDistinct,
+            //"array_agg" => AggregateFunctionType.ArrayAgg
+
             "var" or "var_samp" => AggregateFunctionType.Variance,
             "var_pop" => AggregateFunctionType.VariancePop,
             "stddev" or "stddev_samp" => AggregateFunctionType.StdDev,
             "stddev_pop" => AggregateFunctionType.StdDevPop,
             "covar" or "covar_samp" => AggregateFunctionType.Covariance,
             "covar_pop" => AggregateFunctionType.CovariancePop,
-            //"corr" => AggregateFunction::Correlation,
+            
+            //"corr" => AggregateFunctionType.Correlation,
             //"approx_percentile_cont" => AggregateFunction::ApproxPercentileCont,
             //"approx_percentile_cont_with_weight" => {
-            //"approx_median" => AggregateFunction::ApproxMedian,
+            //"approx_median" => AggregateFunctionType.ApproxMedian,
             //"grouping" => AggregateFunction::Grouping,
 
             //TODO other aggregate functions

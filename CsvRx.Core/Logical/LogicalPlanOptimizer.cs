@@ -7,6 +7,7 @@ internal class LogicalPlanOptimizer
     private static readonly List<ILogicalPlanOptimizationRule> Rules = new()
     {
         new ReplaceDistinctWithAggregateRule(),
+        new ExtractEquijoinPredicateRule(),
         new PushDownProjectionRule(),
         new EliminateProjectionRule(),
     };

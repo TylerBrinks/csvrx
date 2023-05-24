@@ -15,7 +15,8 @@ internal class GroupedHashAggregation
     private readonly AggregationMode _aggregationMode;
     private readonly QueryOptions _queryOptions;
 
-    public GroupedHashAggregation(AggregationMode aggregationMode,
+    public GroupedHashAggregation(
+        AggregationMode aggregationMode,
         Schema schema,
         List<Aggregate> aggregates,
         IExecutionPlan plan,

@@ -85,4 +85,9 @@ public class Schema
     {
         return GetFieldFromColumn(column) != null;
     }
+
+    //public bool IsColumnFromSchema(Column column)
+    //{
+    //    throw new NotImplementedException();
+    //}
 }

@@ -142,14 +142,13 @@ internal class PhysicalPlanner
 
         var (schema, columnIndices) = BuildJoinSchema(leftPlan.Schema, rightPlan.Schema, join.JoinType);
 
-        //TODO implement hash join
-        //if (!joinOn.Any())
+        if (!joinOn.Any())
         {
             return new NestedLoopJoinExecution(leftPlan, rightPlan, joinFilter, join.JoinType, columnIndices, schema);
         }
 
-        //return new HashJoinExecution(leftPlan, rightPlan, joinOn, joinFilter,
-        //    join.JoinType, PartitionMode.CollectLeft, columnIndices, false, schema);
+        return new HashJoinExecution(leftPlan, rightPlan, joinOn, joinFilter,
+            join.JoinType, PartitionMode.CollectLeft, columnIndices, false, schema);
 
         JoinFilter? CreateJoinFilter()
         {
@@ -198,7 +197,7 @@ internal class PhysicalPlanner
         }
     }
 
-    private (Schema, List<ColumnIndex>) BuildJoinSchema(Schema left, Schema right, JoinType joinType)
+    private static (Schema, List<ColumnIndex>) BuildJoinSchema(Schema left, Schema right, JoinType joinType)
     {
         List<QualifiedField> fields;
         List<ColumnIndex> columnIndices;
@@ -261,7 +260,6 @@ internal class PhysicalPlanner
 
     private static QualifiedField OutputJoinField(QualifiedField oldField, JoinType joinType, bool isLeft)
     {
-
         var forceNullable = joinType switch
         {
             JoinType.Inner

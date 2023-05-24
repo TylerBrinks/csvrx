@@ -97,7 +97,9 @@ internal record Join(
 
     public override string ToString()
     {
-        return $"Join: {Filter}";
+        var on = On.Select(_ => $"{ _.Left } = { _.Right }").ToList();
+        var filter = Filter!=null? $" Filter: { Filter }" : "";
+        return $"{JoinType} Join: {string.Join(",", on)}{filter}";
     }
 
     public string ToStringIndented(Indentation? indentation = null)

@@ -1,6 +1,8 @@
 ﻿using CsvRx.Core.Data;
 using CsvRx.Core.Logical.Expressions;
 using CsvRx.Core.Logical.Plans;
+using SqlParser.Ast;
+using Join = CsvRx.Core.Logical.Plans.Join;
 
 namespace CsvRx.Core.Logical;
 
@@ -48,7 +50,10 @@ internal interface ILogicalPlan : INode
             Filter f => new List<ILogicalExpression> { f.Predicate },
             Projection p => p.Expression,
             Sort s => s.OrderByExpressions,
-            Join {Filter: { }} j => new List<ILogicalExpression> { j.Filter },
+            Join {Filter: { }} jf => new List<ILogicalExpression> { jf.Filter },
+            Join {On: { }} jo => jo.On
+                .Select(j => (ILogicalExpression) new  Binary(j.Left, BinaryOperator.Eq, j.Right))
+                .ToList(),
 
             _ => new List<ILogicalExpression>()
         };
