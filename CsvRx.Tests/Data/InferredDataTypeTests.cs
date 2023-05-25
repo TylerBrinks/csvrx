@@ -74,8 +74,7 @@ public class InferredDataTypeTests
         var inference = new InferredDataType();
         inference.Update("2001-02-03T11:22:33.123");
 
-        Assert.Equal(ColumnDataType.TimestampMillisecond | ColumnDataType.TimestampMicrosecond | ColumnDataType.TimestampNanosecond, 
-            inference.DataType);
+        Assert.Equal(ColumnDataType.TimestampNanosecond, inference.DataType);
     }
 
     [Fact]
@@ -84,8 +83,7 @@ public class InferredDataTypeTests
         var inference = new InferredDataType();
         inference.Update("2001-02-03T11:22:33.123456");
 
-        Assert.Equal(ColumnDataType.TimestampMicrosecond | ColumnDataType.TimestampNanosecond,
-            inference.DataType);
+        Assert.Equal(ColumnDataType.TimestampNanosecond, inference.DataType);
     }
 
     [Fact]
@@ -94,8 +92,7 @@ public class InferredDataTypeTests
         var inference = new InferredDataType();
         inference.Update("2001-02-03T11:22:33.123456789");
 
-        Assert.Equal(ColumnDataType.TimestampNanosecond,
-            inference.DataType);
+        Assert.Equal(ColumnDataType.TimestampNanosecond, inference.DataType);
     }
 
     [Fact]

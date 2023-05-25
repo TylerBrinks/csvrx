@@ -20,7 +20,8 @@ public partial class InferredDataType
     {
         if (value.StartsWith("\""))
         {
-            DataType |= ColumnDataType.Utf8;
+            //DataType |= ColumnDataType.Utf8;
+            DataType = ColumnDataType.Utf8;
             return;
         }
 
@@ -29,7 +30,15 @@ public partial class InferredDataType
         {
             if (!TypeExpressions[i].IsMatch(value)) { continue; }
 
-            DataType |= (ColumnDataType)(1 << i);
+            //DataType |= (ColumnDataType)(1 << i);
+
+            var suggestedType = (1 << i);
+
+            if (suggestedType > (int) DataType)
+            {
+                DataType = (ColumnDataType)(1 << i);
+            }
+
             matched = true;
         }
 

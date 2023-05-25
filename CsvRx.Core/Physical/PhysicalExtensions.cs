@@ -109,7 +109,7 @@ namespace CsvRx.Core.Physical
                 {
                     ColumnDataType.Integer 
                         or ColumnDataType.Double 
-                        or ColumnDataType.Integer | ColumnDataType.Double
+                        //or ColumnDataType.Integer | ColumnDataType.Double
                         => ColumnDataType.Double,
                     _ => throw new InvalidOperationException($"{functionName} does not support data type {dataType}")
                 };

@@ -176,25 +176,30 @@ internal record HashJoinExecution(
         }
     }
 
-    private static void CreateHashes(List<ColumnValue> columnValues, int[] hashBuffer)
+    private static void CreateHashes(IReadOnlyCollection<ColumnValue> columnValues, IList<int> hashBuffer)
     {
-        //TODO: multi column?
-        //var multiColumn = columnValues.Count > 1;
-
-        foreach (var columnValue in columnValues)
+        for (var i = 0; i < hashBuffer.Count; i++)
         {
-            HashArray(columnValue, hashBuffer);//, multiColumn);
+            var values = columnValues.Select(v => v.GetValue(i)).Where(v => v != null).ToList();
+            var hash = new HashCode();
+            
+            foreach (var value in values)
+            {
+                hash.Add(value);
+            }
+
+            hashBuffer[i] = hash.ToHashCode();
         }
     }
 
-    private static void HashArray(ColumnValue columnValue, IList<int> hashBuffer)
-    {
-        for (var i = 0; i < columnValue.Size; i++)
-        {
-            var hash = columnValue.GetValue(i).GetHashCode(); //TODO handle nulls
-            hashBuffer[i] = hash;
-        }
-    }
+    //private static void HashArray(ColumnValue columnValue, IList<int> hashBuffer)
+    //{
+    //    for (var i = 0; i < columnValue.Size; i++)
+    //    {
+    //        var hash = columnValue.GetValue(i).GetHashCode(); //TODO handle nulls
+    //        hashBuffer[i] = hash;
+    //    }
+    //}
 
     private (long[] LeftIndies, long[] RightIndices) BuildJoinIndices(
         RecordBatch probeBatch,
