@@ -879,27 +879,69 @@ internal static class LogicalExtensions
 
     internal static ILogicalPlan CreateRelation(this TableFactor tableFactor, PlannerContext context)
     {
-        if (tableFactor is not TableFactor.Table relation)
+        if (tableFactor is TableFactor.Table relation)
         {
-            throw new InvalidOperationException();
+            // Get the table name used to query the data source
+            // var name = relation.Alias != null ? relation.Alias.Name : relation.Name.Values[0];
+            var name = relation.Name.Values[0];
+            var tableRef = context.TableReferences.Find(t => t.Name == name);
+
+            // The root operation will scan the table for the projected values
+            var table = context.DataSources[name];
+            var qualifiedFields = table.Schema!.Fields.Select(f => new QualifiedField(f.Name, f.DataType, tableRef)).ToList();
+            var schema = new Schema(qualifiedFields);
+
+            var plan = (ILogicalPlan)new TableScan(name, schema, table);
+
+            return tableRef?.Alias == null
+                ? plan
+                : SubqueryAlias.TryNew(plan, tableRef.Alias);
         }
 
-        // Get the table name used to query the data source
-        // var name = relation.Alias != null ? relation.Alias.Name : relation.Name.Values[0];
-        var name = relation.Name.Values[0];
-        var tableRef = context.TableReferences.Find(t => t.Name == name);
+        if (tableFactor is TableFactor.Derived derived)
+        {
+            var subqueryPlan = LogicalPlanner.CreateLogicalPlan(derived.SubQuery, context.DataSources);
+           
+            return derived.Alias != null 
+                ? ApplyTableAlias(subqueryPlan, derived.Alias) 
+                : subqueryPlan;
+        }
 
-        // The root operation will scan the table for the projected values
-        var table = context.DataSources[name];
-        var qualifiedFields = table.Schema!.Fields.Select(f => new QualifiedField(f.Name, f.DataType, tableRef)).ToList();
-        var schema = new Schema(qualifiedFields);
-
-        var plan = (ILogicalPlan)new TableScan(name, schema, table);
-
-        return tableRef?.Alias == null 
-            ? plan 
-            : SubqueryAlias.TryNew(plan, tableRef.Alias);
+        throw new InvalidOperationException("Relation type is not supported.");
     }
+
+    internal static ILogicalPlan ApplyTableAlias(ILogicalPlan plan, TableAlias alias)
+    {
+        var aliasPlan = SubqueryAlias.TryNew(plan, alias.Name);
+
+        return ApplyExpressionAlias(aliasPlan, alias.Columns);
+    }
+
+    private static ILogicalPlan ApplyExpressionAlias(ILogicalPlan plan, IReadOnlyCollection<Ident>? idents)
+    {
+        if (idents == null || !idents.Any())
+        {
+            return plan;
+        }
+
+        if (idents.Count != plan.Schema.Fields.Count)
+        {
+            throw new InvalidOperationException(
+                $"Source table contains {plan.Schema.Fields.Count} columns but {idents.Count} names given as column alias");
+        }
+
+        var fields = plan.Schema.Fields;
+
+        var expressions = fields.Zip(idents).Select(c =>
+        {
+            var column = new Column(c.First.Name);
+            ILogicalExpression alias = new Alias(column, c.Second.Value);
+            return alias;
+        }).ToList();
+
+        return plan.PlanProjection(expressions);
+    }
+
 
     internal static ILogicalPlan ParseRelationJoin(this ILogicalPlan left, SqlParser.Ast.Join join, PlannerContext context)
     {
