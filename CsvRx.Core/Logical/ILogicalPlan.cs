@@ -50,13 +50,28 @@ internal interface ILogicalPlan : INode
             Filter f => new List<ILogicalExpression> { f.Predicate },
             Projection p => p.Expression,
             Sort s => s.OrderByExpressions,
-            Join {Filter: { }} jf => new List<ILogicalExpression> { jf.Filter },
-            Join {On: { }} jo => jo.On
-                .Select(j => (ILogicalExpression) new  Binary(j.Left, BinaryOperator.Eq, j.Right))
-                .ToList(),
+            Join j => GetJoinExpressions(j),
+            //Join {Filter: { }} jf => new List<ILogicalExpression> { jf.Filter },
+            //Join {On: { }} jo => jo.On
+            //    .Select(j => (ILogicalExpression) new  Binary(j.Left, BinaryOperator.Eq, j.Right))
+            //    .ToList(),
 
             _ => new List<ILogicalExpression>()
         };
+
+        List<ILogicalExpression> GetJoinExpressions(Join join)
+        {
+            var expressions = join.On
+                .Select(j => (ILogicalExpression) new Binary(j.Left, BinaryOperator.Eq, j.Right))
+                .ToList();
+
+            if (join.Filter != null)
+            {
+                expressions.Add(join.Filter);
+            }
+
+            return expressions;
+        }
     }
 
     VisitRecursion INode.ApplyChildren(Func<INode, VisitRecursion> action)

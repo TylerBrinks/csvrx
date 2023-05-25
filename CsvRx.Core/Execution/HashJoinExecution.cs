@@ -21,68 +21,67 @@ internal record HashJoinExecution(
         var onLeft = On.Select(j => j.Right).ToList();
         var onRight = On.Select(j => j.Left).ToList();
 
-        if (PartitionMode == PartitionMode.CollectLeft)
+        //if (PartitionMode == PartitionMode.CollectLeft)
+        //{
+        var leftData = await CollectLeft(options, onLeft);
+
+        // these join type need the bitmap to identify which row has be matched or unmatched.
+        // For the `left semi` join, need to use the bitmap to produce the matched row in the left side
+        // For the `left` join, need to use the bitmap to produce the unmatched row in the left side with null
+        // For the `left anti` join, need to use the bitmap to produce the unmatched row in the left side
+        // For the `full` join, need to use the bitmap to produce the unmatched row in the left side with null
+        var visitedLeftSide = NeedProduceResultInFinal(JoinType)
+            ? new bool[leftData.Batch.RowCount]
+            : Array.Empty<bool>();
+
+        await foreach (var rightBatch in Right.Execute(options))
         {
-            var leftData = await CollectLeft(options, onLeft);
-
-            // these join type need the bitmap to identify which row has be matched or unmatched.
-            // For the `left semi` join, need to use the bitmap to produce the matched row in the left side
-            // For the `left` join, need to use the bitmap to produce the unmatched row in the left side with null
-            // For the `left anti` join, need to use the bitmap to produce the unmatched row in the left side
-            // For the `full` join, need to use the bitmap to produce the unmatched row in the left side with null
-            var visitedLeftSide = NeedProduceResultInFinal(JoinType)
-                ? new bool[leftData.Batch.RowCount]
-                : Array.Empty<bool>();
-
-            await foreach (var rightBatch in Right.Execute(options))
+            if (rightBatch.RowCount > 0)
             {
-                if (rightBatch.RowCount > 0)
-                {
-                    var indices = BuildJoinIndices(rightBatch, leftData, onLeft, onRight, Filter, 0, JoinSide.Left);
+                var (leftIndies, rightIndices) = BuildJoinIndices(rightBatch, leftData, onLeft, onRight, Filter, 0, JoinSide.Left);
 
-                    //if (indices.LeftIndies.Any() && indices.RightIndices.Any())
+                //if (indices.LeftIndies.Any() && indices.RightIndices.Any())
+                {
+                    // Set the left bitmap
+                    // Only left, full, left semi, left anti need the left bitmap
+                    if (NeedProduceResultInFinal(JoinType))
                     {
-                        // Set the left bitmap
-                        // Only left, full, left semi, left anti need the left bitmap
-                        if (NeedProduceResultInFinal(JoinType))
+                        foreach (var index in leftIndies)
                         {
-                            foreach (var index in indices.LeftIndies)
-                            {
-                                visitedLeftSide[(int)index] = true;
-                            }
+                            visitedLeftSide[(int)index] = true;
                         }
-
-                        var (leftSide, rightSide) = AdjustIndicesByJoinType(indices.LeftIndies, indices.RightIndices,
-                            rightBatch.RowCount, JoinType);
-
-                        var batch = BuildBatchFromIndices(Schema, leftData.Batch, rightBatch,
-                            leftSide, rightSide, ColumnIndices, JoinSide.Left);
-
-                        yield return batch;
                     }
-                    //else
-                    //{
-                    //    throw new InvalidOperationException("Failed to build join indices");
-                    //}
+
+                    var (leftSide, rightSide) = AdjustIndicesByJoinType(leftIndies, rightIndices,
+                        rightBatch.RowCount, JoinType);
+
+                    var batch = BuildBatchFromIndices(Schema, leftData.Batch, rightBatch,
+                        leftSide, rightSide, ColumnIndices, JoinSide.Left);
+
+                    yield return batch;
                 }
-                else
+                //else
+                //{
+                //    throw new InvalidOperationException("Failed to build join indices");
+                //}
+            }
+            else
+            {
+                if (NeedProduceResultInFinal(JoinType)) //TODO: && isExhausted
                 {
-                    if (NeedProduceResultInFinal(JoinType)) //TODO: && isExhausted
-                    {
 
-                        var (leftSide, rightSide) = GetFinalIndices(visitedLeftSide, JoinType);
-                        var rightEmptyBatch = new RecordBatch(Right.Schema);
+                    var (leftSide, rightSide) = GetFinalIndices(visitedLeftSide, JoinType);
+                    var rightEmptyBatch = new RecordBatch(Right.Schema);
 
-                        yield return BuildBatchFromIndices(Schema, leftData.Batch, rightEmptyBatch,
-                            leftSide, rightSide, ColumnIndices, JoinSide.Left);
-                    }
+                    yield return BuildBatchFromIndices(Schema, leftData.Batch, rightEmptyBatch,
+                        leftSide, rightSide, ColumnIndices, JoinSide.Left);
                 }
             }
         }
-        else if (PartitionMode == PartitionMode.Partitioned)
-        {
-
-        }
+        //}
+        //else if (PartitionMode == PartitionMode.Partitioned)
+        //{
+        //}
     }
     private static bool NeedProduceResultInFinal(JoinType joinType)
     {
@@ -184,7 +183,7 @@ internal record HashJoinExecution(
 
         foreach (var columnValue in columnValues)
         {
-            HashArray(columnValue, hashBuffer);
+            HashArray(columnValue, hashBuffer);//, multiColumn);
         }
     }
 

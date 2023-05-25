@@ -37,8 +37,8 @@ internal class ExtractEquijoinPredicateRule : ILogicalPlanOptimizationRule
         return join with {On = newOn, Filter = nonEquijoinExpression};
     }
 
-    private static (List<(ILogicalExpression, ILogicalExpression)> Predicates, ILogicalExpression? Expression) SplitJoinPredicate(
-        ILogicalExpression filter, Schema leftSchema, Schema rightSchema)
+    private static (List<(ILogicalExpression, ILogicalExpression)> Predicates, ILogicalExpression? Expression) 
+        SplitJoinPredicate(ILogicalExpression filter, Schema leftSchema, Schema rightSchema)
     {
         var expressions = SplitConjunction(filter);
 
@@ -72,10 +72,7 @@ internal class ExtractEquijoinPredicateRule : ILogicalPlanOptimizationRule
         ILogicalExpression? resultFilter = null;
         if (filters.Any())
         {
-            resultFilter = filters.Aggregate((a, b) =>
-            {
-                return new Binary(a, BinaryOperator.And, b);
-            });
+            resultFilter = filters.Aggregate((left, right) => new Binary(left, BinaryOperator.And, right));
         }
 
         return (joinKeys, resultFilter);

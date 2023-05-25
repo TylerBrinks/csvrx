@@ -128,6 +128,9 @@ internal record Binary(IPhysicalExpression Left, BinaryOperator Op, IPhysicalExp
             case ColumnDataType.Double:
                 return CompareDecimals(left, right);
 
+            case ColumnDataType.Integer | ColumnDataType.Double:
+                return CompareDecimals(left, right);
+
             case ColumnDataType.Boolean:
                 return CompareBooleans(left, right);
 
