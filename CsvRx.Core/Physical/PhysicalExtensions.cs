@@ -3,11 +3,30 @@ using CsvRx.Core.Logical;
 using CsvRx.Core.Logical.Expressions;
 using CsvRx.Core.Physical.Expressions;
 using CsvRx.Core.Physical.Functions;
+using CsvRx.Core.Values;
 
 namespace CsvRx.Core.Physical
 {
     internal static class PhysicalExtensions
     {
+        internal static ArrayColumnValue ToValueArray(this ColumnValue scalar, int size)
+        {
+            if (scalar is ArrayColumnValue a)
+            {
+                return a;
+            }
+
+            var value = ((ScalarColumnValue)scalar).Value.RawValue;
+            var list = new List<object>(size);
+            for (var i = 0; i < size; i++)
+            {
+                list.Add(value ?? null);
+            }
+            var array = new ArrayColumnValue(list, scalar.DataType);
+
+            return array;
+        }
+
         internal static GroupBy CreateGroupingPhysicalExpression(
             this List<ILogicalExpression> groupExpressions,
             Schema inputDfSchema,

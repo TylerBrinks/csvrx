@@ -1,5 +1,6 @@
 ﻿using CsvRx.Core.Data;
 using CsvRx.Core.Execution;
+using CsvRx.Core.Logical.Values;
 using CsvRx.Core.Physical.Expressions;
 using CsvRx.Core.Physical.Functions;
 using CsvRx.Core.Values;
@@ -49,7 +50,7 @@ internal class NoGroupingAggregation
     {
         foreach (var (accumulator, exp) in accumulators.Zip(expressions))
         {
-            var values = exp.Select(c => (ArrayColumnValue)c.Evaluate(batch)).ToList();
+            var values = exp.Select(c => c.Evaluate(batch).ToValueArray(batch.RowCount)).ToList();
 
             if (_aggregationMode == AggregationMode.Partial)
             {

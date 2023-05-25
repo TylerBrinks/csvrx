@@ -205,4 +205,24 @@ public class RecordBatchTests
         var schema = new Schema(new List<QualifiedField>(new List<QualifiedField> {new("", ColumnDataType.Integer)}));
         Assert.Equal(0, new RecordBatch(schema).RowCount);
     }
+
+    [Fact]
+    public void RecordBath_Prevents_Schema_Mismatch()
+    {
+        var schema = new Schema(new List<QualifiedField> {new("name", ColumnDataType.Integer)});
+        Assert.Throws<InvalidOperationException>(() => RecordBatch.TryNew(schema, new List<object?>()));
+    }
+
+    [Fact]
+    public void RecordBath_Counts_Rows()
+    {
+        var schema = new Schema(new List<QualifiedField> { new("name", ColumnDataType.Integer) });
+        var batch = new RecordBatch(schema);
+
+        Assert.Equal(0, batch.RowCount);
+
+        batch.Results[0].Add("");
+       
+        Assert.Equal(1, batch.RowCount);
+    }
 }

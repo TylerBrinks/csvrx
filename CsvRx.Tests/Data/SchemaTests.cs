@@ -71,7 +71,7 @@ public class SchemaTests
     {
         var table = new TableReference("table");
         var table2 = new TableReference("other");
-        var schema = new Schema(new List<QualifiedField> { new("test", ColumnDataType.Integer, table) });
+        var schema = new Schema(new List<QualifiedField> { new("test", ColumnDataType.Integer, table2) });
 
         Assert.Null(schema.GetFieldFromColumn(new Column("test", table)));
     }
@@ -164,5 +164,23 @@ public class SchemaTests
         });
 
         Assert.NotEqual(schema1, schema2);
+    }
+
+    [Fact]
+    public void Schemas_Compare_Hash_Codes()
+    {
+        var schema1 = new Schema(new List<QualifiedField>
+        {
+            new("first", ColumnDataType.Integer),
+            new("second", ColumnDataType.Integer),
+        });
+
+        var schema2 = new Schema(new List<QualifiedField>
+        {
+            new("first", ColumnDataType.Integer),
+            new("second", ColumnDataType.Integer),
+        });
+
+        Assert.Equal(schema1.GetHashCode(), schema2.GetHashCode());
     }
 }

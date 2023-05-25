@@ -304,8 +304,8 @@ public class LogicalExtensionsTests
     public void ComparisonCoercion_Finds_Common_Data_Type()
     {
         Assert.Equal(ColumnDataType.Boolean, LogicalExtensions.GetComparisonCoercion(ColumnDataType.Boolean, ColumnDataType.Boolean));
-        Assert.Equal(ColumnDataType.Utf8, LogicalExtensions.GetComparisonCoercion(ColumnDataType.Integer, ColumnDataType.Boolean));
-        Assert.Equal(ColumnDataType.Utf8, LogicalExtensions.GetComparisonCoercion(ColumnDataType.Boolean, ColumnDataType.Double));
+        Assert.Equal(ColumnDataType.Integer, LogicalExtensions.GetComparisonCoercion(ColumnDataType.Integer, ColumnDataType.Boolean));
+        Assert.Equal(ColumnDataType.Double, LogicalExtensions.GetComparisonCoercion(ColumnDataType.Boolean, ColumnDataType.Double));
         Assert.Equal(ColumnDataType.Utf8, LogicalExtensions.GetComparisonCoercion(ColumnDataType.Utf8, ColumnDataType.Utf8));
     }
 

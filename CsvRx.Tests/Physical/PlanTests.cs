@@ -139,12 +139,7 @@ public class PlanTests
         Assert.Equal("a", partialAggregateExec.GroupBy.Expression[0].Name);
         Assert.Empty(partialAggregateExec.AggregateExpressions);
 
-        var projectionExec = (ProjectionExecution) partialAggregateExec.Plan;
-        Assert.Single(projectionExec.Schema.Fields);
-        Assert.Equal("a", projectionExec.Expressions[0].Name);
-        Assert.Single(projectionExec.Schema.Fields);
-
-        var scanExec = (InMemoryTableExecution) projectionExec.Plan;
+        var scanExec = (InMemoryTableExecution) partialAggregateExec.Plan;
         Assert.Equal(3, scanExec.Schema.Fields.Count);
     }
 
@@ -173,16 +168,11 @@ public class PlanTests
         Assert.Equal("a", ((Column)projectionExec.Expressions[0].Expression).Name);
 
         var sortExec = (SortExecution) projectionExec.Plan;
-        Assert.Equal(2, sortExec.Schema.Fields.Count);
+        Assert.Equal(3, sortExec.Schema.Fields.Count);
         Assert.Single(sortExec.SortExpressions);
         Assert.Equal("b", ((Column)sortExec.SortExpressions[0].Expression).Name);
 
-        var nestedProjection = (ProjectionExecution) sortExec.Plan;
-        Assert.Equal(2, nestedProjection.Schema.Fields.Count);
-        Assert.Equal("a", ((Column)nestedProjection.Expressions[0].Expression).Name);
-        Assert.Equal("b", ((Column)nestedProjection.Expressions[1].Expression).Name);
-
-        var scanExec = (InMemoryTableExecution)nestedProjection.Plan;
+        var scanExec = (InMemoryTableExecution)sortExec.Plan;
         Assert.Equal(3, scanExec.Schema.Fields.Count);
     }
 
@@ -257,8 +247,7 @@ public class PlanTests
         var finalAggregateExec = (AggregateExecution)projectionExec.Plan;
         var partialAggregateExec = (AggregateExecution)finalAggregateExec.Plan;
         var filterExec = (FilterExecution)partialAggregateExec.Plan;
-        var subProjection = (ProjectionExecution)filterExec.Plan;
-        var scanExec = (InMemoryTableExecution)subProjection.Plan;
+        var scanExec = (InMemoryTableExecution)filterExec.Plan;
 
         Assert.Equal(2, projectionExec.Schema.Fields.Count);
         Assert.Equal("MAX(db.a)", ((Column)projectionExec.Expressions[0].Expression).Name);
@@ -276,12 +265,8 @@ public class PlanTests
         Assert.Equal("b", ((Column)partialAggregateExec.GroupBy.Expression[0].Expression).Name);
         Assert.Equal("a", ((Column)partialAggregateExec.AggregateExpressions[0].Expression).Name);
 
-        Assert.Equal(2, filterExec.Schema.Fields.Count);
+        Assert.Equal(3, filterExec.Schema.Fields.Count);
         Assert.IsType<Binary>(filterExec.Predicate);
-
-        Assert.Equal(2, projectionExec.Schema.Fields.Count);
-        Assert.Equal("MAX(db.a)", ((Column)projectionExec.Expressions[0].Expression).Name);
-        Assert.Equal("b", ((Column)projectionExec.Expressions[1].Expression).Name);
 
         Assert.Equal(3, scanExec.Schema.Fields.Count);
     }
@@ -311,7 +296,7 @@ public class PlanTests
         const string sql = "SELECT db.a, joinDb.d FROM db join joinDb on db.c = joinDb.e";
         var logicalPlan = _context.BuildLogicalPlan(sql);
         var projectionExec = (ProjectionExecution)Execution.ExecutionContext.BuildPhysicalPlan(logicalPlan);
-        var joinExec = (NestedLoopJoinExecution)projectionExec.Plan;
+        var joinExec = (HashJoinExecution)projectionExec.Plan;
         var scanExecLeft = (InMemoryTableExecution)joinExec.Left;
         var scanExecRight = (InMemoryTableExecution)joinExec.Right;
 
@@ -321,9 +306,9 @@ public class PlanTests
         Assert.Equal(6, joinExec.Schema.Fields.Count);
         Assert.Equal(JoinType.Inner, joinExec.JoinType);
 
-        var binary = (Binary)joinExec.Filter!.FilterExpression;
-        Assert.Equal("c", ((Column)binary.Left).Name);
-        Assert.Equal("e", ((Column)binary.Right).Name);
+        var join = joinExec.On!.First();
+        Assert.Equal("c", (join.Left).Name);
+        Assert.Equal("e", (join.Right).Name);
 
         Assert.Equal(3, scanExecLeft.Schema.Fields.Count);
         Assert.Equal(3, scanExecRight.Schema.Fields.Count);

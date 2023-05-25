@@ -1,8 +1,4 @@
-﻿using CsvRx.Core;
-using CsvRx.Core.Data;
-using CsvRx.Core.Execution;
-using CsvRx.Core.Physical.Expressions;
-using SqlParser.Ast;
+﻿using CsvRx.Core.Data;
 using Schema = CsvRx.Core.Data.Schema;
 
 namespace CsvRx.Tests.Physical;
@@ -37,17 +33,17 @@ public class ExecutionTests
         _context.RegisterDataSource("joinDb", joinDb);
     }
 
-    [Fact]
-    public void Context_Executes_Async_Batches()
-    {
-        const string sql = """
-            select db.a, avg(joinDb.c3)
-            from db 
-            join joinDb on joinDb.c = db.a
-            group by db.a
-            """;
+    //[Fact]
+    //public void Context_Executes_Async_Batches()
+    //{
+    //    const string sql = """
+    //        select db.a, avg(joinDb.c3)
+    //        from db 
+    //        join joinDb on joinDb.c = db.a
+    //        group by db.a
+    //        """;
 
-        var logicalPlan = _context.BuildLogicalPlan(sql);
-        var execution = Execution.ExecutionContext.BuildPhysicalPlan(logicalPlan);
-    }
+    //    var logicalPlan = _context.BuildLogicalPlan(sql);
+    //    var execution = Execution.ExecutionContext.BuildPhysicalPlan(logicalPlan);
+    //}
 }

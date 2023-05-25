@@ -159,6 +159,7 @@ internal static class LogicalExtensions
             Alias a => a.Expression.GetDataType(schema),
             AggregateFunction fn => GetAggregateDataType(fn),
             Binary b => GetBinaryDataType(GetDataType(b.Left, schema), b.Op, GetDataType(b.Right, schema)),
+            Literal l => l.Value.DataType,
 
             _ => throw new NotImplementedException("GetDataType not implemented for ColumnDataType"),
         };
@@ -283,7 +284,7 @@ internal static class LogicalExtensions
     /// <returns>Coerced column data type</returns>
     internal static ColumnDataType GetBitwiseCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
     {
-        if (!leftDataType.IsNumeric() && !rightDataType.IsNumeric())
+        if (!leftDataType.IsNumeric() || !rightDataType.IsNumeric())
         {
             return ColumnDataType.Utf8;
         }
@@ -330,6 +331,7 @@ internal static class LogicalExtensions
             ? ColumnDataType.Utf8
             : null;
     }
+    
     internal static ColumnDataType? ComparisonBinaryNumericCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
     {
         if (leftDataType == rightDataType)
@@ -369,7 +371,7 @@ internal static class LogicalExtensions
     /// <returns>Coerced column data type</returns>
     internal static ColumnDataType GetMathNumericalCoercion(ColumnDataType leftDataType, ColumnDataType rightDataType)
     {
-        if (!leftDataType.IsNumeric() && !rightDataType.IsNumeric())
+        if (!leftDataType.IsNumeric() || !rightDataType.IsNumeric())
         {
             return ColumnDataType.Utf8;
         }
@@ -1205,39 +1207,46 @@ internal static class LogicalExtensions
 
     internal static (AggregateFunctionType, List<ILogicalExpression>) AggregateFunctionToExpression(
         AggregateFunctionType functionType,
-        IReadOnlyCollection<FunctionArg>? args,
+        IReadOnlyCollection<FunctionArg>? arguments,
         Schema schema, 
         PlannerContext context)
     {
-        List<ILogicalExpression> arguments;
+        List<ILogicalExpression> functionArguments;
 
-        if (functionType == AggregateFunctionType.Count)
-        {
-            functionType = AggregateFunctionType.Count;
-            arguments = FunctionArgsToExpression();
-        }
-        else
-        {
-            arguments = FunctionArgsToExpression();
-        }
+        //if (functionType == AggregateFunctionType.Count)
+        //{
+        //    functionArguments = FunctionArgsToExpression();
+        //}
+        //else
+        //{
+            functionArguments = FunctionArgsToExpression();
+        //}
 
-        return (functionType, arguments);
+        return (functionType, functionArguments);
 
         List<ILogicalExpression> FunctionArgsToExpression()
         {
-            return args == null
+            return arguments == null
                 ? new List<ILogicalExpression>()
-                : args.Select(SqlFnArgToLogicalExpression).ToList();
+                : arguments.Select(SqlFnArgToLogicalExpression).ToList();
 
             ILogicalExpression SqlFnArgToLogicalExpression(FunctionArg functionArg)
             {
+                if (functionType == AggregateFunctionType.Count && functionArg is FunctionArg.Unnamed { FunctionArgExpression: FunctionArgExpression.Wildcard })
+                {
+                    return new Literal(new IntegerScalar(1));
+                }
+
                 return functionArg switch
                 {
                     FunctionArg.Named { Arg: FunctionArgExpression.Wildcard } => new Wildcard(),
                     FunctionArg.Named { Arg: FunctionArgExpression.FunctionExpression a }
                         => SqlExpressionToLogicalExpression(a.Expression, schema, context),
+
                     FunctionArg.Unnamed { FunctionArgExpression: FunctionArgExpression.FunctionExpression fe }
                         => SqlExpressionToLogicalExpression(fe.Expression, schema, context),
+
+                    FunctionArg.Unnamed{FunctionArgExpression: FunctionArgExpression.Wildcard} => new Wildcard(),
 
                     _ => throw new InvalidOleVariantTypeException($"Unsupported qualified wildcard argument: {functionArg.ToSql()}")
                 };
@@ -1632,6 +1641,9 @@ internal static class LogicalExtensions
 
             case AggregateFunction fn:
                 return fn.CreateFunctionPhysicalName(fn.Distinct, fn.Args);
+
+            case Literal l:
+                return l.Value.RawValue?.ToString() ?? string.Empty;
 
             default:
                 throw new NotImplementedException();
