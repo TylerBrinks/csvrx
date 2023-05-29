@@ -1,6 +1,5 @@
 ﻿using CsvRx.Core.Logical;
 using CsvRx.Core.Logical.Expressions;
-using static SqlParser.Ast.FetchDirection;
 
 namespace CsvRx.Core.Data;
 
@@ -67,12 +66,17 @@ public class Schema
 
     public IEnumerable<QualifiedField> FieldsWithQualifiedName(TableReference qualifier, string columnName)
     {
-        return Fields.Where(f => f.Qualifier != null && f.Qualifier.Name == qualifier.Name && f.Name == columnName);
+        //return Fields.Where(f => f.Qualifier != null && f.Qualifier.Name == qualifier.Name && f.Name == columnName);
+        return Fields.Where(f => f.Qualifier != null && 
+                                 f.Qualifier.Name.Equals(qualifier.Name, StringComparison.InvariantCultureIgnoreCase) &&
+                                 f.Name.Equals(columnName, StringComparison.InvariantCultureIgnoreCase));
+            // == qualifier.Name && f.Name == columnName);
     }
 
     public IEnumerable<QualifiedField> FieldsWithUnqualifiedName(string columnName)
     {
-        return Fields.Where(f => f.Name == columnName);
+        //return Fields.Where(f => f.Name == columnName);
+        return Fields.Where(f => f.Name.Equals(columnName, StringComparison.InvariantCultureIgnoreCase));
     }
 
     public Schema Join(Schema joinSchema)
@@ -99,7 +103,9 @@ public class Schema
         {
             if (qualifier != null && field.Qualifier != null)
             {
-                return field.Name == name && field.Qualifier.Name == qualifier.Name;
+                return field.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase) &&
+                       field.Qualifier.Name.Equals(qualifier.Name, StringComparison.InvariantCultureIgnoreCase);
+                //return field.Name == name && field.Qualifier.Name == qualifier.Name;
             }
 
             if (qualifier != null && field.Qualifier == null)
@@ -108,13 +114,16 @@ public class Schema
                 
                 if (column.Relation != null && column.Relation == qualifier)
                 {
-                    return column.Relation.Name == qualifier.Name && column.Name == name;
+                    return column.Relation.Name.Equals(qualifier.Name, StringComparison.InvariantCultureIgnoreCase)
+                           && column.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase);
+                    //return column.Relation.Name == qualifier.Name && column.Name == name;
                 }
 
                 return false;
             }
 
-            return field.Name == name;
+            return field.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase);
+            //== name;
         }).ToList();
 
         if (!matches.Any())

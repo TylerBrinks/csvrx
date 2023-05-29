@@ -50,9 +50,8 @@ internal record AggregateFunction(
         if (other == null) { return false; }
 
         var equal = FunctionType == other.FunctionType &&
-               Distinct == other.Distinct &&
-              
-               Args.SequenceEqual(other.Args);
+                    Distinct == other.Distinct &&
+                    Args.SequenceEqual(other.Args);
 
         if (equal && Filter != null)
         {

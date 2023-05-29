@@ -17,9 +17,10 @@ internal record Column(string Name, TableReference? Relation = null) : ILogicalE
             return false;
         }
 
-        var equal = Name == other.Name;
+        //var equal = Name == other.Name;
+        var equal = Name.Equals(other.Name, StringComparison.InvariantCultureIgnoreCase);
 
-        if(equal && Relation != null)
+        if (equal && Relation != null)
         {
             equal &= Relation == other.Relation;
         }

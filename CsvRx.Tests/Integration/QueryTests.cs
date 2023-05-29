@@ -17,15 +17,27 @@ public class QueryTests
         _context.RegisterCsv("locations", $"{root}/Integration/db_locations.csv");
     }
 
-    [Fact]
-    public async Task Query_Counts_Table_Records()
+    private async Task<RecordBatch> ExecuteSingleBatch(string sql)
     {
-        var execution = _context.ExecuteSql("select count(employee_id) from employees");
+        var execution = _context.ExecuteSql(sql);
 
         var enumerator = execution.GetAsyncEnumerator();
 
         await enumerator.MoveNextAsync();
-        var batch = enumerator.Current;
+        return enumerator.Current;
+    }
+
+    [Fact]
+    public async Task Query_Ignore_Field_Name_Case()
+    {
+        var batch = await ExecuteSingleBatch("select employee_id, Employee_Id, EMPLOYEE_ID from employees");
+        Assert.Equal(107, batch.RowCount);
+    }
+
+    [Fact]
+    public async Task Query_Counts_Table_Records()
+    {
+        var batch = await ExecuteSingleBatch("select count(employee_id) from employees");
 
         Assert.Equal(1, batch.RowCount);
         Assert.Equal(107L, batch.Results[0].Values[0]);
@@ -39,12 +51,7 @@ public class QueryTests
                 FROM employees 
                 WHERE salary > 10000
                 """;
-        var execution = _context.ExecuteSql(sql);
-
-        var enumerator = execution.GetAsyncEnumerator();
-
-        await enumerator.MoveNextAsync();
-        var batch = enumerator.Current;
+        var batch = await ExecuteSingleBatch(sql);
 
         Assert.Equal(15, batch.RowCount);
 
@@ -53,28 +60,23 @@ public class QueryTests
                 FROM employees 
                 WHERE salary > 10000
                 """;
-        execution = _context.ExecuteSql(sql);
-
-        enumerator = execution.GetAsyncEnumerator();
-
-        await enumerator.MoveNextAsync();
-        batch = enumerator.Current;
+        batch = await ExecuteSingleBatch(sql);
 
         Assert.Equal(1, batch.RowCount);
         Assert.Equal(15L, batch.Results[0].Values[0]);
     }
 
     [Fact]
-    public async Task Query_Evaluates_Average()
+    public async Task Query_Evaluates_Aliased_Self_Join()
     {
         var sql = """
                 SELECT 
-                    mgr.employee_id as mgrid, 
+                    mgr.employee_id as MgrId, 
                     emp.employee_id, 
-                    mgr.first_name mgrfn, 
-                    mgr.last_name mgrln,
-                    emp.first_name empfn, 
-                    emp.last_name empln
+                    mgr.first_name MgrFirst, 
+                    mgr.last_name MgrLast,
+                    emp.first_name EmpFirst, 
+                    emp.last_name EmpLast
                 FROM employees mgr
                 join employees emp
                 on mgr.employee_id = emp.manager_id
@@ -82,37 +84,28 @@ public class QueryTests
                 order by emp.manager_id
                 """;
 
-        var execution = _context.ExecuteSql(sql);
-
-        var enumerator = execution.GetAsyncEnumerator();
-
-        await enumerator.MoveNextAsync();
-        var batch = enumerator.Current;
+        var batch = await ExecuteSingleBatch(sql);
 
         Assert.Equal(14, batch.RowCount);
     }
 
-    //[Fact]
-    //public async Task Query_Evaluates_Subquery_Records()
-    //{
-    //    const string sql = """
-    //        SELECT first_name, last_name 
-    //        FROM employees 
-    //        WHERE salary > 
-    //        (SELECT salary  
-    //        FROM employees 
-    //        WHERE employee_id=163
-    //        )
-    //        """;
-    //    var execution = _context.ExecuteSql(sql);
+    [Fact]
+    public async Task Query_Evaluates_Subquery_Records()
+    {
+        const string sql = """
+            SELECT *
+            FROM 
+                (SELECT 
+                    employee_id, 
+                    first_name,
+                    last_name
+                FROM employees)
+            """;
 
-    //    var enumerator = execution.GetAsyncEnumerator();
+        var batch = await ExecuteSingleBatch(sql);
 
-    //    await enumerator.MoveNextAsync();
-    //    var batch = enumerator.Current;
-
-    //    Assert.Equal(1, batch.RowCount);
-    //    Assert.Equal(107L, batch.Results[0].Values[0]);
-    //}
+        Assert.Equal(107, batch.RowCount);
+        Assert.Equal(3, batch.Results.Count);
+    }
 }
 
