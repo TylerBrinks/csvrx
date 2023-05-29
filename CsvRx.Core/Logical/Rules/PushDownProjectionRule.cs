@@ -227,7 +227,7 @@ internal class PushDownProjectionRule : ILogicalPlanOptimizationRule
                 (f.QualifiedColumn().FlatName, Expr: expr)
             };
             // return (f.Name, Expr: expr);// removed f!.Name
-           return projections;
+           return projections.Distinct();
         })
         .ToDictionary(f => f.Name, f => f.Expr);
     }

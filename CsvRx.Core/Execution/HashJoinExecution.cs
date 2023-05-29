@@ -18,8 +18,8 @@ internal record HashJoinExecution(
 {
     public async IAsyncEnumerable<RecordBatch> Execute(QueryOptions options)
     {
-        var onLeft = On.Select(j => j.Right).ToList();
-        var onRight = On.Select(j => j.Left).ToList();
+        var onLeft = On.Select(j => j.Left).ToList();
+        var onRight = On.Select(j => j.Right).ToList();
 
         //if (PartitionMode == PartitionMode.CollectLeft)
         //{

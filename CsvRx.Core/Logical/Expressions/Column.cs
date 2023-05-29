@@ -26,4 +26,9 @@ internal record Column(string Name, TableReference? Relation = null) : ILogicalE
 
         return equal;
     }
+
+    public static Column FromQualifiedName(string name)
+    {
+        return new Column(name);
+    }
 }

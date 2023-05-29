@@ -686,7 +686,8 @@ internal static class LogicalExtensions
         var result = terms.Select(term => new
             {
                 Term = term,
-                Field = schema.GetFieldFromColumn(new Column(term.ColumnName, term.Table))
+                //Field = schema.GetFieldFromColumn(new Column(term.ColumnName, term.Table))
+                Field = schema.FieldWithName(new Column(term.ColumnName, term.Table))
             })
             .Where(term => term.Field != null)
             .Select(term => (term.Field, term.Term.NestedNames))
@@ -698,7 +699,15 @@ internal static class LogicalExtensions
             return result.Field.QualifiedColumn();
         }
 
-        throw new NotImplementedException("SqlCompoundIdentToExpression not implemented for identifier");
+        //todo: check outer query schema
+        //if outer schema{}
+        //else{
+        var relation = idents[0];
+        var name = idents[1];
+
+        return new Column(name, new TableReference(relation));
+        //}
+        //throw new NotImplementedException("SqlCompoundIdentToExpression not implemented for identifier");
         // todo case field & nested is not empty
         // case null
     }
@@ -886,7 +895,9 @@ internal static class LogicalExtensions
             // Get the table name used to query the data source
             // var name = relation.Alias != null ? relation.Alias.Name : relation.Name.Values[0];
             var name = relation.Name.Values[0];
-            var tableRef = context.TableReferences.Find(t => t.Name == name);
+            var tableRef = context.TableReferences.Find(t => t.Name == name &&
+                            (relation.Alias == null || t.Alias! == relation.Alias.Name) );
+            //var tableRef = context.TableReferences.Find(t => t.Name == name);
 
             // The root operation will scan the table for the projected values
             var table = context.DataSources[name];

@@ -86,8 +86,75 @@ public class Schema
         return GetFieldFromColumn(column) != null;
     }
 
-    //public bool IsColumnFromSchema(Column column)
-    //{
-    //    throw new NotImplementedException();
-    //}
+    internal QualifiedField? FieldWithQualifiedName(TableReference qualifier, string columnName)
+    {
+        var index = IndexOfColumnByName(qualifier, columnName);
+
+        return index.HasValue ? Fields[index!.Value] : null;
+    }
+
+    private int? IndexOfColumnByName(TableReference? qualifier, string name)
+    {
+        var matches = Fields.Where(field =>
+        {
+            if (qualifier != null && field.Qualifier != null)
+            {
+                return field.Name == name && field.Qualifier.Name == qualifier.Name;
+            }
+
+            if (qualifier != null && field.Qualifier == null)
+            {
+                var column = Column.FromQualifiedName(field.Name);
+                
+                if (column.Relation != null && column.Relation == qualifier)
+                {
+                    return column.Relation.Name == qualifier.Name && column.Name == name;
+                }
+
+                return false;
+            }
+
+            return field.Name == name;
+        }).ToList();
+
+        if (!matches.Any())
+        {
+            return null;
+        }
+
+        return Fields.IndexOf(matches.First());
+    }
+
+    internal QualifiedField? FieldWithUnqualifiedName(string name)
+    {
+        var matches = FieldsWithUnqualifiedName(name).ToList();
+
+        return matches.Count switch
+        {
+            0 => null,//throw new InvalidOperationException("Unqualified field not found"),
+
+            1 => matches.First(),
+
+            _ => FindField()
+        };
+
+        QualifiedField FindField()
+        {
+            var fieldsWithoutQualifier = matches.Where(f => f.Qualifier == null).ToList();
+
+            if (fieldsWithoutQualifier.Count == 1)
+            {
+                return fieldsWithoutQualifier[0];
+            }
+
+            throw new InvalidOperationException("Unqualified field not found");
+        }
+    }
+
+    internal QualifiedField? FieldWithName(Column column)
+    {
+        return column.Relation != null
+            ? FieldWithQualifiedName(column.Relation, column.Name)
+            : FieldWithUnqualifiedName(column.Name);
+    }
 }
